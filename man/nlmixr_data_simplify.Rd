@@ -27,3 +27,8 @@ covariates.  Column order is standardized (RxODE then nlmixr then
 alphabetically sorted covariates), and RxODE and nlmixr column names are
 converted to lower case.
 }
+\seealso{
+Other Simplifiers: 
+\code{\link{nlmixr_object_simplify}()}
+}
+\concept{Simplifiers}

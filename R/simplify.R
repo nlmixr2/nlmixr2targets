@@ -9,6 +9,8 @@
 #' @inheritParams nlmixr::nlmixr
 #' @return \code{object} converted to a nlmixrui object.  The model name is
 #'   always "object".
+#' @family Simplifiers
+#' @export
 nlmixr_object_simplify <- function(object) {
   # drop comments since they won't affect most outputs and typically change
   # between interactive (when srcref is available) to batch (when srcref is not
@@ -35,6 +37,7 @@ nlmixr_object_simplify <- function(object) {
 #'   \code{nlmixr(object=model)}
 #' @return The data with the nlmixr column lower case and on the left and the
 #'   covariate columns on the right and alphabetically sorted.
+#' @family Simplifiers
 #' @export
 nlmixr_data_simplify <- function(data, object) {
   nlmixr_cols <-

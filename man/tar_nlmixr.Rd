@@ -86,6 +86,6 @@ list(
   tar_nlmixr(name=pheno_model, object=pheno, data=nlmixr::pheno_sd, est="saem")
 )
 })
-tar_make()
+targets::tar_make()
 }
 }

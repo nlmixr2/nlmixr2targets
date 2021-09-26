@@ -21,3 +21,8 @@ The object simplification removes comments (so please use \code{label()}
 instead of comments to label parameters) and then converts the \code{object}
 to a "nlmixrui" object.
 }
+\seealso{
+Other Simplifiers: 
+\code{\link{nlmixr_data_simplify}()}
+}
+\concept{Simplifiers}
