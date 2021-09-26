@@ -12,6 +12,7 @@ status](https://www.r-pkg.org/badges/version/nlmixrtargets)](https://CRAN.R-proj
 [![R
 Targetopia](https://img.shields.io/badge/R_Targetopia-member-blue?style=flat&labelColor=gray)](https://wlandau.github.io/targetopia/)
 [![R-CMD-check](https://github.com/nlmixrdevelopment/nlmixrtargets/workflows/R-CMD-check/badge.svg)](https://github.com/nlmixrdevelopment/nlmixrtargets/actions)
+[![Code\_Coverage\_Badge](http://codecov.io/github/nlmixrdevelopment/nlmixrtargets/coverage.svg?branch=main)](http://codecov.io/github/nlmixrdevelopment/nlmixrtargets?branch=main)
 <!-- badges: end -->
 
 The goal of nlmixrtargets is to simplify the use of the
