@@ -22,10 +22,9 @@ test_that("tar_nlmixr object generation", {
   expect_true(inherits(target_list, "list"))
 })
 
-test_that("tar_nlmixr execution", {
-  skip("How do I test a tar_script when the package is not installed?")
-
-  targets::tar_destroy(ask=FALSE)
+# targets::tar_test() runs the test code inside a temporary directory
+# to avoid accidentally writing to the user's file space.
+targets::tar_test("tar_nlmixr execution", {
   targets::tar_script({
     pheno <- function() {
       ini({
@@ -47,9 +46,18 @@ test_that("tar_nlmixr execution", {
       })
     }
 
-    nlmixrtargets::tar_nlmixr(name=pheno_model, object=pheno, data=nlmixr::pheno_sd, est="saem", control=nlmixr::saemControl(nBurn=1, nEm=1))
+    nlmixrtargets::tar_nlmixr(
+      name=pheno_model,
+      object=pheno,
+      data=nlmixr::pheno_sd,
+      est="saem",
+      # Minimize time spent
+      control=nlmixr::saemControl(nBurn=1, nEm=1)
+    )
   })
-  targets::tar_make()
-  expect_true(inherits(target_list, "list"))
-  targets::tar_destroy(ask=FALSE)
+  expect_equal(
+    targets::tar_outdated(callr_function = NULL),
+    c("pheno_model_tar_object_simple", "pheno_model_tar_data_simple", "pheno_model")
+  )
+  suppressWarnings(targets::tar_make(callr_function = NULL))
 })
