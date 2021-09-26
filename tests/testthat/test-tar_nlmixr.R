@@ -60,4 +60,9 @@ targets::tar_test("tar_nlmixr execution", {
     c("pheno_model_tar_object_simple", "pheno_model_tar_data_simple", "pheno_model")
   )
   suppressWarnings(targets::tar_make(callr_function = NULL))
+  # A successful model estimation step should return an nlmixrFitCore object
+  # (testing of model results is outside the scope of nlmixrtargets)
+  expect_true(
+    inherits(tar_read(pheno_model), "nlmixrFitCore")
+  )
 })
