@@ -22,6 +22,14 @@ test_that("tar_nlmixr object generation", {
   expect_true(inherits(target_list, "list"))
 })
 
+test_that("tar_nlmixr expected errors", {
+  expect_error(
+    tar_nlmixr(name=pheno_model, object=pheno, data=nlmixr::pheno_sd),
+    regexp="'est' must not be null",
+    fixed=TRUE
+  )
+})
+
 # targets::tar_test() runs the test code inside a temporary directory
 # to avoid accidentally writing to the user's file space.
 targets::tar_test("tar_nlmixr execution", {
