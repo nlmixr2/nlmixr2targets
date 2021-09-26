@@ -43,9 +43,9 @@ devtools::install_github("nlmixrdevelopment/nlmixrtargets")
 This is a basic example which shows you how to solve a common problem:
 
 ```{r example, eval=FALSE}
-libtary(targets)
-library(nlmixrtargets)
+library(targets)
 targets::tar_script({
+  library(nlmixrtargets)
   pheno <- function() {
     ini({
       tcl <- log(0.008) # typical value of clearance
@@ -63,7 +63,7 @@ targets::tar_script({
       d/dt(A1) = - ke * A1    # model differential equation
       cp = A1 / v             # concentration in plasma
       cp ~ add(add.err)       # define error model
-     })
+    })
   }
   list(
     tar_nlmixr(name=pheno_model, object=pheno, data=nlmixr::pheno_sd, est="saem")
