@@ -33,6 +33,11 @@ jobs:
 
       - uses: r-lib/actions/setup-pandoc@v1
 
+      - name: Install Symengine from source for MacOS
+        if: runner.os == 'macOS'
+        run: install.packages("symengine", type="source")
+        shell: Rscript {0}
+
       - uses: r-lib/actions/setup-r@v1
         with:
           r-version: ${{ matrix.config.r }}
