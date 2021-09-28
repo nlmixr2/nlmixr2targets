@@ -45,7 +45,7 @@ nlmixr_data_simplify <- function(data, object) {
       # RxODE columns
       c("id", "time", "amt", "rate", "dur", "evid", "cmt", "ss", "ii", "addl"),
       # nlmixr columns
-      c("dv", "mdv")
+      c("dv", "dvid", "mdv")
     )
   # nlmixr pays attention to the columns in a case-insensitive way for the
   # standard columns.  Verify that the data has case-insensitive column names
