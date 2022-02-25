@@ -1,40 +1,40 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# nlmixrtargets
+# nlmixr2targets
 
 <!-- badges: start -->
 
 [![Lifecycle:
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![CRAN
-status](https://www.r-pkg.org/badges/version/nlmixrtargets)](https://CRAN.R-project.org/package=nlmixrtargets)
+status](https://www.r-pkg.org/badges/version/nlmixr2targets)](https://CRAN.R-project.org/package=nlmixr2targets)
 [![R
 Targetopia](https://img.shields.io/badge/R_Targetopia-member-blue?style=flat&labelColor=gray)](https://wlandau.github.io/targetopia/)
-[![R-CMD-check](https://github.com/nlmixrdevelopment/nlmixrtargets/workflows/R-CMD-check/badge.svg)](https://github.com/nlmixrdevelopment/nlmixrtargets/actions)
-[![Code\_Coverage\_Badge](http://codecov.io/github/nlmixrdevelopment/nlmixrtargets/coverage.svg?branch=main)](http://codecov.io/github/nlmixrdevelopment/nlmixrtargets?branch=main)
+[![R-CMD-check](https://github.com/nlmixr2/nlmixr2targets/workflows/R-CMD-check/badge.svg)](https://github.com/nlmixr2/nlmixr2targets/actions)
+[![Code_Coverage_Badge](http://codecov.io/github/nlmixr2/nlmixr2targets/coverage.svg?branch=main)](http://codecov.io/github/nlmixr2/nlmixr2targets?branch=main)
 <!-- badges: end -->
 
-The goal of nlmixrtargets is to simplify the use of the
-[nlmixr](https://github.com/nlmixrdevelopment/nlmixr) package with the
-[targets](https://docs.ropensci.org/targets/) package. nlmixrtargets is
+The goal of nlmixr2targets is to simplify the use of the
+[nlmixr2](https://github.com/nlmixr2/nlmixr2) package with the
+[targets](https://docs.ropensci.org/targets/) package. nlmixr2targets is
 part of the
 [targetopeia](https://wlandau.github.io/targetopia/packages.html).
 
 ## Installation
 
 When available on CRAN, you can install the released version of
-nlmixrtargets from [CRAN](https://CRAN.R-project.org) with:
+nlmixr2targets from [CRAN](https://CRAN.R-project.org) with:
 
 ``` r
-install.packages("nlmixrtargets")
+install.packages("nlmixr2targets")
 ```
 
 And the development version from [GitHub](https://github.com/) with:
 
 ``` r
 # install.packages("devtools")
-devtools::install_github("nlmixrdevelopment/nlmixrtargets")
+devtools::install_github("nlmixr2/nlmixr2targets")
 ```
 
 ## Example
@@ -44,7 +44,7 @@ This is a basic example which shows you how to solve a common problem:
 ``` r
 library(targets)
 targets::tar_script({
-  library(nlmixrtargets)
+  library(nlmixr2targets)
   pheno <- function() {
     ini({
       tcl <- log(0.008) # typical value of clearance
@@ -65,7 +65,7 @@ targets::tar_script({
     })
   }
   list(
-    tar_nlmixr(name=pheno_model, object=pheno, data=nlmixr::pheno_sd, est="saem")
+    tar_nlmixr(name=pheno_model, object=pheno, data=nlmixr2data::pheno_sd, est="saem")
   )
 })
 targets::tar_make()

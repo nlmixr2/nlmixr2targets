@@ -6,7 +6,7 @@
 #' instead of comments to label parameters) and then converts the \code{object}
 #' to a "nlmixrui" object.
 #'
-#' @inheritParams nlmixr::nlmixr
+#' @inheritParams nlmixr2est::nlmixr
 #' @return \code{object} converted to a nlmixrui object.  The model name is
 #'   always "object".
 #' @family Simplifiers
@@ -16,33 +16,33 @@ nlmixr_object_simplify <- function(object) {
   # between interactive (when srcref is available) to batch (when srcref is not
   # available) mode.
   attr(object, "srcref") <- NULL
-  ret <- nlmixr::nlmixr(object)
+  ret <- nlmixr2est::nlmixr(object)
   # TODO: ret$model.name is always "object"; it may be better to set it to
   # as.character(substitute(object)), but that didn't work with initial testing.
   # (Or, maybe it's better to have it just be "object" so that it is simpler.)
   ret
 }
 
-#' Standardize and simplify data for nlmixr estimation
+#' Standardize and simplify data for nlmixr2 estimation
 #'
 #' This function is typically not needed by end users.
 #'
-#' The standardization keeps columns that RxODE and nlmixr use along with the
-#' covariates.  Column order is standardized (RxODE then nlmixr then
-#' alphabetically sorted covariates), and RxODE and nlmixr column names are
+#' The standardization keeps columns that rxode2 and nlmixr2 use along with the
+#' covariates.  Column order is standardized (rxode2 then nlmixr2 then
+#' alphabetically sorted covariates), and rxode2 and nlmixr2 column names are
 #' converted to lower case.
 #'
-#' @inheritParams nlmixr::nlmixr
+#' @inheritParams nlmixr2est::nlmixr
 #' @param object an nlmixr_ui object (e.g. the output of running
 #'   \code{nlmixr(object=model)}
-#' @return The data with the nlmixr column lower case and on the left and the
+#' @return The data with the nlmixr2 column lower case and on the left and the
 #'   covariate columns on the right and alphabetically sorted.
 #' @family Simplifiers
 #' @export
 nlmixr_data_simplify <- function(data, object) {
   nlmixr_cols <-
     c(
-      # RxODE columns
+      # rxode2 columns
       c("id", "time", "amt", "rate", "dur", "evid", "cmt", "ss", "ii", "addl"),
       # nlmixr columns
       c("dv", "dvid", "mdv")
@@ -71,7 +71,7 @@ nlmixr_data_simplify <- function(data, object) {
   # that upper/lower case column name changes will not affect the need to rerun.
   # Also, standardizing the column name order to always be the same will prevent
   # the need to rerun, so cov_names is sorted.
-  setNames(
+  stats::setNames(
     object=data[, c(nlmixr_names, sort(cov_names)), drop=FALSE],
     nm=c(tolower(nlmixr_names), sort(cov_names))
   )

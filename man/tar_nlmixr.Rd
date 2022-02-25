@@ -10,11 +10,13 @@ tar_nlmixr(
   data,
   est = NULL,
   control = list(),
-  table = nlmixr::tableControl()
+  table = nlmixr2est::tableControl()
 )
 }
 \arguments{
-\item{name}{Symbol, name of the target. Subsequent targets
+\item{name}{Symbol, name of the target. A target
+name must be a valid name for a symbol in R, and it
+must not start with a dot. Subsequent targets
 can refer to this name symbolically to induce a dependency relationship:
 e.g. \code{tar_target(downstream_target, f(upstream_target))} is a
 target named \code{downstream_target} which depends on a target
@@ -30,18 +32,15 @@ to locally recreate the target's initial RNG state.}
 
 \item{object}{Fitted object or function specifying the model.}
 
-\item{data}{Dataset to estimate.  Needs to be RxODE compatible (see
-\url{https://nlmixrdevelopment.github.io/RxODE/articles/RxODE-event-types.html}
-for detailed dataset requirements).}
+\item{data}{nlmixr data}
 
-\item{est}{Estimation method}
+\item{est}{estimation method}
 
-\item{control}{Estimation control options.  They could be
-\code{\link[nlme]{nlmeControl}}, \code{\link[nlmixr]{saemControl}} or
-\code{\link[nlmixr]{foceiControl}}}
+\item{control}{The estimation control object.  These are expected
+to be different for each type of estimation method}
 
-\item{table}{A list controlling the table options (i.e. CWRES, NPDE etc).
-See \code{\link[nlmixr]{tableControl}}.}
+\item{table}{The output table control object (like
+`tableControl()`)}
 }
 \value{
 A list of targets for the model simplification, data simplification,
@@ -83,7 +82,7 @@ pheno <- function() {
   })
 }
 list(
-  tar_nlmixr(name=pheno_model, object=pheno, data=nlmixr::pheno_sd, est="saem")
+  tar_nlmixr(name=pheno_model, object=pheno, data=nlmixr2data::pheno_sd, est="saem")
 )
 })
 targets::tar_make()

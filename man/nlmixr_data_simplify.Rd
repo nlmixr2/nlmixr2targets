@@ -2,29 +2,27 @@
 % Please edit documentation in R/simplify.R
 \name{nlmixr_data_simplify}
 \alias{nlmixr_data_simplify}
-\title{Standardize and simplify data for nlmixr estimation}
+\title{Standardize and simplify data for nlmixr2 estimation}
 \usage{
 nlmixr_data_simplify(data, object)
 }
 \arguments{
-\item{data}{Dataset to estimate.  Needs to be RxODE compatible (see
-\url{https://nlmixrdevelopment.github.io/RxODE/articles/RxODE-event-types.html}
-for detailed dataset requirements).}
+\item{data}{nlmixr data}
 
 \item{object}{an nlmixr_ui object (e.g. the output of running
 \code{nlmixr(object=model)}}
 }
 \value{
-The data with the nlmixr column lower case and on the left and the
+The data with the nlmixr2 column lower case and on the left and the
 covariate columns on the right and alphabetically sorted.
 }
 \description{
 This function is typically not needed by end users.
 }
 \details{
-The standardization keeps columns that RxODE and nlmixr use along with the
-covariates.  Column order is standardized (RxODE then nlmixr then
-alphabetically sorted covariates), and RxODE and nlmixr column names are
+The standardization keeps columns that rxode2 and nlmixr2 use along with the
+covariates.  Column order is standardized (rxode2 then nlmixr2 then
+alphabetically sorted covariates), and rxode2 and nlmixr2 column names are
 converted to lower case.
 }
 \seealso{

@@ -33,20 +33,20 @@ test_that("nlmixr_object_simplify", {
 test_that("nlmixr_data_simplify", {
   # Columns are kept in the correct order
   expect_equal(
-    names(nlmixr_data_simplify(data=nlmixr::pheno_sd, object=model_simple)),
+    names(nlmixr_data_simplify(data=nlmixr2data::pheno_sd, object=model_simple)),
     c("id", "time", "amt", "dv", "mdv", "evid", "WT")
   )
 })
 
 test_that("nlmixr_data_simplify expected errors", {
-  bad_data_lower_case <- nlmixr::pheno_sd
+  bad_data_lower_case <- nlmixr2data::pheno_sd
   bad_data_lower_case$id <- bad_data_lower_case$ID
   expect_error(
     nlmixr_data_simplify(data=bad_data_lower_case, object=model_simple),
     regexp="The following column(s) are duplicated when lower case: 'id'",
     fixed=TRUE
   )
-  bad_data_no_cov <- nlmixr::pheno_sd
+  bad_data_no_cov <- nlmixr2data::pheno_sd
   bad_data_no_cov$WT <- NULL
   expect_error(
     nlmixr_data_simplify(data=bad_data_no_cov, object=model_simple),

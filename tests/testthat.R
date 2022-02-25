@@ -1,6 +1,6 @@
 library(testthat)
 # Load targets to work around https://github.com/ropensci/targets/issues/642
 library(targets)
-library(nlmixrtargets)
+library(nlmixr2targets)
 
-test_check("nlmixrtargets")
+test_check("nlmixr2targets")

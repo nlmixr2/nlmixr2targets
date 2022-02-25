@@ -10,7 +10,7 @@
 #' \code{\link{nlmixr_object_simplify}()} and
 #' \code{\link{nlmixr_data_simplify}()}.
 #'
-#' @inheritParams nlmixr::nlmixr
+#' @inheritParams nlmixr2est::nlmixr
 #' @inheritParams targets::tar_target
 #' @return A list of targets for the model simplification, data simplification,
 #'   and model estimation.
@@ -38,13 +38,13 @@
 #'   })
 #' }
 #' list(
-#'   tar_nlmixr(name=pheno_model, object=pheno, data=nlmixr::pheno_sd, est="saem")
+#'   tar_nlmixr(name=pheno_model, object=pheno, data=nlmixr2data::pheno_sd, est="saem")
 #' )
 #' })
 #' targets::tar_make()
 #' }
 #' @export
-tar_nlmixr <- function(name, object, data, est=NULL, control=list(), table=nlmixr::tableControl()) {
+tar_nlmixr <- function(name, object, data, est=NULL, control=list(), table=nlmixr2est::tableControl()) {
   if (is.null(est)) {
     stop("'est' must not be null")
   }
@@ -60,7 +60,7 @@ tar_nlmixr <- function(name, object, data, est=NULL, control=list(), table=nlmix
             nlmixr_object_simplify(object=object),
             list(object=substitute(object))
           ),
-        packages="nlmixr"
+        packages="nlmixr2est"
       ),
       targets::tar_target_raw(
         name=name_data_simple,
@@ -77,7 +77,7 @@ tar_nlmixr <- function(name, object, data, est=NULL, control=list(), table=nlmix
         name=name,
         command=
           substitute(
-            nlmixr::nlmixr(
+            nlmixr2est::nlmixr(
               object=object_simple,
               data=data_simple,
               est=est,
@@ -91,7 +91,7 @@ tar_nlmixr <- function(name, object, data, est=NULL, control=list(), table=nlmix
               table=substitute(table)
             )
           ),
-        packages="nlmixr"
+        packages="nlmixr2est"
       )
     )
   ret

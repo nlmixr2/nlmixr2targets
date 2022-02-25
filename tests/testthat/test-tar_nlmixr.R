@@ -18,13 +18,13 @@ test_that("tar_nlmixr object generation", {
       cp ~ add(add.err)       # define error model
     })
   }
-  target_list <- tar_nlmixr(name=pheno_model, object=pheno, data=nlmixr::pheno_sd, est="saem")
+  target_list <- tar_nlmixr(name=pheno_model, object=pheno, data=nlmixr2data::pheno_sd, est="saem")
   expect_true(inherits(target_list, "list"))
 })
 
 test_that("tar_nlmixr expected errors", {
   expect_error(
-    tar_nlmixr(name=pheno_model, object=pheno, data=nlmixr::pheno_sd),
+    tar_nlmixr(name=pheno_model, object=pheno, data=nlmixr2data::pheno_sd),
     regexp="'est' must not be null",
     fixed=TRUE
   )
@@ -54,13 +54,13 @@ targets::tar_test("tar_nlmixr execution", {
       })
     }
 
-    nlmixrtargets::tar_nlmixr(
+    nlmixr2targets::tar_nlmixr(
       name=pheno_model,
       object=pheno,
-      data=nlmixr::pheno_sd,
+      data=nlmixr2data::pheno_sd,
       est="saem",
       # Minimize time spent
-      control=nlmixr::saemControl(nBurn=1, nEm=1)
+      control=nlmixr2est::saemControl(nBurn=1, nEm=1)
     )
   })
   expect_equal(
@@ -68,9 +68,9 @@ targets::tar_test("tar_nlmixr execution", {
     c("pheno_model_tar_object_simple", "pheno_model_tar_data_simple", "pheno_model")
   )
   suppressWarnings(targets::tar_make(callr_function = NULL))
-  # A successful model estimation step should return an nlmixrFitCore object
-  # (testing of model results is outside the scope of nlmixrtargets)
+  # A successful model estimation step should return an nlmixr2FitCore object
+  # (testing of model results is outside the scope of nlmixr2targets)
   expect_true(
-    inherits(tar_read(pheno_model), "nlmixrFitCore")
+    inherits(tar_read(pheno_model), "nlmixr2FitCore")
   )
 })
