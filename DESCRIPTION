@@ -21,3 +21,4 @@ RoxygenNote: 7.2.3
 Imports: 
     nlmixr2est,
     targets
+URL: https://nlmixr2.github.io/nlmixr2targets/
