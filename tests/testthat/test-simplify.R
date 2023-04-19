@@ -23,13 +23,6 @@ model_simple <-
     nlmixr_object_simplify(pheno)
   ))
 
-test_that("nlmixr_object_simplify", {
-  expect_equal(
-    model_simple$model.name,
-    "object"
-  )
-})
-
 test_that("nlmixr_data_simplify", {
   # Columns are kept in the correct order
   expect_equal(

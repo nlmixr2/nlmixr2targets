@@ -19,7 +19,7 @@ knitr::opts_chunk$set(
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![CRAN status](https://www.r-pkg.org/badges/version/nlmixr2targets)](https://CRAN.R-project.org/package=nlmixr2targets)
 [![R Targetopia](https://img.shields.io/badge/R_Targetopia-member-blue?style=flat&labelColor=gray)](https://wlandau.github.io/targetopia/)
-[![R-CMD-check](https://github.com/nlmixr2/nlmixr2targets/workflows/R-CMD-check/badge.svg)](https://github.com/nlmixr2/nlmixr2targets/actions)
+[![R-CMD-check](https://github.com/nlmixr2/nlmixr2targets/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/nlmixr2/nlmixr2targets/actions/workflows/R-CMD-check.yaml)
 [![Code_Coverage_Badge](http://codecov.io/github/nlmixr2/nlmixr2targets/coverage.svg?branch=main)](http://codecov.io/github/nlmixr2/nlmixr2targets?branch=main)
 <!-- badges: end -->
 
