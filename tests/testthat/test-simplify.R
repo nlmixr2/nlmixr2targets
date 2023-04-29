@@ -27,6 +27,15 @@ test_that("nlmixr_data_simplify", {
     names(nlmixr_data_simplify(data = nlmixr2data::pheno_sd, object = model_simple)),
     c("id", "time", "amt", "dv", "mdv", "evid", "WT")
   )
+  # control's 'keep' argument is respected
+  expect_equal(
+    names(nlmixr_data_simplify(
+      data = nlmixr2data::pheno_sd,
+      object = model_simple,
+      table = nlmixr2est::tableControl(keep = "APGR")
+    )),
+    c("id", "time", "amt", "dv", "mdv", "evid", "WT", "APGR")
+  )
 })
 
 test_that("nlmixr_data_simplify expected errors", {
