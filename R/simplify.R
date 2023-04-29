@@ -34,7 +34,7 @@ nlmixr_object_simplify <- function(object) {
 #'
 #' @inheritParams nlmixr2est::nlmixr
 #' @param object an nlmixr_ui object (e.g. the output of running
-#'   \code{nlmixr(object=model)}
+#'   \code{nlmixr(object = model)}
 #' @return The data with the nlmixr2 column lower case and on the left and the
 #'   covariate columns on the right and alphabetically sorted.
 #' @family Simplifiers
@@ -56,7 +56,7 @@ nlmixr_data_simplify <- function(data, object) {
   if (any(mask_duplicated)) {
     stop(
       "The following column(s) are duplicated when lower case: ",
-      paste0("'", nlmixr_names[mask_duplicated], "'", collapse=", ")
+      paste0("'", nlmixr_names[mask_duplicated], "'", collapse = ", ")
     )
   }
   cov_names <- object$all.covs
@@ -64,7 +64,7 @@ nlmixr_data_simplify <- function(data, object) {
   if (length(missing_cov) > 0) {
     stop(
       "The following covariate column(s) are missing from the data: ",
-      paste0("'", missing_cov, "'", collapse=", ")
+      paste0("'", missing_cov, "'", collapse = ", ")
     )
   }
   # Simplifying the nlmixr_names column names to always be lower case ensures
@@ -72,7 +72,7 @@ nlmixr_data_simplify <- function(data, object) {
   # Also, standardizing the column name order to always be the same will prevent
   # the need to rerun, so cov_names is sorted.
   stats::setNames(
-    object=data[, c(nlmixr_names, sort(cov_names)), drop=FALSE],
-    nm=c(tolower(nlmixr_names), sort(cov_names))
+    object = data[, c(nlmixr_names, sort(cov_names)), drop = FALSE],
+    nm = c(tolower(nlmixr_names), sort(cov_names))
   )
 }

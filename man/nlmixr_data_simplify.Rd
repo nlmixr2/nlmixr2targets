@@ -10,7 +10,7 @@ nlmixr_data_simplify(data, object)
 \item{data}{nlmixr data}
 
 \item{object}{an nlmixr_ui object (e.g. the output of running
-\code{nlmixr(object=model)}}
+\code{nlmixr(object = model)}}
 }
 \value{
 The data with the nlmixr2 column lower case and on the left and the
