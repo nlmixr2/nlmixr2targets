@@ -39,7 +39,7 @@ nlmixr_object_simplify <- function(object) {
 #'   covariate columns on the right and alphabetically sorted.
 #' @family Simplifiers
 #' @export
-nlmixr_data_simplify <- function(data, object) {
+nlmixr_data_simplify <- function(data, object, table = list()) {
   nlmixr_cols <-
     c(
       # rxode2 columns
@@ -59,20 +59,33 @@ nlmixr_data_simplify <- function(data, object) {
       paste0("'", nlmixr_names[mask_duplicated], "'", collapse = ", ")
     )
   }
-  cov_names <- object$all.covs
-  missing_cov <- setdiff(cov_names, names(data))
-  if (length(missing_cov) > 0) {
-    stop(
-      "The following covariate column(s) are missing from the data: ",
-      paste0("'", missing_cov, "'", collapse = ", ")
-    )
-  }
+  cov_names <- nlmixr_data_simplify_cols(data, cols = object$all.covs, type = "covariate")
+  keep_names <- nlmixr_data_simplify_cols(data, cols = table$keep, type = "keep")
   # Simplifying the nlmixr_names column names to always be lower case ensures
   # that upper/lower case column name changes will not affect the need to rerun.
   # Also, standardizing the column name order to always be the same will prevent
   # the need to rerun, so cov_names is sorted.
+
+  # Sorting so that they are in order, unique so that duplication between
+  # covariates and keep do not try to duplicate columns in the output data.
+  add_col_names <- sort(unique(c(cov_names, keep_names)))
+
+  # Drop names from nlmixr_names from the added names
+  add_col_names <- setdiff(add_col_names, nlmixr_names)
+
   stats::setNames(
-    object = data[, c(nlmixr_names, sort(cov_names)), drop = FALSE],
-    nm = c(tolower(nlmixr_names), sort(cov_names))
+    object = data[, c(nlmixr_names, add_col_names), drop = FALSE],
+    nm = c(tolower(nlmixr_names), add_col_names)
   )
+}
+
+nlmixr_data_simplify_cols <- function(data, cols, type) {
+  missing_col <- setdiff(cols, names(data))
+  if (length(missing_col) > 0) {
+    stop(
+      "The following ", type, " column(s) are missing from the data: ",
+      paste0("'", missing_col, "'", collapse = ", ")
+    )
+  }
+  cols
 }

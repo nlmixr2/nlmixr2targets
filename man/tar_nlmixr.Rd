@@ -74,8 +74,8 @@ pheno <- function() {
   model({
     cl <- exp(lcl + etalcl)
     vc <- exp(lvc + etalvc)
-    kel <- cl/v
-    d/dt(central) <- -ke*central
+    kel <- cl/vc
+    d/dt(central) <- -kel*central
     cp <- central/vc
     cp ~ add(cpaddSd)
   })

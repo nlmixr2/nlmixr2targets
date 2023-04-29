@@ -27,14 +27,34 @@ test_that("nlmixr_data_simplify", {
     names(nlmixr_data_simplify(data = nlmixr2data::pheno_sd, object = model_simple)),
     c("id", "time", "amt", "dv", "mdv", "evid", "WT")
   )
-  # control's 'keep' argument is respected
+  # table's 'keep' argument is respected
   expect_equal(
     names(nlmixr_data_simplify(
       data = nlmixr2data::pheno_sd,
       object = model_simple,
       table = nlmixr2est::tableControl(keep = "APGR")
     )),
-    c("id", "time", "amt", "dv", "mdv", "evid", "WT", "APGR")
+    c("id", "time", "amt", "dv", "mdv", "evid", "APGR", "WT")
+  )
+  # duplication between table's 'keep' argument and covariates does not
+  # duplicate columns
+  expect_equal(
+    names(nlmixr_data_simplify(
+      data = nlmixr2data::pheno_sd,
+      object = model_simple,
+      table = nlmixr2est::tableControl(keep = "WT")
+    )),
+    c("id", "time", "amt", "dv", "mdv", "evid", "WT")
+  )
+  # duplication between table's 'keep' argument and nlmixr2 columns does not add
+  # them
+  expect_equal(
+    names(nlmixr_data_simplify(
+      data = nlmixr2data::pheno_sd,
+      object = model_simple,
+      table = nlmixr2est::tableControl(keep = "EVID")
+    )),
+    c("id", "time", "amt", "dv", "mdv", "evid", "WT")
   )
 })
 

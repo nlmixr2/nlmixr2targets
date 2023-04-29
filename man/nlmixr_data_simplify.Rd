@@ -4,13 +4,16 @@
 \alias{nlmixr_data_simplify}
 \title{Standardize and simplify data for nlmixr2 estimation}
 \usage{
-nlmixr_data_simplify(data, object)
+nlmixr_data_simplify(data, object, table = list())
 }
 \arguments{
 \item{data}{nlmixr data}
 
 \item{object}{an nlmixr_ui object (e.g. the output of running
 \code{nlmixr(object = model)}}
+
+\item{table}{The output table control object (like
+`tableControl()`)}
 }
 \value{
 The data with the nlmixr2 column lower case and on the left and the

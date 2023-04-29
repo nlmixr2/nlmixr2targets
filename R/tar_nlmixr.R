@@ -69,10 +69,11 @@ tar_nlmixr <- function(name, object, data, est = NULL, control = list(), table =
         name = name_data_simple,
         command =
           substitute(
-            nlmixr_data_simplify(object = object_simple, data = data),
+            nlmixr_data_simplify(object = object_simple, data = data, table = table),
             list(
               object_simple = as.name(name_obj_simple),
-              data = substitute(data)
+              data = substitute(data),
+              table = substitute(table)
             )
           )
       ),
