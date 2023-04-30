@@ -8,7 +8,8 @@
 #'
 #' For the way that the objects are simplified, see
 #' \code{\link{nlmixr_object_simplify}()} and
-#' \code{\link{nlmixr_data_simplify}()}.
+#' \code{\link{nlmixr_data_simplify}()}.  To see how to write initial conditions
+#' to work with targets, see \code{\link{nlmixr_object_simplify}()}.
 #'
 #' @inheritParams nlmixr2est::nlmixr
 #' @inheritParams targets::tar_target

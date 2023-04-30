@@ -20,6 +20,10 @@ This function is typically not needed by end users.
 The object simplification removes comments (so please use \code{label()}
 instead of comments to label parameters) and then converts the \code{object}
 to a "nlmixrui" object.
+
+Since setting initial conditions with \code{cmt(0)} does not work with \code{targets},
+the function definition of the object must set it with \code{cmt(initial)}.
+\code{cmt(initial)} will be converted to \code{cmt(0)} before passing to nlmixr2.
 }
 \seealso{
 Other Simplifiers: 
