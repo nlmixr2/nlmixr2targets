@@ -66,6 +66,9 @@ always "object".</p>
     <p>The object simplification removes comments (so please use <code>label()</code>
 instead of comments to label parameters) and then converts the <code>object</code>
 to a "nlmixrui" object.</p>
+<p>Since setting initial conditions with <code>cmt(0)</code> does not work with <code>targets</code>,
+the function definition of the object must set it with <code>cmt(initial)</code>.
+<code>cmt(initial)</code> will be converted to <code>cmt(0)</code> before passing to nlmixr2.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
