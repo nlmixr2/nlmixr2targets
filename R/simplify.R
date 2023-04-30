@@ -6,6 +6,10 @@
 #' instead of comments to label parameters) and then converts the \code{object}
 #' to a "nlmixrui" object.
 #'
+#' Since setting initial conditions with `cmt(0)` does not work with `targets`,
+#' the function definition of the object must set it with `cmt(initial)`.
+#' `cmt(initial)` will be converted to `cmt(0)` before passing to nlmixr2.
+#'
 #' @inheritParams nlmixr2est::nlmixr
 #' @return \code{object} converted to a nlmixrui object.  The model name is
 #'   always "object".
@@ -16,11 +20,37 @@ nlmixr_object_simplify <- function(object) {
   # between interactive (when srcref is available) to batch (when srcref is not
   # available) mode.
   attr(object, "srcref") <- NULL
+  object <- nlmixr_object_simplify_zero_initial(object)
   ret <- nlmixr2est::nlmixr(object)
   # TODO: ret$model.name is always "object"; it may be better to set it to
   # as.character(substitute(object)), but that didn't work with initial testing.
   # (Or, maybe it's better to have it just be "object" so that it is simpler.)
   ret
+}
+
+#' Convert initial conditions from cmt(initial) to cmt(0) to work with `targets`
+#' parser.
+#'
+#' @inheritParams nlmixr_object_simplify
+#' @noRd
+nlmixr_object_simplify_zero_initial <- function(object) {
+  if (is.function(object)) {
+    # simplification is only required for functions because once they are rxode2
+    # or nlmixr2 objects, the code has been transformed
+    base::body(object) <- nlmixr_object_simplify_zero_initial_helper(base::body(object))
+  }
+  object
+}
+
+nlmixr_object_simplify_zero_initial_helper <- function(object) {
+  if (rxode2:::.matchesLangTemplate(object, str2lang(".name(initial) <- ."))) {
+    object[[2]][[2]] <- 0
+  } else if (is.call(object)) {
+    for (idx in seq_along(object)) {
+      object[[idx]] <- nlmixr_object_simplify_zero_initial_helper(object[[idx]])
+    }
+  }
+  object
 }
 
 #' Standardize and simplify data for nlmixr2 estimation
@@ -34,12 +64,12 @@ nlmixr_object_simplify <- function(object) {
 #'
 #' @inheritParams nlmixr2est::nlmixr
 #' @param object an nlmixr_ui object (e.g. the output of running
-#'   \code{nlmixr(object=model)}
+#'   \code{nlmixr(object = model)}
 #' @return The data with the nlmixr2 column lower case and on the left and the
 #'   covariate columns on the right and alphabetically sorted.
 #' @family Simplifiers
 #' @export
-nlmixr_data_simplify <- function(data, object) {
+nlmixr_data_simplify <- function(data, object, table = list()) {
   nlmixr_cols <-
     c(
       # rxode2 columns
@@ -56,23 +86,36 @@ nlmixr_data_simplify <- function(data, object) {
   if (any(mask_duplicated)) {
     stop(
       "The following column(s) are duplicated when lower case: ",
-      paste0("'", nlmixr_names[mask_duplicated], "'", collapse=", ")
+      paste0("'", nlmixr_names[mask_duplicated], "'", collapse = ", ")
     )
   }
-  cov_names <- object$all.covs
-  missing_cov <- setdiff(cov_names, names(data))
-  if (length(missing_cov) > 0) {
-    stop(
-      "The following covariate column(s) are missing from the data: ",
-      paste0("'", missing_cov, "'", collapse=", ")
-    )
-  }
+  cov_names <- nlmixr_data_simplify_cols(data, cols = object$all.covs, type = "covariate")
+  keep_names <- nlmixr_data_simplify_cols(data, cols = table$keep, type = "keep")
   # Simplifying the nlmixr_names column names to always be lower case ensures
   # that upper/lower case column name changes will not affect the need to rerun.
   # Also, standardizing the column name order to always be the same will prevent
   # the need to rerun, so cov_names is sorted.
+
+  # Sorting so that they are in order, unique so that duplication between
+  # covariates and keep do not try to duplicate columns in the output data.
+  add_col_names <- sort(unique(c(cov_names, keep_names)))
+
+  # Drop names from nlmixr_names from the added names
+  add_col_names <- setdiff(add_col_names, nlmixr_names)
+
   stats::setNames(
-    object=data[, c(nlmixr_names, sort(cov_names)), drop=FALSE],
-    nm=c(tolower(nlmixr_names), sort(cov_names))
+    object = data[, c(nlmixr_names, add_col_names), drop = FALSE],
+    nm = c(tolower(nlmixr_names), add_col_names)
   )
+}
+
+nlmixr_data_simplify_cols <- function(data, cols, type) {
+  missing_col <- setdiff(cols, names(data))
+  if (length(missing_col) > 0) {
+    stop(
+      "The following ", type, " column(s) are missing from the data: ",
+      paste0("'", missing_col, "'", collapse = ", ")
+    )
+  }
+  cols
 }
