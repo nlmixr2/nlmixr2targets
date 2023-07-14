@@ -1,5 +1,6 @@
 ^nlmixrtargets\.Rproj$
 ^\.Rproj\.user$
+^LICENSE$
 ^LICENSE\.md$
 ^README\.Rmd$
 ^cran-comments\.md$

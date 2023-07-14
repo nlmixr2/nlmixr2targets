@@ -43,7 +43,7 @@ nlmixr_object_simplify_zero_initial <- function(object) {
 }
 
 nlmixr_object_simplify_zero_initial_helper <- function(object) {
-  if (rxode2:::.matchesLangTemplate(object, str2lang(".name(initial) <- ."))) {
+  if (rxode2::.matchesLangTemplate(object, str2lang(".name(initial) <- ."))) {
     object[[2]][[2]] <- 0
   } else if (is.call(object)) {
     for (idx in seq_along(object)) {
