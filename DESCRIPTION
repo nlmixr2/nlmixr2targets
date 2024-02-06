@@ -1,13 +1,13 @@
 Package: nlmixr2targets
-Title: Make it easier to use nlmixr2 with targets
+Title: Targets for 'nlmixr2' Pipelines
 Version: 0.0.0.9000
 Authors@R: 
     person("Bill", "Denney", email="wdenney@humanpredictions.com", role=c("aut", "cre"), comment=c(ORCID="0000-0002-5759-428X"))
 Description:
-  nlmixr has many specific items that make it amenable to use with
-  reproducible workflows.  The targets package enables reproducible workflows.
-  nlmixr2targets ensures minimal rework in model development with nlmixr and
-  targets by simplifying and standardizing models and datasets.
+  'nlmixr2' often has long runtimes.  A pipeline toolkit tailored to 'nlmixr2'
+  workflows leverages 'targets' and 'nlmixr2' to ease reproducible workflows.
+  'nlmixr2targets' ensures minimal rework in model development with 'nlmixr2'
+  and 'targets' by simplifying and standardizing models and datasets.
 License: GPL (>= 2)
 Suggests: 
     covr,
