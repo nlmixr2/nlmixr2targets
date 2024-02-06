@@ -115,3 +115,20 @@ test_that("nlmixr_object_simplify_zero_initial", {
   new_model <- nlmixr_object_simplify_zero_initial(pheno)
   expect_equal(body(new_model), body(pheno_0))
 })
+
+test_that("re-estimating a model works with covariates (#9)", {
+  bad_data_lower_case <- nlmixr2data::pheno_sd
+  bad_data_lower_case$id <- bad_data_lower_case$ID
+  fit_estimated <-
+    suppressMessages(
+      nlmixr2est::nlmixr(
+        object = model_simple,
+        data = nlmixr2data::pheno_sd,
+        est = "focei",
+        control = list(eval.max = 1)
+      )
+    )
+  expect_true(
+    "WT" %in% names(nlmixr_data_simplify(data = nlmixr2data::pheno_sd, object = fit_estimated))
+  )
+})

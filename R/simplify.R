@@ -89,7 +89,12 @@ nlmixr_data_simplify <- function(data, object, table = list()) {
       paste0("'", nlmixr_names[mask_duplicated], "'", collapse = ", ")
     )
   }
-  cov_names <- nlmixr_data_simplify_cols(data, cols = object$all.covs, type = "covariate")
+  if (!is.null(object$ui)) {
+    covVec <- object$ui$all.covs
+  } else {
+    covVec <- object$all.covs
+  }
+  cov_names <- nlmixr_data_simplify_cols(data, cols = covVec, type = "covariate")
   keep_names <- nlmixr_data_simplify_cols(data, cols = table$keep, type = "keep")
   # Simplifying the nlmixr_names column names to always be lower case ensures
   # that upper/lower case column name changes will not affect the need to rerun.
