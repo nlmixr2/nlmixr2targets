@@ -20,5 +20,6 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.1
 Imports: 
     nlmixr2est,
+    rxode2 (>= 2.0.14),
     targets
 URL: https://nlmixr2.github.io/nlmixr2targets/
