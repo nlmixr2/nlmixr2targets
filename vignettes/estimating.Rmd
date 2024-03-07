@@ -1,0 +1,36 @@
+---
+title: "Estimating nlmixr2 models with 'nlmixr2targets'"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Estimating nlmixr2 models with 'nlmixr2targets'}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(nlmixr2targets)
+```
+
+# Introduction to `nlmixr2targets`
+
+The `nlmixr2targets` improves reproducibility by ensuring that your model is
+up-to-date with your data, and it speeds your workflow using the `targets`
+package to only run models when the model or data have changed.
+
+There are two main functions that are used within the package:
+
+* `tar_nlmixr()` which runs a single model, and
+* `tar_nlmixr_multimodel()` which runs multiple models for a single dataset.
+
+Using `nlmixr2targets` requires the use of the `targets` package.  To learn
+about the `targets` package, see
+(https://docs.ropensci.org/targets/)[the targets website].
+
+# `tar_nlmixr()` usage

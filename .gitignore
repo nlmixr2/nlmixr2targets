@@ -3,3 +3,4 @@ docs
 .Rhistory
 _targets.R
 _targets
+inst/doc
