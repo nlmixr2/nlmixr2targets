@@ -10,7 +10,8 @@ tar_nlmixr_multimodel(
   data,
   est,
   control = list(),
-  table = nlmixr2est::tableControl()
+  table = nlmixr2est::tableControl(),
+  envir = parent.frame()
 )
 }
 \arguments{
@@ -42,6 +43,9 @@ to be different for each type of estimation method}
 
 \item{table}{The output table control object (like
 `tableControl()`)}
+
+\item{envir}{The environment where models are defined (usually doesn't need
+to be modified)}
 }
 \value{
 A list of targets for the model simplification, data simplification,
