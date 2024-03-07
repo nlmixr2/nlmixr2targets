@@ -51,16 +51,16 @@ tar_nlmixr <- function(name, object, data, est = NULL, control = list(), table =
   if (is.null(est)) {
     stop("'est' must not be null")
   }
-  name <- targets::tar_deparse_language(substitute(name))
+  name_parsed <- targets::tar_deparse_language(substitute(name))
   tar_nlmixr_raw(
-    name = name,
-    object = object,
-    data = data,
-    est = est,
-    control = control,
-    table = table,
-    object_simple_name = paste(name, "object_simple", sep = "_tar_"),
-    data_simple_name = paste(name, "data_simple", sep = "_tar_")
+    name = name_parsed,
+    object = substitute(object),
+    data = substitute(data),
+    est = substitute(est),
+    control = substitute(control),
+    table = substitute(table),
+    object_simple_name = paste(name_parsed, "object_simple", sep = "_tar_"),
+    data_simple_name = paste(name_parsed, "data_simple", sep = "_tar_")
   )
 }
 
@@ -75,7 +75,7 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table, object_simpl
       command =
         substitute(
           nlmixr_object_simplify(object = object),
-          list(object = substitute(object))
+          list(object = as.name(object))
         ),
       packages = "nlmixr2est"
     ),
@@ -86,8 +86,8 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table, object_simpl
           nlmixr_data_simplify(object = object_simple, data = data, table = table),
           list(
             object_simple = as.name(object_simple_name),
-            data = substitute(data),
-            table = substitute(table)
+            data = data,
+            table = table
           )
         )
     ),
@@ -102,11 +102,11 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table, object_simpl
             control = control
           ),
           list(
-            object_simple = as.name(object_simple_name),
-            data_simple = as.name(name_data_simple),
-            est = substitute(est),
-            control = substitute(control),
-            table = substitute(table)
+            object_simple_name = as.name(object_simple_name),
+            data_simple_name = as.name(data_simple_name),
+            est = est,
+            control = control,
+            table = table
           )
         ),
       packages = "nlmixr2est"
