@@ -69,6 +69,9 @@ tar_nlmixr <- function(name, object, data, est = NULL, control = list(), table =
 #'   and data
 #' @export
 tar_nlmixr_raw <- function(name, object, data, est, control, table, object_simple_name, data_simple_name) {
+  checkmate::assert_character(name, len = 1, min.chars = 1, any.missing = FALSE)
+  checkmate::assert_character(object_simple_name, len = 1, min.chars = 1, any.missing = FALSE)
+  checkmate::assert_character(data_simple_name, len = 1, min.chars = 1, any.missing = FALSE)
   list(
     targets::tar_target_raw(
       name = object_simple_name,
