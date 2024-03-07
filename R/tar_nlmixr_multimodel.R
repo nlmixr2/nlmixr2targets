@@ -10,10 +10,6 @@
 #'   and model estimation.
 #' @export
 tar_nlmixr_multimodel <- function(name, ..., data, est, control = list(), table = nlmixr2est::tableControl(), envir = parent.frame()) {
-  if (is.null(est)) {
-    stop("'est' must not be null")
-  }
-
   tar_nlmixr_multimodel_parse(
     name = targets::tar_deparse_language(substitute(name)),
     data = substitute(data),
