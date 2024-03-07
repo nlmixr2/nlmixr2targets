@@ -11,35 +11,64 @@ tar_nlmixr_multimodel <- function(name, ..., data, est, control = list(), table 
   if (is.null(est)) {
     stop("'est' must not be null")
   }
+
   tar_nlmixr_multimodel_parse(
     name = targets::tar_deparse_language(substitute(name)),
-    data = data,
-    est = est,
-    control = control,
-    table = table
+    data = substitute(data),
+    est = substitute(est),
+    control = substitute(control),
+    table = substitute(table),
+    # This extracts the ... argument similarly to using `substitute()`.  From
+    # https://stackoverflow.com/questions/55019441/deparse-substitute-with-three-dots-arguments
+    model_list = match.call(expand.dots = FALSE)$...
   )
 }
 
-tar_nlmixr_multimodel_parse <- function(name, data, est, control, table, ...) {
-  args <- list(...)
-  checkmate::assert_named(args, type = "unique")
-  lapply(
-    X = seq_along(args),
-    FUN = \(idx, data) {
-      tar_nlmixr_multimodel_single(
-        name = name,
-        object = args[[idx]],
-        data = data,
-        description = names(args)[[idx]],
-        est = est,
-        control = control,
-        table = table
-      )
-    }
+tar_nlmixr_multimodel_parse <- function(name, data, est, control, table, model_list) {
+  checkmate::assert_named(model_list, type = "unique")
+  ret_prep <-
+    lapply(
+      X = model_list,
+      FUN = tar_nlmixr_multimodel_single,
+      name = name,
+      data = data,
+      est = est,
+      control = control,
+      table = table
+    )
+  # Extract the targets to fit.  This will be a list of lists.  The inner list
+  # will have the three targets for fitting the model, and the outer list will
+  # be one element per model fit.
+  target_model_fitting <- lapply(X = unname(ret_prep), FUN = \(x) x[["target"]])
+  # Generate the combined list with names
+  combined_list <- lapply(X = ret_prep, FUN = \(x) as.name(x$name))
+  target_combined_list <- tar_target_raw(name = name, command = str2lang(deparse(combined_list)))
+  # Return the models to fit and the list-combining target
+  append(
+    target_model_fitting,
+    target_combined_list
   )
 }
 
-tar_nlmixr_multimodel_single <- function(name, object, data, description, est, control, table) {
-  tar_nlmixr(
+tar_nlmixr_multimodel_single <- function(object, name, data, est, control, table) {
+  # Hash the model itself without its description.  Then, if the description
+  # changes, the model will not need to rerun.
+  hash_long <- digest::digest(eval(object))
+  hash <- substr(hash_long, 1, 8)
+  name_hash <- paste(name, hash, sep = "_")
+  tar_prep <-
+    tar_nlmixr_raw(
+      name = name_hash,
+      object = object,
+      data = data,
+      est = est,
+      control = control,
+      table = table,
+      object_simple_name = paste0(name_hash, "_osimple"),
+      data_simple_name = paste0(name_hash, "_dsimple")
+    )
+  list(
+    target = tar_prep,
+    name = name_hash
   )
 }
