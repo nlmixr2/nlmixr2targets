@@ -3,3 +3,5 @@
 export(nlmixr_data_simplify)
 export(nlmixr_object_simplify)
 export(tar_nlmixr)
+export(tar_nlmixr_multimodel)
+export(tar_nlmixr_raw)

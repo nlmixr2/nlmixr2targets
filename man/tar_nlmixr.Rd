@@ -2,6 +2,7 @@
 % Please edit documentation in R/tar_nlmixr.R
 \name{tar_nlmixr}
 \alias{tar_nlmixr}
+\alias{tar_nlmixr_raw}
 \title{Generate a set of targets for nlmixr estimation}
 \usage{
 tar_nlmixr(
@@ -11,6 +12,17 @@ tar_nlmixr(
   est = NULL,
   control = list(),
   table = nlmixr2est::tableControl()
+)
+
+tar_nlmixr_raw(
+  name,
+  object,
+  data,
+  est,
+  control,
+  table,
+  object_simple_name,
+  data_simple_name
 )
 }
 \arguments{
@@ -27,8 +39,8 @@ running the same pipeline should get the same results,
 and no two targets in the same pipeline share the same seed.
 (Even dynamic branches have different names and thus different seeds.)
 You can recover the seed of a completed target
-with \code{tar_meta(your_target, seed)} and run \code{set.seed()} on the result
-to locally recreate the target's initial RNG state.}
+with \code{tar_meta(your_target, seed)} and run \code{\link[targets:tar_seed_set]{tar_seed_set()}}
+on the result to locally recreate the target's initial RNG state.}
 
 \item{object}{Fitted object or function specifying the model.}
 
@@ -42,24 +54,31 @@ to be different for each type of estimation method}
 
 \item{table}{The output table control object (like
 `tableControl()`)}
+
+\item{object_simple_name, data_simple_name}{target names to use for the object
+and data}
 }
 \value{
 A list of targets for the model simplification, data simplification,
 and model estimation.
 }
 \description{
-The targets generated will include the \code{name} as the final estimation
-step, \code{paste(name, "object_simple", sep = "_tar_")} (e.g.
+The targets generated will include the \code{name} as the final estimation step,
+\code{paste(name, "object_simple", sep = "_tar_")} (e.g.
 "pheno_tar_object_simple") as the simplified model object, and
-\code{paste(name, "data_simple", sep = "_tar_")} (e.g. "pheno_tar_data_simple")
-as the simplified data object.
+\code{paste(name, "data_simple", sep = "_tar_")} (e.g. "pheno_tar_data_simple") as
+the simplified data object.
 }
 \details{
-For the way that the objects are simplified, see
-\code{\link{nlmixr_object_simplify}()} and
-\code{\link{nlmixr_data_simplify}()}.  To see how to write initial conditions
-to work with targets, see \code{\link{nlmixr_object_simplify}()}.
+For the way that the objects are simplified, see \code{nlmixr_object_simplify()}
+and \code{nlmixr_data_simplify()}.  To see how to write initial conditions to work
+with targets, see \code{nlmixr_object_simplify()}.
 }
+\section{Functions}{
+\itemize{
+\item \code{tar_nlmixr_raw()}: An internal function to generate the targets
+
+}}
 \examples{
 \dontrun{
 library(targets)

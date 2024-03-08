@@ -1,15 +1,14 @@
 #' Generate a set of targets for nlmixr estimation
 #'
-#' The targets generated will include the \code{name} as the final estimation
-#' step, \code{paste(name, "object_simple", sep = "_tar_")} (e.g.
+#' The targets generated will include the `name` as the final estimation step,
+#' `paste(name, "object_simple", sep = "_tar_")` (e.g.
 #' "pheno_tar_object_simple") as the simplified model object, and
-#' \code{paste(name, "data_simple", sep = "_tar_")} (e.g. "pheno_tar_data_simple")
-#' as the simplified data object.
+#' `paste(name, "data_simple", sep = "_tar_")` (e.g. "pheno_tar_data_simple") as
+#' the simplified data object.
 #'
-#' For the way that the objects are simplified, see
-#' \code{\link{nlmixr_object_simplify}()} and
-#' \code{\link{nlmixr_data_simplify}()}.  To see how to write initial conditions
-#' to work with targets, see \code{\link{nlmixr_object_simplify}()}.
+#' For the way that the objects are simplified, see `nlmixr_object_simplify()`
+#' and `nlmixr_data_simplify()`.  To see how to write initial conditions to work
+#' with targets, see `nlmixr_object_simplify()`.
 #'
 #' @inheritParams nlmixr2est::nlmixr
 #' @inheritParams targets::tar_target
@@ -52,52 +51,68 @@ tar_nlmixr <- function(name, object, data, est = NULL, control = list(), table =
   if (is.null(est)) {
     stop("'est' must not be null")
   }
-  name <- targets::tar_deparse_language(substitute(name))
-  name_obj_simple <- paste(name, "object_simple", sep = "_tar_")
-  name_data_simple <- paste(name, "data_simple", sep = "_tar_")
-  ret <-
-    list(
-      targets::tar_target_raw(
-        name = name_obj_simple,
-        command =
-          substitute(
-            nlmixr_object_simplify(object = object),
-            list(object = substitute(object))
-          ),
-        packages = "nlmixr2est"
-      ),
-      targets::tar_target_raw(
-        name = name_data_simple,
-        command =
-          substitute(
-            nlmixr_data_simplify(object = object_simple, data = data, table = table),
-            list(
-              object_simple = as.name(name_obj_simple),
-              data = substitute(data),
-              table = substitute(table)
-            )
+  name_parsed <- targets::tar_deparse_language(substitute(name))
+  tar_nlmixr_raw(
+    name = name_parsed,
+    object = substitute(object),
+    data = substitute(data),
+    est = substitute(est),
+    control = substitute(control),
+    table = substitute(table),
+    object_simple_name = paste(name_parsed, "object_simple", sep = "_tar_"),
+    data_simple_name = paste(name_parsed, "data_simple", sep = "_tar_")
+  )
+}
+
+#' @describeIn tar_nlmixr An internal function to generate the targets
+#' @param object_simple_name,data_simple_name target names to use for the object
+#'   and data
+#' @export
+tar_nlmixr_raw <- function(name, object, data, est, control, table, object_simple_name, data_simple_name) {
+  checkmate::assert_character(name, len = 1, min.chars = 1, any.missing = FALSE)
+  checkmate::assert_character(object_simple_name, len = 1, min.chars = 1, any.missing = FALSE)
+  checkmate::assert_character(data_simple_name, len = 1, min.chars = 1, any.missing = FALSE)
+  list(
+    targets::tar_target_raw(
+      name = object_simple_name,
+      command =
+        substitute(
+          nlmixr_object_simplify(object = object),
+          list(object = as.name(object))
+        ),
+      packages = "nlmixr2est"
+    ),
+    targets::tar_target_raw(
+      name = data_simple_name,
+      command =
+        substitute(
+          nlmixr_data_simplify(object = object_simple, data = data, table = table),
+          list(
+            object_simple = as.name(object_simple_name),
+            data = data,
+            table = table
           )
-      ),
-      targets::tar_target_raw(
-        name = name,
-        command =
-          substitute(
-            nlmixr2est::nlmixr(
-              object = object_simple,
-              data = data_simple,
-              est = est,
-              control = control
-            ),
-            list(
-              object_simple = as.name(name_obj_simple),
-              data_simple = as.name(name_data_simple),
-              est = substitute(est),
-              control = substitute(control),
-              table = substitute(table)
-            )
+        )
+    ),
+    targets::tar_target_raw(
+      name = name,
+      command =
+        substitute(
+          nlmixr2est::nlmixr(
+            object = object_simple_name,
+            data = data_simple_name,
+            est = est,
+            control = control
           ),
-        packages = "nlmixr2est"
-      )
+          list(
+            object_simple_name = as.name(object_simple_name),
+            data_simple_name = as.name(data_simple_name),
+            est = est,
+            control = control,
+            table = table
+          )
+        ),
+      packages = "nlmixr2est"
     )
-  ret
+  )
 }
