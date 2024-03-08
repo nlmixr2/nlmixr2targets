@@ -33,4 +33,135 @@ Using `nlmixr2targets` requires the use of the `targets` package.  To learn
 about the `targets` package, see
 (https://docs.ropensci.org/targets/)[the targets website].
 
-# `tar_nlmixr()` usage
+# Model modifications to use `nlmixr2targets`
+
+When running a model with `nlmixr2targets`, it must be interpretable by the
+`targets` package.  The only notable issue comes from setting initial conditions
+for a compartment, such as using `pd(0) <- initialConc`.  The reason this
+doesn't work is the `targets` package does not allow the assignment into zero.
+So, for any initial conditions, you will need to set them with `initial` instead
+of `0`.  The example above would be `pd(initial) <- initialConc`, and
+`nlmixr2targets` will convert it to the model `nlmixr2` expects for you.
+
+# Running one model with one dataset (`tar_nlmixr()`)
+
+The `tar_nlmixr()` function allows you to estimate one model with one dataset.
+It will generate three targets:  a simplified version of the model, a minimal
+version of the dataset, and the estimation step.
+
+The simplified version of the model removes parts that are less reproducible but
+changes none of the model intent.  (Advanced information:  The parts that are
+removed are that the source references and the model name.  Also, the model is
+modified at this step for setting initial values as described in the previous
+section of this vignette.)
+
+```{r using-tar_nlmixr, eval = FALSE}
+library(targets)
+library(tarchetypes)
+library(nlmixr2targets)
+
+pheno <- function() {
+  ini({
+    lcl <- log(0.008); label("Typical value of clearance")
+    lvc <-  log(0.6); label("Typical value of volume of distribution")
+    etalcl + etalvc ~ c(1,
+                        0.01, 1)
+    cpaddSd <- 0.1; label("residual variability")
+  })
+  model({
+    cl <- exp(lcl + etalcl)
+    vc <- exp(lvc + etalvc)
+    kel <- cl/vc
+    d/dt(central) <- -kel*central
+    cp <- central/vc
+    cp ~ add(cpaddSd)
+  })
+}
+
+plan_model <-
+  tar_plan(
+    myData = nlmixr2data::pheno_sd,
+    tar_nlmixr(
+      model_pheno,
+      object = pheno,
+      data = myData,
+      est = "saem"
+    )
+  )
+
+list(
+  plan_model
+)
+```
+
+# Running multiple model with one dataset (`tar_nlmixr_multimodel()`)
+
+A common use case is to generate multiple models using a single dataset and
+estimation method.  `tar_nlmixr_multimodel()` allows the generation of a named
+list of models to allow subsequent analysis of all models.
+
+Internally, `tar_nlmixr_multimodel()` passes all the models to `tar_nlmixr()` so
+that the data set simplification and equivalent steps run once per model, and
+not model is run more often than required for dataset or model changes.
+
+```{r using-tar_nlmixr, eval = FALSE}
+library(targets)
+library(tarchetypes)
+library(nlmixr2targets)
+
+pheno <- function() {
+  ini({
+    lcl <- log(0.008); label("Typical value of clearance")
+    lvc <-  log(0.6); label("Typical value of volume of distribution")
+    etalcl + etalvc ~ c(1,
+                        0.01, 1)
+    cpaddSd <- 0.1; label("residual variability")
+  })
+  model({
+    cl <- exp(lcl + etalcl)
+    vc <- exp(lvc + etalvc)
+    kel <- cl/vc
+    d/dt(central) <- -kel*central
+    cp <- central/vc
+    cp ~ add(cpaddSd)
+  })
+}
+
+pheno2 <- function() {
+  ini({
+    lcl <- log(0.008); label("Typical value of clearance")
+    lvc <-  log(0.6); label("Typical value of volume of distribution")
+    etalcl + etalvc ~ c(2,
+                        0.01, 2)
+    cpaddSd <- 3.0; label("residual variability")
+  })
+  model({
+    cl <- exp(lcl + etalcl)
+    vc <- exp(lvc + etalvc)
+    kel <- cl/vc
+    d/dt(central) <- -kel*central
+    cp <- central/vc
+    cp ~ add(cpaddSd)
+  })
+}
+
+plan_model <-
+  tar_nlmixr_multimodel(
+    all_models,
+    data = nlmixr2data::pheno_sd,
+    est = "saem",
+    "Base one-compartment model; IIV in clearance and volume; additive residual error" = pheno,
+    "Base one-compartment model; IIV in clearance and volume; additive residual error (estimate starting at 3)" = pheno2
+  )
+
+plan_report <-
+  tar_plan(
+    # Determine the AIC for all tested models
+    aic_list = sapply(X = all_models, FUN = AIC)
+  )
+
+list(
+  plan_model,
+  plan_report
+)
+```
