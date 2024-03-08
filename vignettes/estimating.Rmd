@@ -150,8 +150,8 @@ plan_model <-
     all_models,
     data = nlmixr2data::pheno_sd,
     est = "saem",
-    "Base one-compartment model; IIV in clearance and volume; additive residual error" = pheno,
-    "Base one-compartment model; IIV in clearance and volume; additive residual error (estimate starting at 3)" = pheno2
+    "Base model; additive residual error = 1" = pheno,
+    "Base model; additive residual error = 3" = pheno2
   )
 
 plan_report <-
