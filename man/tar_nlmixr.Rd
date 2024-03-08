@@ -70,9 +70,9 @@ The targets generated will include the \code{name} as the final estimation step,
 the simplified data object.
 }
 \details{
-For the way that the objects are simplified, see \code{nlmixr_object_simplify()}
-and \code{nlmixr_data_simplify()}.  To see how to write initial conditions to work
-with targets, see \code{nlmixr_object_simplify()}.
+For the way that the objects are simplified, see \code{nlmixr_object_simplify()}.
+To see how to write initial conditions to work with targets, see
+\code{nlmixr_object_simplify()}.
 }
 \section{Functions}{
 \itemize{

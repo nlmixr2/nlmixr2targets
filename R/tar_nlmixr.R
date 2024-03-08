@@ -6,9 +6,9 @@
 #' `paste(name, "data_simple", sep = "_tar_")` (e.g. "pheno_tar_data_simple") as
 #' the simplified data object.
 #'
-#' For the way that the objects are simplified, see `nlmixr_object_simplify()`
-#' and `nlmixr_data_simplify()`.  To see how to write initial conditions to work
-#' with targets, see `nlmixr_object_simplify()`.
+#' For the way that the objects are simplified, see `nlmixr_object_simplify()`.
+#' To see how to write initial conditions to work with targets, see
+#' `nlmixr_object_simplify()`.
 #'
 #' @inheritParams nlmixr2est::nlmixr
 #' @inheritParams targets::tar_target
@@ -86,7 +86,7 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table, object_simpl
       name = data_simple_name,
       command =
         substitute(
-          nlmixr_data_simplify(object = object_simple, data = data, table = table),
+          rxode2::etTrans(inData = data, obj = object_simple, keep = table$keep),
           list(
             object_simple = as.name(object_simple_name),
             data = data,

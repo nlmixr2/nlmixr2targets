@@ -25,8 +25,4 @@ Since setting initial conditions with \code{cmt(0)} does not work with \code{tar
 the function definition of the object must set it with \code{cmt(initial)}.
 \code{cmt(initial)} will be converted to \code{cmt(0)} before passing to nlmixr2.
 }
-\seealso{
-Other Simplifiers: 
-\code{\link{nlmixr_data_simplify}()}
-}
 \concept{Simplifiers}
