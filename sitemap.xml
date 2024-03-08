@@ -16,6 +16,12 @@
     <loc>https://nlmixr2.github.io/nlmixr2targets/LICENSE.html</loc>
   </url>
   <url>
+    <loc>https://nlmixr2.github.io/nlmixr2targets/articles/estimating.html</loc>
+  </url>
+  <url>
+    <loc>https://nlmixr2.github.io/nlmixr2targets/articles/index.html</loc>
+  </url>
+  <url>
     <loc>https://nlmixr2.github.io/nlmixr2targets/authors.html</loc>
   </url>
   <url>
@@ -35,5 +41,8 @@
   </url>
   <url>
     <loc>https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.html</loc>
+  </url>
+  <url>
+    <loc>https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel.html</loc>
   </url>
 </urlset>
