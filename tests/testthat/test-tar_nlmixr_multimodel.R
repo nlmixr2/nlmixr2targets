@@ -62,3 +62,50 @@ test_that("tar_nlmixr_multimodel", {
   expect_equal(collating_call[[2]], as.name(target_list[[1]][[3]]$settings$name))
   expect_equal(collating_call[[3]], as.name(target_list[[2]][[3]]$settings$name))
 })
+
+test_that("tar_nlmixr_multimodel works with long model names", {
+  pheno <- function() {
+    ini({
+      lcl <- log(0.008); label("Typical value of clearance")
+      lvc <-  log(0.6); label("Typical value of volume of distribution")
+      etalcl + etalvc ~ c(1,
+                          0.01, 1)
+      cpaddSd <- 0.1; label("residual variability")
+    })
+    model({
+      cl <- exp(lcl + etalcl)
+      vc <- exp(lvc + etalvc)
+      kel <- cl/vc
+      d/dt(central) <- -kel*central
+      cp <- central/vc
+      cp ~ add(cpaddSd)
+    })
+  }
+
+  pheno2 <- function() {
+    ini({
+      lcl <- log(0.008); label("Typical value of clearance")
+      lvc <-  log(0.6); label("Typical value of volume of distribution")
+      etalcl + etalvc ~ c(2,
+                          0.01, 2)
+      cpaddSd <- 3.0; label("residual variability")
+    })
+    model({
+      cl <- exp(lcl + etalcl)
+      vc <- exp(lvc + etalvc)
+      kel <- cl/vc
+      d/dt(central) <- -kel*central
+      cp <- central/vc
+      cp ~ add(cpaddSd)
+    })
+  }
+  plan_model <-
+    tar_nlmixr_multimodel(
+      all_models,
+      data = nlmixr2data::pheno_sd,
+      est = "saem",
+      "Base one-compartment model; IIV in clearance and volume; additive residual error" = pheno,
+      "Base one-compartment model; IIV in clearance and volume; additive residual error (estimate starting at 3)" = pheno2
+    )
+  expect_true(inherits(target_list, "list"))
+})

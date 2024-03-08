@@ -42,7 +42,12 @@ tar_nlmixr_multimodel_parse <- function(name, data, est, control, table, model_l
   target_model_fitting <- lapply(X = unname(ret_prep), FUN = \(x) x[["target"]])
   # Generate the combined list with names
   combined_list <- lapply(X = ret_prep, FUN = \(x) as.name(x$name))
-  target_combined_list <- targets::tar_target_raw(name = name, command = str2lang(deparse(combined_list)))
+  call_list <- str2lang("list()")
+  for (idx in seq_along(combined_list)) {
+    call_list[[idx + 1]] <- combined_list[[idx]]
+  }
+  names(call_list) <- c("", names(combined_list))
+  target_combined_list <- targets::tar_target_raw(name = name, command = call_list)
   # Return the models to fit and the list-combining target
   append(
     target_model_fitting,
