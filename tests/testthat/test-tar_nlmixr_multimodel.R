@@ -99,7 +99,7 @@ test_that("tar_nlmixr_multimodel works with long model names", {
       cp ~ add(cpaddSd)
     })
   }
-  plan_model <-
+  target_list <-
     tar_nlmixr_multimodel(
       all_models,
       data = nlmixr2data::pheno_sd,
