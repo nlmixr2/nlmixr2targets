@@ -84,7 +84,7 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table, object_simpl
       command =
         substitute(
           nlmixr_object_simplify(object = object),
-          list(object = as.name(object))
+          list(object = object)
         ),
       packages = "nlmixr2est"
     ),
@@ -134,13 +134,16 @@ set_env_object_noinitial <- function(object, env) {
   if (is.name(object)) {
     object_env <- env[[as.character(object)]]
     if (is.function(object_env)) {
-      object_result <- try(object_env(), silent = TRUE)
+      object_result <- try(rxode2::assertRxUi(object_env), silent = TRUE)
       if (inherits(object_result, "rxUi")) {
         assign(x = as.character(object), value = object_result, envir = env)
       }
     }
-  } else {
-    stop("Object must be a name")
+  } else if (is.call(object)) {
+    # Recursively iterate over all parts of the call
+    lapply(X = object, FUN = set_env_object_noinitial, env = env)
   }
+  # If it's anything other than a name or a call, then we don't need to modify
+  # it or its sub-objects.
   NULL
 }
