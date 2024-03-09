@@ -96,20 +96,6 @@ package, see (<a href="https://docs.ropensci.org/targets/" class="external-link 
 website].</p>
 </div>
 <div class="section level2">
-<h2 id="model-modifications-to-use-nlmixr2targets">Model modifications to use <code>nlmixr2targets</code><a class="anchor" aria-label="anchor" href="#model-modifications-to-use-nlmixr2targets"></a>
-</h2>
-<p>When running a model with <code>nlmixr2targets</code>, it must be
-interpretable by the <code>targets</code> package. The only notable
-issue comes from setting initial conditions for a compartment, such as
-using <code>pd(0) &lt;- initialConc</code>. The reason this doesn’t work
-is the <code>targets</code> package does not allow the assignment into
-zero. So, for any initial conditions, you will need to set them with
-<code>initial</code> instead of <code>0</code>. The example above would
-be <code>pd(initial) &lt;- initialConc</code>, and
-<code>nlmixr2targets</code> will convert it to the model
-<code>nlmixr2</code> expects for you.</p>
-</div>
-<div class="section level2">
 <h2 id="running-one-model-with-one-dataset-tar_nlmixr">Running one model with one dataset (<code>tar_nlmixr()</code>)<a class="anchor" aria-label="anchor" href="#running-one-model-with-one-dataset-tar_nlmixr"></a>
 </h2>
 <p>The <code><a href="../reference/tar_nlmixr.html">tar_nlmixr()</a></code> function allows you to estimate one
