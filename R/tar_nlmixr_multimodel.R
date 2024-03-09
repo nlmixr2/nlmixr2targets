@@ -4,12 +4,11 @@
 #'   modelFunction`
 #' @inheritParams nlmixr2est::nlmixr
 #' @inheritParams targets::tar_target
-#' @param envir The environment where models are defined (usually doesn't need
-#'   to be modified)
+#' @inheritParams tar_nlmixr
 #' @return A list of targets for the model simplification, data simplification,
 #'   and model estimation.
 #' @export
-tar_nlmixr_multimodel <- function(name, ..., data, est, control = list(), table = nlmixr2est::tableControl(), envir = parent.frame()) {
+tar_nlmixr_multimodel <- function(name, ..., data, est, control = list(), table = nlmixr2est::tableControl(), env = parent.frame()) {
   tar_nlmixr_multimodel_parse(
     name = targets::tar_deparse_language(substitute(name)),
     data = substitute(data),
@@ -19,11 +18,11 @@ tar_nlmixr_multimodel <- function(name, ..., data, est, control = list(), table 
     # This extracts the ... argument similarly to using `substitute()`.  From
     # https://stackoverflow.com/questions/55019441/deparse-substitute-with-three-dots-arguments
     model_list = match.call(expand.dots = FALSE)$...,
-    envir = envir
+    env = env
   )
 }
 
-tar_nlmixr_multimodel_parse <- function(name, data, est, control, table, model_list, envir) {
+tar_nlmixr_multimodel_parse <- function(name, data, est, control, table, model_list, env) {
   checkmate::assert_named(model_list, type = "unique")
   ret_prep <-
     lapply(
@@ -34,7 +33,7 @@ tar_nlmixr_multimodel_parse <- function(name, data, est, control, table, model_l
       est = est,
       control = control,
       table = table,
-      envir = envir
+      env = env
     )
   # Extract the targets to fit.  This will be a list of lists.  The inner list
   # will have the three targets for fitting the model, and the outer list will
@@ -55,10 +54,10 @@ tar_nlmixr_multimodel_parse <- function(name, data, est, control, table, model_l
   )
 }
 
-tar_nlmixr_multimodel_single <- function(object, name, data, est, control, table, envir) {
+tar_nlmixr_multimodel_single <- function(object, name, data, est, control, table, env) {
   # Hash the model itself without its description.  Then, if the description
   # changes, the model will not need to rerun.
-  hash_long <- digest::digest(eval(object, envir = envir))
+  hash_long <- digest::digest(eval(object, env = env))
   hash <- substr(hash_long, 1, 8)
   name_hash <- paste(name, hash, sep = "_")
   tar_prep <-
@@ -70,7 +69,8 @@ tar_nlmixr_multimodel_single <- function(object, name, data, est, control, table
       control = control,
       table = table,
       object_simple_name = paste0(name_hash, "_osimple"),
-      data_simple_name = paste0(name_hash, "_dsimple")
+      data_simple_name = paste0(name_hash, "_dsimple"),
+      env = env
     )
   list(
     target = tar_prep,

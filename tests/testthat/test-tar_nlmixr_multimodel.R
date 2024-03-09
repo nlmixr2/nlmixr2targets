@@ -109,3 +109,63 @@ test_that("tar_nlmixr_multimodel works with long model names", {
     )
   expect_true(inherits(target_list, "list"))
 })
+
+test_that("tar_nlmixr_multimodel works with initial condition setting `central(0) <- 0`", {
+  pheno <- function() {
+    ini({
+      lcl <- log(0.008); label("Typical value of clearance")
+      lvc <-  log(0.6); label("Typical value of volume of distribution")
+      etalcl + etalvc ~ c(1,
+                          0.01, 1)
+      cpaddSd <- 0.1; label("residual variability")
+    })
+    model({
+      cl <- exp(lcl + etalcl)
+      vc <- exp(lvc + etalvc)
+      kel <- cl/vc
+      d/dt(central) <- -kel*central
+      central(0) <- 0
+      cp <- central/vc
+      cp ~ add(cpaddSd)
+    })
+  }
+
+  target_list <-
+    tar_nlmixr_multimodel(
+      name = foo, data = nlmixr2data::pheno_sd, est = "saem",
+      "my first model" = pheno
+    )
+  expect_s3_class(pheno, "rxUi")
+})
+
+targets::tar_test("tar_nlmixr_multimodel works with initial condition setting `central(0) <- 0`, running the targets", {
+  targets::tar_script({
+    pheno <- function() {
+      ini({
+        lcl <- log(0.008); label("Typical value of clearance")
+        lvc <-  log(0.6); label("Typical value of volume of distribution")
+        etalcl + etalvc ~ c(1,
+                            0.01, 1)
+        cpaddSd <- 0.1; label("residual variability")
+      })
+      model({
+        cl <- exp(lcl + etalcl)
+        vc <- exp(lvc + etalvc)
+        kel <- cl/vc
+        d/dt(central) <- -kel*central
+        central(0) <- 0
+        cp <- central/vc
+        cp ~ add(cpaddSd)
+      })
+    }
+
+    target_list <-
+      tar_nlmixr_multimodel(
+        name = foo, data = nlmixr2data::pheno_sd, est = "saem",
+        "my first model" = pheno
+      )
+  })
+  # This is really testing that there was no error when running the targets due
+  # to the `central(0) <- 0` line
+  expect_type(targets::tar_outdated(callr_function = NULL), "character")
+})

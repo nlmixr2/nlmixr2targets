@@ -11,7 +11,8 @@ tar_nlmixr(
   data,
   est = NULL,
   control = list(),
-  table = nlmixr2est::tableControl()
+  table = nlmixr2est::tableControl(),
+  env = parent.frame()
 )
 
 tar_nlmixr_raw(
@@ -22,7 +23,8 @@ tar_nlmixr_raw(
   control,
   table,
   object_simple_name,
-  data_simple_name
+  data_simple_name,
+  env
 )
 }
 \arguments{
@@ -54,6 +56,9 @@ to be different for each type of estimation method}
 
 \item{table}{The output table control object (like
 `tableControl()`)}
+
+\item{env}{The environment where the model is setup (not needed for typical
+use)}
 
 \item{object_simple_name, data_simple_name}{target names to use for the object
 and data}
