@@ -33,16 +33,6 @@ Using `nlmixr2targets` requires the use of the `targets` package.  To learn
 about the `targets` package, see
 (https://docs.ropensci.org/targets/)[the targets website].
 
-# Model modifications to use `nlmixr2targets`
-
-When running a model with `nlmixr2targets`, it must be interpretable by the
-`targets` package.  The only notable issue comes from setting initial conditions
-for a compartment, such as using `pd(0) <- initialConc`.  The reason this
-doesn't work is the `targets` package does not allow the assignment into zero.
-So, for any initial conditions, you will need to set them with `initial` instead
-of `0`.  The example above would be `pd(initial) <- initialConc`, and
-`nlmixr2targets` will convert it to the model `nlmixr2` expects for you.
-
 # Running one model with one dataset (`tar_nlmixr()`)
 
 The `tar_nlmixr()` function allows you to estimate one model with one dataset.

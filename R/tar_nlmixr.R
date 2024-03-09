@@ -12,6 +12,8 @@
 #'
 #' @inheritParams nlmixr2est::nlmixr
 #' @inheritParams targets::tar_target
+#' @param env The environment where the model is setup (not needed for typical
+#'   use)
 #' @return A list of targets for the model simplification, data simplification,
 #'   and model estimation.
 #' @examples
@@ -47,7 +49,7 @@
 #' targets::tar_make()
 #' }
 #' @export
-tar_nlmixr <- function(name, object, data, est = NULL, control = list(), table = nlmixr2est::tableControl()) {
+tar_nlmixr <- function(name, object, data, est = NULL, control = list(), table = nlmixr2est::tableControl(), env = parent.frame()) {
   if (is.null(est)) {
     stop("'est' must not be null")
   }
@@ -60,7 +62,8 @@ tar_nlmixr <- function(name, object, data, est = NULL, control = list(), table =
     control = substitute(control),
     table = substitute(table),
     object_simple_name = paste(name_parsed, "object_simple", sep = "_tar_"),
-    data_simple_name = paste(name_parsed, "data_simple", sep = "_tar_")
+    data_simple_name = paste(name_parsed, "data_simple", sep = "_tar_"),
+    env = env
   )
 }
 
@@ -68,17 +71,20 @@ tar_nlmixr <- function(name, object, data, est = NULL, control = list(), table =
 #' @param object_simple_name,data_simple_name target names to use for the object
 #'   and data
 #' @export
-tar_nlmixr_raw <- function(name, object, data, est, control, table, object_simple_name, data_simple_name) {
+tar_nlmixr_raw <- function(name, object, data, est, control, table, object_simple_name, data_simple_name, env) {
   checkmate::assert_character(name, len = 1, min.chars = 1, any.missing = FALSE)
   checkmate::assert_character(object_simple_name, len = 1, min.chars = 1, any.missing = FALSE)
   checkmate::assert_character(data_simple_name, len = 1, min.chars = 1, any.missing = FALSE)
+
+  # Make models with initial conditions set work within `targets` (see #15)
+  set_env_object_noinitial(object = object, env = env)
   list(
     targets::tar_target_raw(
       name = object_simple_name,
       command =
         substitute(
           nlmixr_object_simplify(object = object),
-          list(object = as.name(object))
+          list(object = object)
         ),
       packages = "nlmixr2est"
     ),
@@ -115,4 +121,29 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table, object_simpl
       packages = "nlmixr2est"
     )
   )
+}
+
+#' Ensure that an object is set in its initial environment so that it is
+#' protected from the `targets` domain-specific-language issue of
+#' `pd(0) <- initial`
+#'
+#' @inheritParams tar_nlmixr
+#' @return NULL (called for side effects)
+#' @noRd
+set_env_object_noinitial <- function(object, env) {
+  if (is.name(object)) {
+    object_env <- env[[as.character(object)]]
+    if (is.function(object_env)) {
+      object_result <- try(rxode2::assertRxUi(object_env), silent = TRUE)
+      if (inherits(object_result, "rxUi")) {
+        assign(x = as.character(object), value = object_result, envir = env)
+      }
+    }
+  } else if (is.call(object)) {
+    # Recursively iterate over all parts of the call
+    lapply(X = object, FUN = set_env_object_noinitial, env = env)
+  }
+  # If it's anything other than a name or a call, then we don't need to modify
+  # it or its sub-objects.
+  NULL
 }
