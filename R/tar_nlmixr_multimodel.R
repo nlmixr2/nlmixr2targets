@@ -57,7 +57,7 @@ tar_nlmixr_multimodel_parse <- function(name, data, est, control, table, model_l
 tar_nlmixr_multimodel_single <- function(object, name, data, est, control, table, env) {
   # Hash the model itself without its description.  Then, if the description
   # changes, the model will not need to rerun.
-  hash_long <- digest::digest(eval(object, env = env))
+  hash_long <- digest::digest(eval(object, envir = env))
   hash <- substr(hash_long, 1, 8)
   name_hash <- paste(name, hash, sep = "_")
   tar_prep <-
