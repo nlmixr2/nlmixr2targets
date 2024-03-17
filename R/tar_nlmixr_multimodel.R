@@ -70,6 +70,7 @@ tar_nlmixr_multimodel_single <- function(object, name, data, est, control, table
       table = table,
       object_simple_name = paste0(name_hash, "_osimple"),
       data_simple_name = paste0(name_hash, "_dsimple"),
+      fit_simple_name = paste0(name_hash, "_fitsimple"),
       env = env
     )
   list(
