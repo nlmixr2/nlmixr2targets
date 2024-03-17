@@ -63,15 +63,18 @@ tar_nlmixr <- function(name, object, data, est = NULL, control = list(), table =
     table = substitute(table),
     object_simple_name = paste(name_parsed, "object_simple", sep = "_tar_"),
     data_simple_name = paste(name_parsed, "data_simple", sep = "_tar_"),
+    fit_simple_name = paste(name_parsed, "fit_simple", sep = "_tar_"),
     env = env
   )
 }
 
 #' @describeIn tar_nlmixr An internal function to generate the targets
-#' @param object_simple_name,data_simple_name target names to use for the object
-#'   and data
+#' @param object_simple_name,data_simple_name,fit_simple_name target names to
+#'   use for the simplified object, simplified data, fit of the simplified
+#'   object with the simplified data, and fit with the original data
+#'   re-inserted.
 #' @export
-tar_nlmixr_raw <- function(name, object, data, est, control, table, object_simple_name, data_simple_name, env) {
+tar_nlmixr_raw <- function(name, object, data, est, control, table, object_simple_name, data_simple_name, fit_simple_name, env) {
   checkmate::assert_character(name, len = 1, min.chars = 1, any.missing = FALSE)
   checkmate::assert_character(object_simple_name, len = 1, min.chars = 1, any.missing = FALSE)
   checkmate::assert_character(data_simple_name, len = 1, min.chars = 1, any.missing = FALSE)
@@ -86,7 +89,7 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table, object_simpl
           nlmixr_object_simplify(object = object),
           list(object = object)
         ),
-      packages = "nlmixr2est"
+      packages = c("nlmixr2targets", "nlmixr2est")
     ),
     targets::tar_target_raw(
       name = data_simple_name,
@@ -98,10 +101,11 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table, object_simpl
             data = data,
             table = table
           )
-        )
+        ),
+      packages = "nlmixr2targets"
     ),
     targets::tar_target_raw(
-      name = name,
+      name = fit_simple_name,
       command =
         substitute(
           nlmixr2est::nlmixr(
@@ -119,6 +123,18 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table, object_simpl
           )
         ),
       packages = "nlmixr2est"
+    ),
+    targets::tar_target_raw(
+      name = name,
+      command =
+        substitute(
+          assign_origData(fit = fit, data = data),
+          list(
+            fit = as.name(fit_simple_name),
+            data = data
+          )
+        ),
+      packages = "nlmixr2targets"
     )
   )
 }
@@ -146,4 +162,22 @@ set_env_object_noinitial <- function(object, env) {
   # If it's anything other than a name or a call, then we don't need to modify
   # it or its sub-objects.
   NULL
+}
+
+#' Replace the fit data with the original data, then return the modified fit
+#'
+#' This function is intended for use within `nlmixr2targets` target creation,
+#' and it's not typically invoked by users.
+#'
+#' @param fit an estimated `nlmixr2` object
+#' @param data the data from the original fit
+#' @returns The fit with the data added back in as `fit$env$origData`
+#' @keywords Internal
+#' @export
+assign_origData <- function(fit, data) {
+  # The data being replaced must have the same number of rows as the original
+  # data
+  checkmate::assert_data_frame(data, nrows = nrow(fit$env$origData))
+  assign(x = "origData", value = data, envir = fit$env)
+  fit
 }
