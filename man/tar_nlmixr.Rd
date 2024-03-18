@@ -24,6 +24,7 @@ tar_nlmixr_raw(
   table,
   object_simple_name,
   data_simple_name,
+  fit_simple_name,
   env
 )
 }
@@ -60,8 +61,10 @@ to be different for each type of estimation method}
 \item{env}{The environment where the model is setup (not needed for typical
 use)}
 
-\item{object_simple_name, data_simple_name}{target names to use for the object
-and data}
+\item{object_simple_name, data_simple_name, fit_simple_name}{target names to
+use for the simplified object, simplified data, fit of the simplified
+object with the simplified data, and fit with the original data
+re-inserted.}
 }
 \value{
 A list of targets for the model simplification, data simplification,

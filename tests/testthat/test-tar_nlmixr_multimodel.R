@@ -45,9 +45,9 @@ test_that("tar_nlmixr_multimodel", {
   # One for each model and then one for combining everything
   expect_length(target_list, 3)
   # Data and object simplification, then the fitting
-  expect_length(target_list[[1]], 3)
+  expect_length(target_list[[1]], 4)
   # Data and object simplification, then the fitting
-  expect_length(target_list[[2]], 3)
+  expect_length(target_list[[2]], 4)
   # Combine the fit models as a single step
   expect_s3_class(target_list[[3]], "tar_stem")
   expect_equal(target_list[[3]]$settings$name, "foo")
@@ -59,8 +59,8 @@ test_that("tar_nlmixr_multimodel", {
   expect_equal(names(collating_call), c("", "my first model", "my second model"))
 
   # Verify the targets created are the ones being collated
-  expect_equal(collating_call[[2]], as.name(target_list[[1]][[3]]$settings$name))
-  expect_equal(collating_call[[3]], as.name(target_list[[2]][[3]]$settings$name))
+  expect_equal(collating_call[[2]], as.name(target_list[[1]][[4]]$settings$name))
+  expect_equal(collating_call[[3]], as.name(target_list[[2]][[4]]$settings$name))
 })
 
 test_that("tar_nlmixr_multimodel works with long model names", {
