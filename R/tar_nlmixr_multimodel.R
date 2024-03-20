@@ -46,13 +46,15 @@ tar_nlmixr_multimodel_parse <- function(name, data, est, control, table, model_l
   while (any(mask_self_referential)) {
     mask_self_referential_orig <- mask_self_referential
     model_list_self_reference <- model_list[mask_self_referential]
+    # Generate a mapping of names to their target names, only for
+    # non-self-referential models.
     name_map <-
       setNames(
         vapply(X = ret_prep, FUN = \(x) x$name, FUN.VALUE = ""),
         # rxode2::.matchesLangTemplate() treats single vs double quotes in a
         # call the same.
         sprintf("%s[['%s']]", name, names(ret_prep))
-      )
+      )[!mask_self_referential]
     model_list_fewer_self_ref <-
       tar_nlmixr_multimodel_remove_self_reference(model_list = model_list[mask_self_referential], name_map = name_map)
     # Replace self-referential models with possibly-not-self-referential models

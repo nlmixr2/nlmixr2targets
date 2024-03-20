@@ -221,15 +221,44 @@ test_that("tar_nlmixr_multimodel works for within-list model piping (#19), direc
         target_list[[1]]$fit_simple$settings$name
       ))
   ))
+
+  # Verify that circular references are caught
+  expect_error(
+    tar_nlmixr_multimodel(
+      name = foo, data = nlmixr2data::pheno_sd, est = "saem",
+      "my first model" = pheno,
+      "my second model" = foo[["my third model"]] |> rxode2::ini(lcl = log(0.01)),
+      "my third model" = foo[["my second model"]] |> rxode2::ini(lcl = log(0.1))
+    ),
+    regexp = 'The following model\\(s\\) appear to have circular references to each other: "my second model", "my third model"'
+  )
+
+  # Verify that sequential references work
+  target_list <-
+    tar_nlmixr_multimodel(
+      name = foo, data = nlmixr2data::pheno_sd, est = "saem",
+      "my first model" = pheno,
+      "my second model" = foo[["my first model"]] |> rxode2::ini(lcl = log(0.01)),
+      "my third model" = foo[["my second model"]] |> rxode2::ini(lcl = log(0.1))
+    )
+  expect_equal(length(target_list), 4)
+  # The second model depends on the first
+  expect_true(
+    target_list[[1]]$fit_simple$settings$name %in%
+      targets::tar_deps_raw(target_list[[2]]$object_simple$command$expr)
+  )
+  # The third model depends on the second
+  expect_true(
+    target_list[[2]]$fit_simple$settings$name %in%
+      targets::tar_deps_raw(target_list[[3]]$object_simple$command$expr)
+  )
 })
 
 # targets::tar_test() runs the test code inside a temporary directory
 # to avoid accidentally writing to the user's file space.
 targets::tar_test("tar_nlmixr_multimodel works for within-list model piping (#19), testing via target creation", {
   targets::tar_script({
-    # TODO: Remove load_all
-    devtools::load_all("c:/git/nlmixr2/nlmixr2targets/")
-    #library(nlmixr2targets)
+    library(nlmixr2targets)
     pheno <- function() {
       ini({
         lcl <- log(0.008); label("Typical value of clearance")
