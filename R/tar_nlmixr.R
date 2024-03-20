@@ -82,60 +82,64 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table, object_simpl
   # Make models with initial conditions set work within `targets` (see #15)
   set_env_object_noinitial(object = object, env = env)
   list(
-    targets::tar_target_raw(
-      name = object_simple_name,
-      command =
-        substitute(
-          nlmixr_object_simplify(object = object),
-          list(object = object)
-        ),
-      packages = c("nlmixr2targets", "nlmixr2est")
-    ),
-    targets::tar_target_raw(
-      name = data_simple_name,
-      command =
-        substitute(
-          nlmixr_data_simplify(object = object_simple, data = data, table = table),
-          list(
-            object_simple = as.name(object_simple_name),
-            data = data,
-            table = table
-          )
-        ),
-      packages = "nlmixr2targets"
-    ),
-    targets::tar_target_raw(
-      name = fit_simple_name,
-      command =
-        substitute(
-          nlmixr2est::nlmixr(
-            object = object_simple_name,
-            data = data_simple_name,
-            est = est,
-            control = control
+    object_simple =
+      targets::tar_target_raw(
+        name = object_simple_name,
+        command =
+          substitute(
+            nlmixr_object_simplify(object = object),
+            list(object = object)
           ),
-          list(
-            object_simple_name = as.name(object_simple_name),
-            data_simple_name = as.name(data_simple_name),
-            est = est,
-            control = control,
-            table = table
-          )
-        ),
-      packages = "nlmixr2est"
-    ),
-    targets::tar_target_raw(
-      name = name,
-      command =
-        substitute(
-          assign_origData(fit = fit, data = data),
-          list(
-            fit = as.name(fit_simple_name),
-            data = data
-          )
-        ),
-      packages = "nlmixr2targets"
-    )
+        packages = c("nlmixr2targets", "nlmixr2est")
+      ),
+    data_simple =
+      targets::tar_target_raw(
+        name = data_simple_name,
+        command =
+          substitute(
+            nlmixr_data_simplify(object = object_simple, data = data, table = table),
+            list(
+              object_simple = as.name(object_simple_name),
+              data = data,
+              table = table
+            )
+          ),
+        packages = "nlmixr2targets"
+      ),
+    fit_simple =
+      targets::tar_target_raw(
+        name = fit_simple_name,
+        command =
+          substitute(
+            nlmixr2est::nlmixr(
+              object = object_simple_name,
+              data = data_simple_name,
+              est = est,
+              control = control
+            ),
+            list(
+              object_simple_name = as.name(object_simple_name),
+              data_simple_name = as.name(data_simple_name),
+              est = est,
+              control = control,
+              table = table
+            )
+          ),
+        packages = "nlmixr2est"
+      ),
+    fit =
+      targets::tar_target_raw(
+        name = name,
+        command =
+          substitute(
+            assign_origData(fit = fit, data = data),
+            list(
+              fit = as.name(fit_simple_name),
+              data = data
+            )
+          ),
+        packages = "nlmixr2targets"
+      )
   )
 }
 

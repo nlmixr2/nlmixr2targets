@@ -169,3 +169,129 @@ targets::tar_test("tar_nlmixr_multimodel works with initial condition setting `c
   # to the `central(0) <- 0` line
   expect_type(targets::tar_outdated(callr_function = NULL), "character")
 })
+
+test_that("tar_nlmixr_multimodel works for within-list model piping (#19), direct testing", {
+  pheno <- function() {
+    ini({
+      lcl <- log(0.008); label("Typical value of clearance")
+      lvc <-  log(0.6); label("Typical value of volume of distribution")
+      etalcl + etalvc ~ c(1,
+                          0.01, 1)
+      cpaddSd <- 0.1; label("residual variability")
+    })
+    model({
+      cl <- exp(lcl + etalcl)
+      vc <- exp(lvc + etalvc)
+      kel <- cl/vc
+      d/dt(central) <- -kel*central
+      cp <- central/vc
+      cp ~ add(cpaddSd)
+    })
+  }
+
+  target_list <-
+    tar_nlmixr_multimodel(
+      name = foo, data = nlmixr2data::pheno_sd, est = "saem",
+      "my first model" = pheno,
+      "my second model" = foo[["my first model"]] |> rxode2::ini(lcl = log(0.01))
+    )
+  expect_true(inherits(target_list, "list"))
+  # One for each model and then one for combining everything
+  expect_length(target_list, 3)
+  # Data and object simplification, then the fitting
+  expect_length(target_list[[1]], 4)
+  # Data and object simplification, then the fitting
+  expect_length(target_list[[2]], 4)
+  # Combine the fit models as a single step
+  expect_s3_class(target_list[[3]], "tar_stem")
+  expect_equal(target_list[[3]]$settings$name, "foo")
+
+  # Verify the expression for collation is generated correctly
+  collating_call <- target_list[[3]]$command$expr[[1]]
+  expect_true(grepl(x = as.character(collating_call[[2]]), pattern = "^foo_[0-9a-f]{8}$"))
+  expect_true(grepl(x = as.character(collating_call[[3]]), pattern = "^foo_[0-9a-f]{8}$"))
+  expect_equal(names(collating_call), c("", "my first model", "my second model"))
+
+  # Verify the dependent target is created correctly
+  expect_true(rxode2::.matchesLangTemplate(
+    x = target_list[[2]]$object_simple$command$expr[[1]],
+    template =
+      str2lang(sprintf(
+        "nlmixr_object_simplify(object = rxode2::ini(%s, lcl = log(0.01)))",
+        target_list[[1]]$fit_simple$settings$name
+      ))
+  ))
+
+  # Verify that circular references are caught
+  expect_error(
+    tar_nlmixr_multimodel(
+      name = foo, data = nlmixr2data::pheno_sd, est = "saem",
+      "my first model" = pheno,
+      "my second model" = foo[["my third model"]] |> rxode2::ini(lcl = log(0.01)),
+      "my third model" = foo[["my second model"]] |> rxode2::ini(lcl = log(0.1))
+    ),
+    regexp = 'The following model\\(s\\) appear to have circular references to each other: "my second model", "my third model"'
+  )
+
+  # Verify that sequential references work
+  target_list <-
+    tar_nlmixr_multimodel(
+      name = foo, data = nlmixr2data::pheno_sd, est = "saem",
+      "my first model" = pheno,
+      "my second model" = foo[["my first model"]] |> rxode2::ini(lcl = log(0.01)),
+      "my third model" = foo[["my second model"]] |> rxode2::ini(lcl = log(0.1))
+    )
+  expect_equal(length(target_list), 4)
+  # The second model depends on the first
+  expect_true(
+    target_list[[1]]$fit_simple$settings$name %in%
+      targets::tar_deps_raw(target_list[[2]]$object_simple$command$expr)
+  )
+  # The third model depends on the second
+  expect_true(
+    target_list[[2]]$fit_simple$settings$name %in%
+      targets::tar_deps_raw(target_list[[3]]$object_simple$command$expr)
+  )
+})
+
+# targets::tar_test() runs the test code inside a temporary directory
+# to avoid accidentally writing to the user's file space.
+targets::tar_test("tar_nlmixr_multimodel works for within-list model piping (#19), testing via target creation", {
+  targets::tar_script({
+    library(nlmixr2targets)
+    pheno <- function() {
+      ini({
+        lcl <- log(0.008); label("Typical value of clearance")
+        lvc <-  log(0.6); label("Typical value of volume of distribution")
+        etalcl + etalvc ~ c(1,
+                            0.01, 1)
+        cpaddSd <- 0.1; label("residual variability")
+      })
+      model({
+        cl <- exp(lcl + etalcl)
+        vc <- exp(lvc + etalvc)
+        kel <- cl/vc
+        d/dt(central) <- -kel*central
+        cp <- central/vc
+        cp ~ add(cpaddSd)
+      })
+    }
+
+    target_list <-
+      tar_nlmixr_multimodel(
+        name = foo, data = nlmixr2data::pheno_sd, est = "saem",
+        "my first model" = pheno,
+        "my second model" = foo[["my first model"]] |> rxode2::ini(lcl = log(0.01))
+      )
+  })
+  dependencies <- targets::tar_network()$edges
+  # There is one fitsimple object (estimated model result) that generates an
+  # osimple (prepared model) object
+  expect_equal(
+    sum(
+      grepl(x = dependencies$from, pattern = "foo_.{8}_fitsimple") &
+        grepl(x = dependencies$to, pattern = "foo_.{8}_osimple")
+    ),
+    1
+  )
+})

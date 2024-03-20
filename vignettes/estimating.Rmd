@@ -155,3 +155,55 @@ list(
   plan_report
 )
 ```
+
+## Model piping for multiple models estimated with one dataset
+
+Model piping for `nlmixr2` models (see
+`vignette("modelPiping", package = "nlmixr2")`) is possible within the multiple
+models being estimated with `tar_nlmixr_multimodel()`.  It simplifies examples
+like the one above so that you can focus on the model content and avoid
+rewriting models, as with all `nlmixr2` model piping.
+
+To use model piping, simply refer to the model by its name like a named list.
+Behind the scenes, `nlmixr2targets` will work out the dependencies between the
+models and only rerun the dependent model if it or the dependent model changes.
+
+```{r piping-tar_nlmixr_multimodel, eval = FALSE}
+library(targets)
+library(tarchetypes)
+library(nlmixr2targets)
+library(nlmixr2)
+
+pheno <- function() {
+  ini({
+    lcl <- log(0.008); label("Typical value of clearance")
+    lvc <-  log(0.6); label("Typical value of volume of distribution")
+    etalcl + etalvc ~ c(1,
+                        0.01, 1)
+    cpaddSd <- 0.1; label("residual variability")
+  })
+  model({
+    cl <- exp(lcl + etalcl)
+    vc <- exp(lvc + etalvc)
+    kel <- cl/vc
+    d/dt(central) <- -kel*central
+    cp <- central/vc
+    cp ~ add(cpaddSd)
+  })
+}
+
+plan_model <-
+  tar_nlmixr_multimodel(
+    all_models,
+    data = nlmixr2data::pheno_sd,
+    est = "saem",
+    "Base model; additive residual error = 1" = pheno,
+    "Base model; additive residual error = 3" =
+      all_models[["Base model; additive residual error = 1"]] |>
+      ini(cpaddSd = 3)
+  )
+
+list(
+  plan_model
+)
+```
