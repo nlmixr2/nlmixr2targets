@@ -10,6 +10,8 @@ tar_nlmixr_multimodel_has_self_reference(model_list, name)
 tar_nlmixr_multimodel_has_self_reference_single(model, name)
 }
 \arguments{
+\item{model_list}{A named list of calls for model targets to be created}
+
 \item{name}{Symbol, name of the target. A target
 name must be a valid name for a symbol in R, and it
 must not start with a dot. Subsequent targets
@@ -25,6 +27,8 @@ and no two targets in the same pipeline share the same seed.
 You can recover the seed of a completed target
 with \code{tar_meta(your_target, seed)} and run \code{\link[targets:tar_seed_set]{tar_seed_set()}}
 on the result to locally recreate the target's initial RNG state.}
+
+\item{model}{A single model call for the model target to be created}
 }
 \value{
 A logical vector the same length as \code{model_list} indicating if the

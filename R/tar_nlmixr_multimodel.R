@@ -27,6 +27,7 @@ tar_nlmixr_multimodel <- function(name, ..., data, est, control = list(), table 
 #'
 #' @inheritParams tar_nlmixr_multimodel
 #' @inheritParams tar_nlmixr
+#' @param model_list A named list of calls for model targets to be created
 #' @keywords Internal
 tar_nlmixr_multimodel_parse <- function(name, data, est, control, table, model_list, env) {
   checkmate::assert_named(model_list, type = "unique")
@@ -49,7 +50,7 @@ tar_nlmixr_multimodel_parse <- function(name, data, est, control, table, model_l
     # Generate a mapping of names to their target names, only for
     # non-self-referential models.
     name_map <-
-      setNames(
+      stats::setNames(
         vapply(X = ret_prep, FUN = \(x) x$name, FUN.VALUE = ""),
         # rxode2::.matchesLangTemplate() treats single vs double quotes in a
         # call the same.
@@ -113,6 +114,7 @@ tar_nlmixr_multimodel_has_self_reference <- function(model_list, name) {
 }
 #' @describeIn tar_nlmixr_multimodel_has_self_reference A helper function to
 #'   look at each call for each model separately
+#' @param model A single model call for the model target to be created
 tar_nlmixr_multimodel_has_self_reference_single <- function(model, name) {
   if (rxode2::.matchesLangTemplate(model, str2lang(sprintf("%s[[.]]", name)))) {
     TRUE

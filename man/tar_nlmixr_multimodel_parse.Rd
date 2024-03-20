@@ -35,6 +35,8 @@ to be different for each type of estimation method}
 \item{table}{The output table control object (like
 `tableControl()`)}
 
+\item{model_list}{A named list of calls for model targets to be created}
+
 \item{env}{The environment where the model is setup (not needed for typical
 use)}
 }
