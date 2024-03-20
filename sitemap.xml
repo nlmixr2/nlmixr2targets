@@ -48,4 +48,13 @@
   <url>
     <loc>https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel.html</loc>
   </url>
+  <url>
+    <loc>https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel_has_self_reference.html</loc>
+  </url>
+  <url>
+    <loc>https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel_parse.html</loc>
+  </url>
+  <url>
+    <loc>https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel_single.html</loc>
+  </url>
 </urlset>
