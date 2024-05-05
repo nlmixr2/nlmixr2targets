@@ -11,7 +11,7 @@
 #' `cmt(initial)` will be converted to `cmt(0)` before passing to nlmixr2.
 #'
 #' @inheritParams nlmixr2est::nlmixr
-#' @return \code{object} converted to a nlmixrui object.  The model name is
+#' @returns \code{object} converted to a nlmixrui object.  The model name is
 #'   always "object".
 #' @family Simplifiers
 #' @export
@@ -65,7 +65,7 @@ nlmixr_object_simplify_zero_initial_helper <- function(object) {
 #' @inheritParams nlmixr2est::nlmixr
 #' @param object an nlmixr_ui object (e.g. the output of running
 #'   \code{nlmixr(object = model)}
-#' @return The data with the nlmixr2 column lower case and on the left and the
+#' @returns The data with the nlmixr2 column lower case and on the left and the
 #'   covariate columns on the right and alphabetically sorted.
 #' @family Simplifiers
 #' @export

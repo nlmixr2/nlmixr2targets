@@ -14,7 +14,7 @@
 #' @inheritParams targets::tar_target
 #' @param env The environment where the model is setup (not needed for typical
 #'   use)
-#' @return A list of targets for the model simplification, data simplification,
+#' @returns A list of targets for the model simplification, data simplification,
 #'   and model estimation.
 #' @examples
 #' \dontrun{

@@ -9,6 +9,14 @@ Description:
   'nlmixr2targets' ensures minimal rework in model development with 'nlmixr2'
   and 'targets' by simplifying and standardizing models and datasets.
 License: GPL (>= 2)
+Depends: 
+    R (>= 4.1)
+Imports: 
+    checkmate,
+    digest,
+    nlmixr2est,
+    rxode2 (>= 2.0.14),
+    targets
 Suggests: 
     covr,
     knitr,
@@ -20,11 +28,5 @@ Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.1
-Imports: 
-    checkmate,
-    digest,
-    nlmixr2est,
-    rxode2 (>= 2.0.14),
-    targets
 URL: https://nlmixr2.github.io/nlmixr2targets/
 VignetteBuilder: knitr
