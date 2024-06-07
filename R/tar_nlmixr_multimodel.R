@@ -5,7 +5,7 @@
 #' @inheritParams nlmixr2est::nlmixr
 #' @inheritParams targets::tar_target
 #' @inheritParams tar_nlmixr
-#' @return A list of targets for the model simplification, data simplification,
+#' @returns A list of targets for the model simplification, data simplification,
 #'   and model estimation.
 #' @export
 tar_nlmixr_multimodel <- function(name, ..., data, est, control = list(), table = nlmixr2est::tableControl(), env = parent.frame()) {
