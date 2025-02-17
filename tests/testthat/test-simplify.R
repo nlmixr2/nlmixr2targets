@@ -52,7 +52,7 @@ test_that("nlmixr_data_simplify", {
     names(nlmixr_data_simplify(
       data = nlmixr2data::pheno_sd,
       object = model_simple,
-      table = nlmixr2est::tableControl(keep = "EVID")
+      table = nlmixr2est::tableControl(keep = "MDV")
     )),
     c("id", "time", "amt", "dv", "mdv", "evid", "WT")
   )
@@ -122,7 +122,7 @@ test_that("re-estimating a model works with covariates (#9)", {
   fit_estimated <-
     suppressMessages(
       nlmixr2est::nlmixr(
-        object = model_simple,
+        object = read_nlmixr2obj_indirect(model_simple),
         data = nlmixr2data::pheno_sd,
         est = "focei",
         control = list(eval.max = 1)

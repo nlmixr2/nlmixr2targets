@@ -135,7 +135,7 @@ test_that("tar_nlmixr_multimodel works with initial condition setting `central(0
       name = foo, data = nlmixr2data::pheno_sd, est = "saem",
       "my first model" = pheno
     )
-  expect_s3_class(pheno, "rxUi")
+  expect_type(pheno, "closure")
 })
 
 targets::tar_test("tar_nlmixr_multimodel works with initial condition setting `central(0) <- 0`, running the targets", {
@@ -153,7 +153,7 @@ targets::tar_test("tar_nlmixr_multimodel works with initial condition setting `c
         vc <- exp(lvc + etalvc)
         kel <- cl/vc
         d/dt(central) <- -kel*central
-        central(0) <- 0
+        central(initial) <- 0
         cp <- central/vc
         cp ~ add(cpaddSd)
       })

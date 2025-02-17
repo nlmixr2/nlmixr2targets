@@ -11,8 +11,9 @@ experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](h
 status](https://www.r-pkg.org/badges/version/nlmixr2targets)](https://CRAN.R-project.org/package=nlmixr2targets)
 [![R
 Targetopia](https://img.shields.io/badge/R_Targetopia-member-blue?style=flat&labelColor=gray)](https://wlandau.github.io/targetopia/)
-[![R-CMD-check](https://github.com/nlmixr2/nlmixr2targets/workflows/R-CMD-check/badge.svg)](https://github.com/nlmixr2/nlmixr2targets/actions)
-[![Code_Coverage_Badge](http://codecov.io/github/nlmixr2/nlmixr2targets/coverage.svg?branch=main)](http://codecov.io/github/nlmixr2/nlmixr2targets?branch=main)
+[![R-CMD-check](https://github.com/nlmixr2/nlmixr2targets/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/nlmixr2/nlmixr2targets/actions/workflows/R-CMD-check.yaml)
+[![Codecov test
+coverage](https://codecov.io/gh/nlmixr2/nlmixr2targets/graph/badge.svg)](https://app.codecov.io/gh/nlmixr2/nlmixr2targets)
 <!-- badges: end -->
 
 The goal of nlmixr2targets is to simplify the use of the

@@ -14,7 +14,7 @@
 #' @inheritParams targets::tar_target
 #' @param env The environment where the model is setup (not needed for typical
 #'   use)
-#' @return A list of targets for the model simplification, data simplification,
+#' @returns A list of targets for the model simplification, data simplification,
 #'   and model estimation.
 #' @examples
 #' \dontrun{
@@ -79,8 +79,6 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table, object_simpl
   checkmate::assert_character(object_simple_name, len = 1, min.chars = 1, any.missing = FALSE)
   checkmate::assert_character(data_simple_name, len = 1, min.chars = 1, any.missing = FALSE)
 
-  # Make models with initial conditions set work within `targets` (see #15)
-  set_env_object_noinitial(object = object, env = env)
   list(
     object_simple =
       targets::tar_target_raw(
@@ -111,7 +109,7 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table, object_simpl
         name = fit_simple_name,
         command =
           substitute(
-            nlmixr2est::nlmixr(
+            nlmixr2_indirect(
               object = object_simple_name,
               data = data_simple_name,
               est = est,
@@ -141,31 +139,6 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table, object_simpl
         packages = "nlmixr2targets"
       )
   )
-}
-
-#' Ensure that an object is set in its initial environment so that it is
-#' protected from the `targets` domain-specific-language issue of
-#' `pd(0) <- initial`
-#'
-#' @inheritParams tar_nlmixr
-#' @return NULL (called for side effects)
-#' @noRd
-set_env_object_noinitial <- function(object, env) {
-  if (is.name(object)) {
-    object_env <- env[[as.character(object)]]
-    if (is.function(object_env)) {
-      object_result <- try(rxode2::assertRxUi(object_env), silent = TRUE)
-      if (inherits(object_result, "rxUi")) {
-        assign(x = as.character(object), value = object_result, envir = env)
-      }
-    }
-  } else if (is.call(object)) {
-    # Recursively iterate over all parts of the call
-    lapply(X = object, FUN = set_env_object_noinitial, env = env)
-  }
-  # If it's anything other than a name or a call, then we don't need to modify
-  # it or its sub-objects.
-  NULL
 }
 
 #' Replace the fit data with the original data, then return the modified fit

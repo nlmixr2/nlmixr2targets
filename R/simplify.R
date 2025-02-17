@@ -11,8 +11,8 @@
 #' `cmt(initial)` will be converted to `cmt(0)` before passing to nlmixr2.
 #'
 #' @inheritParams nlmixr2est::nlmixr
-#' @return \code{object} converted to a nlmixrui object.  The model name is
-#'   always "object".
+#' @returns The hash to be able to load `object` from the converted to a
+#'   nlmixrui object. The model name is always "object".
 #' @family Simplifiers
 #' @export
 nlmixr_object_simplify <- function(object) {
@@ -25,7 +25,7 @@ nlmixr_object_simplify <- function(object) {
   # TODO: ret$model.name is always "object"; it may be better to set it to
   # as.character(substitute(object)), but that didn't work with initial testing.
   # (Or, maybe it's better to have it just be "object" so that it is simpler.)
-  ret
+  save_nlmixr2obj_indirect(ret)
 }
 
 #' Convert initial conditions from cmt(initial) to cmt(0) to work with `targets`
@@ -65,11 +65,15 @@ nlmixr_object_simplify_zero_initial_helper <- function(object) {
 #' @inheritParams nlmixr2est::nlmixr
 #' @param object an nlmixr_ui object (e.g. the output of running
 #'   \code{nlmixr(object = model)}
-#' @return The data with the nlmixr2 column lower case and on the left and the
+#' @returns The data with the nlmixr2 column lower case and on the left and the
 #'   covariate columns on the right and alphabetically sorted.
 #' @family Simplifiers
 #' @export
 nlmixr_data_simplify <- function(data, object, table = list()) {
+  if (is.character(object)) {
+    # load from the hash
+    object <- read_nlmixr2obj_indirect(hash = object)
+  }
   nlmixr_cols <-
     c(
       # rxode2 columns
