@@ -7,11 +7,11 @@ nlmixr2_indirect <- function(object, data, est, control) {
   nlmixr2est::nlmixr(object = read_nlmixr2obj_indirect(hash = object), data = data, est = est, control = control)
 }
 
-read_nlmixr2obj_indirect <- function(hash, directory = "_targets/nlmixr2") {
+read_nlmixr2obj_indirect <- function(hash, directory = file.path(targets::tar_config_get("store"), "nlmixr2")) {
   readRDS(file.path(directory, hash))
 }
 
-save_nlmixr2obj_indirect <- function(object, directory = "_targets/nlmixr2") {
+save_nlmixr2obj_indirect <- function(object, directory = file.path(targets::tar_config_get("store"), "nlmixr2")) {
   if (!dir.exists(directory)) {
     dir.create(path = directory, showWarnings = FALSE, recursive = TRUE)
   }
