@@ -1,60 +1,23 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://nlmixr2.github.io/nlmixr2targets/404.html</loc>
-  </url>
-  <url>
-    <loc>https://nlmixr2.github.io/nlmixr2targets/CODE_OF_CONDUCT.html</loc>
-  </url>
-  <url>
-    <loc>https://nlmixr2.github.io/nlmixr2targets/CONTRIBUTING.html</loc>
-  </url>
-  <url>
-    <loc>https://nlmixr2.github.io/nlmixr2targets/LICENSE-text.html</loc>
-  </url>
-  <url>
-    <loc>https://nlmixr2.github.io/nlmixr2targets/LICENSE.html</loc>
-  </url>
-  <url>
-    <loc>https://nlmixr2.github.io/nlmixr2targets/articles/estimating.html</loc>
-  </url>
-  <url>
-    <loc>https://nlmixr2.github.io/nlmixr2targets/articles/index.html</loc>
-  </url>
-  <url>
-    <loc>https://nlmixr2.github.io/nlmixr2targets/authors.html</loc>
-  </url>
-  <url>
-    <loc>https://nlmixr2.github.io/nlmixr2targets/index.html</loc>
-  </url>
-  <url>
-    <loc>https://nlmixr2.github.io/nlmixr2targets/news/index.html</loc>
-  </url>
-  <url>
-    <loc>https://nlmixr2.github.io/nlmixr2targets/reference/assign_origData.html</loc>
-  </url>
-  <url>
-    <loc>https://nlmixr2.github.io/nlmixr2targets/reference/index.html</loc>
-  </url>
-  <url>
-    <loc>https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_data_simplify.html</loc>
-  </url>
-  <url>
-    <loc>https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_object_simplify.html</loc>
-  </url>
-  <url>
-    <loc>https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.html</loc>
-  </url>
-  <url>
-    <loc>https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel.html</loc>
-  </url>
-  <url>
-    <loc>https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel_has_self_reference.html</loc>
-  </url>
-  <url>
-    <loc>https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel_parse.html</loc>
-  </url>
-  <url>
-    <loc>https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel_single.html</loc>
-  </url>
+<urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
+<url><loc>https://nlmixr2.github.io/nlmixr2targets/404.html</loc></url>
+<url><loc>https://nlmixr2.github.io/nlmixr2targets/CODE_OF_CONDUCT.html</loc></url>
+<url><loc>https://nlmixr2.github.io/nlmixr2targets/CONTRIBUTING.html</loc></url>
+<url><loc>https://nlmixr2.github.io/nlmixr2targets/LICENSE-text.html</loc></url>
+<url><loc>https://nlmixr2.github.io/nlmixr2targets/LICENSE.html</loc></url>
+<url><loc>https://nlmixr2.github.io/nlmixr2targets/articles/estimating.html</loc></url>
+<url><loc>https://nlmixr2.github.io/nlmixr2targets/articles/index.html</loc></url>
+<url><loc>https://nlmixr2.github.io/nlmixr2targets/authors.html</loc></url>
+<url><loc>https://nlmixr2.github.io/nlmixr2targets/index.html</loc></url>
+<url><loc>https://nlmixr2.github.io/nlmixr2targets/news/index.html</loc></url>
+<url><loc>https://nlmixr2.github.io/nlmixr2targets/reference/assign_origData.html</loc></url>
+<url><loc>https://nlmixr2.github.io/nlmixr2targets/reference/index.html</loc></url>
+<url><loc>https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr2_indirect.html</loc></url>
+<url><loc>https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_data_simplify.html</loc></url>
+<url><loc>https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_object_simplify.html</loc></url>
+<url><loc>https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.html</loc></url>
+<url><loc>https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel.html</loc></url>
+<url><loc>https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel_has_self_reference.html</loc></url>
+<url><loc>https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel_parse.html</loc></url>
+<url><loc>https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel_single.html</loc></url>
 </urlset>
+
