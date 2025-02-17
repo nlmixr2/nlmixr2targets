@@ -25,7 +25,7 @@ nlmixr_object_simplify <- function(object) {
   # TODO: ret$model.name is always "object"; it may be better to set it to
   # as.character(substitute(object)), but that didn't work with initial testing.
   # (Or, maybe it's better to have it just be "object" so that it is simpler.)
-  ret
+  save_nlmixr2obj_indirect(ret)
 }
 
 #' Convert initial conditions from cmt(initial) to cmt(0) to work with `targets`
@@ -70,6 +70,10 @@ nlmixr_object_simplify_zero_initial_helper <- function(object) {
 #' @family Simplifiers
 #' @export
 nlmixr_data_simplify <- function(data, object, table = list()) {
+  if (is.character(object)) {
+    # load from the hash
+    object <- read_nlmixr2obj_indirect(hash = object)
+  }
   nlmixr_cols <-
     c(
       # rxode2 columns

@@ -109,7 +109,7 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table, object_simpl
         name = fit_simple_name,
         command =
           substitute(
-            nlmixr2est::nlmixr(
+            nlmixr2_indirect(
               object = object_simple_name,
               data = data_simple_name,
               est = est,
