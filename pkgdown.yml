@@ -3,7 +3,7 @@ pkgdown: 2.1.1
 pkgdown_sha: ~
 articles:
   estimating: estimating.html
-last_built: 2025-02-17T20:52Z
+last_built: 2025-02-17T21:53Z
 urls:
   reference: https://nlmixr2.github.io/nlmixr2targets/reference
   article: https://nlmixr2.github.io/nlmixr2targets/articles
