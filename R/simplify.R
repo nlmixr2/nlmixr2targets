@@ -11,8 +11,8 @@
 #' `cmt(initial)` will be converted to `cmt(0)` before passing to nlmixr2.
 #'
 #' @inheritParams nlmixr2est::nlmixr
-#' @returns \code{object} converted to a nlmixrui object.  The model name is
-#'   always "object".
+#' @returns The hash to be able to load `object` from the converted to a
+#'   nlmixrui object. The model name is always "object".
 #' @family Simplifiers
 #' @export
 nlmixr_object_simplify <- function(object) {

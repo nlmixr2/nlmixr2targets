@@ -69,14 +69,10 @@ targets::tar_test("tar_nlmixr execution", {
   ))
   # A successful model estimation step should return an nlmixr2FitCore object
   # (testing of model results is outside the scope of nlmixr2targets)
-  expect_s3_class(targets::tar_read(pheno_model_tar_object_simple), class = "rxUi")
+  expect_type(targets::tar_read(pheno_model_tar_object_simple), "character")
   expect_s3_class(targets::tar_read(pheno_model_tar_data_simple), class = "data.frame")
-  expect_true(
-    inherits(targets::tar_read(pheno_model_tar_fit_simple), "nlmixr2FitCore")
-  )
-  expect_true(
-    inherits(targets::tar_read(pheno_model), "nlmixr2FitCore")
-  )
+  expect_s3_class(targets::tar_read(pheno_model_tar_fit_simple), "nlmixr2FitCore")
+  expect_s3_class(targets::tar_read(pheno_model), "nlmixr2FitCore")
   # tar_nlmixr sets the original data back into the object (#17)
   expect_false(
     identical(
@@ -105,7 +101,7 @@ targets::tar_test("tar_nlmixr handling with initial conditions central(0), witho
       kel <- cl/vc
       d/dt(central) <- -kel*central
       cp <- central/vc
-      central(0) <- 0
+      central(initial) <- 0
       cp ~ add(cpaddSd)
     })
   }
@@ -119,7 +115,7 @@ targets::tar_test("tar_nlmixr handling with initial conditions central(0), witho
     control=nlmixr2est::saemControl(nBurn=1, nEm=1)
   )
 
-  expect_s3_class(pheno, "rxUi")
+  expect_type(pheno, "closure")
 })
 
 targets::tar_test("tar_nlmixr handling with initial conditions central(0) including model piping, without running the target", {
@@ -151,7 +147,7 @@ targets::tar_test("tar_nlmixr handling with initial conditions central(0) includ
     control=nlmixr2est::saemControl(nBurn=1, nEm=1)
   )
 
-  expect_s3_class(pheno, "rxUi")
+  expect_type(pheno, "closure")
 })
 
 # targets::tar_test() runs the test code inside a temporary directory
@@ -172,7 +168,7 @@ targets::tar_test("tar_nlmixr handling with initial conditions central(0), with 
         kel <- cl/vc
         d/dt(central) <- -kel*central
         cp <- central/vc
-        central(0) <- 0
+        central(initial) <- 0
         cp ~ add(cpaddSd)
       })
     }
@@ -193,7 +189,5 @@ targets::tar_test("tar_nlmixr handling with initial conditions central(0), with 
   suppressWarnings(targets::tar_make(callr_function = NULL))
   # A successful model estimation step should return an nlmixr2FitCore object
   # (testing of model results is outside the scope of nlmixr2targets)
-  expect_true(
-    inherits(tar_read(pheno_model), "nlmixr2FitCore")
-  )
+  expect_s3_class(tar_read(pheno_model), "nlmixr2FitCore")
 })
