@@ -295,3 +295,106 @@ targets::tar_test("tar_nlmixr_multimodel works for within-list model piping (#19
     1
   )
 })
+
+test_that("tar_nlmixr_multimodel_has_self_reference_single recognizes references", {
+  # direct match: name[["..."]]
+  expect_true(tar_nlmixr_multimodel_has_self_reference_single(quote(foo[["A"]]), name = "foo"))
+  # nested via pipe / function call
+  expect_true(tar_nlmixr_multimodel_has_self_reference_single(
+    quote(foo[["A"]] |> rxode2::ini(x = 1)), name = "foo"
+  ))
+  # different list name -> not a match
+  expect_false(tar_nlmixr_multimodel_has_self_reference_single(quote(bar[["A"]]), name = "foo"))
+  # plain symbol (closure) -> not a match
+  expect_false(tar_nlmixr_multimodel_has_self_reference_single(quote(my_model), name = "foo"))
+  # atomic input -> not a match
+  expect_false(tar_nlmixr_multimodel_has_self_reference_single(42, name = "foo"))
+})
+
+test_that("tar_nlmixr_multimodel_has_self_reference vectorizes over a list", {
+  ml <- list(
+    A = quote(my_model),
+    B = quote(foo[["A"]] |> rxode2::ini(x = 1))
+  )
+  out <- tar_nlmixr_multimodel_has_self_reference(model_list = ml, name = "foo")
+  expect_equal(out, c(A = FALSE, B = TRUE))
+})
+
+test_that("tar_nlmixr_multimodel_remove_self_reference_single rewrites references", {
+  name_map <- c("foo[['A']]" = "foo_aaaaaaaa")
+  # direct rewrite
+  out <- tar_nlmixr_multimodel_remove_self_reference_single(
+    model = quote(foo[["A"]]), name_map = name_map
+  )
+  expect_equal(out, quote(foo_aaaaaaaa_fitsimple))
+  # nested rewrite (inside a pipe)
+  out2 <- tar_nlmixr_multimodel_remove_self_reference_single(
+    model = quote(foo[["A"]] |> rxode2::ini(x = 1)), name_map = name_map
+  )
+  expect_true(rxode2::.matchesLangTemplate(
+    x = out2,
+    template = str2lang("foo_aaaaaaaa_fitsimple |> rxode2::ini(x = 1)")
+  ))
+  # symbol input is returned unchanged (length <= 1 short-circuit)
+  expect_equal(
+    tar_nlmixr_multimodel_remove_self_reference_single(quote(my_model), name_map),
+    quote(my_model)
+  )
+  # NULL is returned unchanged
+  expect_null(tar_nlmixr_multimodel_remove_self_reference_single(NULL, name_map))
+})
+
+test_that("tar_nlmixr_multimodel_single returns hash-suffixed target name", {
+  out <- tar_nlmixr_multimodel_single(
+    object = quote(my_model),
+    name = "foo",
+    data = quote(my_data),
+    est = "saem",
+    control = quote(list()),
+    table = quote(list()),
+    env = environment()
+  )
+  expect_named(out, c("target", "name"))
+  expect_match(out$name, "^foo_[0-9a-f]{8}$")
+  expect_named(out$target, c("object_simple", "data_simple", "fit_simple", "fit"))
+})
+
+test_that("tar_nlmixr_multimodel_parse rejects bad name and env", {
+  expect_error(
+    tar_nlmixr_multimodel_parse(
+      name = "", data = quote(d), est = "saem",
+      control = quote(list()), table = quote(list()),
+      model_list = list(A = quote(my_model)),
+      env = environment()
+    ),
+    regexp = "name"
+  )
+  expect_error(
+    tar_nlmixr_multimodel_parse(
+      name = "foo", data = quote(d), est = "saem",
+      control = quote(list()), table = quote(list()),
+      model_list = list(A = quote(my_model)),
+      env = "not an environment"
+    ),
+    regexp = "Must be an environment"
+  )
+})
+
+test_that("tar_nlmixr_multimodel_parse rejects unnamed or duplicate-name model_list", {
+  expect_error(
+    tar_nlmixr_multimodel_parse(
+      name = "foo", data = quote(d), est = "saem",
+      control = quote(list()), table = quote(list()),
+      model_list = list(quote(my_model)),
+      env = environment()
+    )
+  )
+  expect_error(
+    tar_nlmixr_multimodel_parse(
+      name = "foo", data = quote(d), est = "saem",
+      control = quote(list()), table = quote(list()),
+      model_list = list(A = quote(m1), A = quote(m2)),
+      env = environment()
+    )
+  )
+})
