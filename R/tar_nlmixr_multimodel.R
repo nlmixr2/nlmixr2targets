@@ -135,6 +135,9 @@ tar_nlmixr_multimodel_has_self_reference <- function(model_list, name) {
 #'   look at each call for each model separately
 #' @param model A single model call for the model target to be created
 tar_nlmixr_multimodel_has_self_reference_single <- function(model, name) {
+  # rxode2::.matchesLangTemplate() is exported from rxode2 but its dotted
+  # name signals it is conventionally internal. If rxode2 ever renames it,
+  # this and the call sites in simplify.R must be updated.
   if (rxode2::.matchesLangTemplate(model, str2lang(sprintf("%s[[.]]", name)))) {
     TRUE
   } else if (length(model) > 1) {

@@ -45,6 +45,9 @@ nlmixr_object_simplify_zero_initial <- function(object) {
 }
 
 nlmixr_object_simplify_zero_initial_helper <- function(object) {
+  # rxode2::.matchesLangTemplate() is exported from rxode2 but its dotted
+  # name signals it is conventionally internal. If rxode2 ever renames it,
+  # this and the call sites in tar_nlmixr_multimodel.R must be updated.
   if (rxode2::.matchesLangTemplate(object, str2lang(".name(initial) <- ."))) {
     object[[2]][[2]] <- 0
   } else if (is.call(object)) {
