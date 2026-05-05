@@ -72,6 +72,8 @@ nlmixr_object_simplify_zero_initial_helper <- function(object) {
 #' @family Simplifiers
 #' @export
 nlmixr_data_simplify <- function(data, object, table = list()) {
+  checkmate::assert_data_frame(data)
+  checkmate::assert_list(table)
   if (is.character(object)) {
     # load from the hash
     object <- read_nlmixr2obj_indirect(hash = object)
