@@ -16,8 +16,8 @@
 #' function to.
 #'
 #' @inheritParams nlmixr2est::nlmixr
-#' @returns The md5 hash that can be used with [read_nlmixr2obj_indirect()] to
-#'   load the simplified `nlmixrui` object back from the indirect cache.
+#' @returns The md5 hash used to load the simplified `nlmixrui` object back
+#'   from the `nlmixr2targets` indirect cache.
 #' @family Simplifiers
 #' @export
 nlmixr_object_simplify <- function(object) {
