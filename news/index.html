@@ -39,8 +39,11 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.0.9000" id="nlmixr2targets-0009000">nlmixr2targets 0.0.0.9000<a class="anchor" aria-label="anchor" href="#nlmixr2targets-0009000"></a></h2>
 <ul><li>Setting initial conditions can now be done with <code>cmt(initial)</code> which will be automatically recoded to <code>cmt(0)</code>.</li>
-<li>Added “cens” and “limit” columns as nlmixr2 columns</li>
-<li>Keep columns from the <code>table</code> argument’s keep element</li>
+<li>Added “cens” and “limit” columns as nlmixr2 columns.</li>
+<li>Keep columns from the <code>table</code> argument’s <code>keep</code> element.</li>
+<li>Indirect cache (<code>save_nlmixr2obj_indirect()</code> / <code>read_nlmixr2obj_indirect()</code>) now reports a clear error mentioning the missing hash and cache directory on cache misses, instead of bubbling up a <code><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS()</a></code> failure.</li>
+<li>
+<code><a href="../reference/tar_nlmixr.html">tar_nlmixr()</a></code>, <code><a href="../reference/tar_nlmixr_multimodel.html">tar_nlmixr_multimodel()</a></code>, <code><a href="../reference/assign_origData.html">assign_origData()</a></code>, and <code><a href="../reference/nlmixr_data_simplify.html">nlmixr_data_simplify()</a></code> now validate their key arguments at function entry so misuse fails loudly at the call site.</li>
 </ul></div>
   </main></div>
 

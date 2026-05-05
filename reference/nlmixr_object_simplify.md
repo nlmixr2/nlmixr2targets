@@ -16,7 +16,7 @@ nlmixr_object_simplify(object)
 
 ## Value
 
-The md5 hash used to load the simplified `nlmixrui` object back from the
+The MD5 hash used to load the simplified `nlmixrui` object back from the
 `nlmixr2targets` indirect cache.
 
 ## Details
@@ -31,7 +31,7 @@ Since setting initial conditions with `cmt(0)` does not work with
 passing to nlmixr2.
 
 The simplified model's `model.name` is always set to `"object"`. This
-keeps the simplified output stable so that the md5 hash used by the
+keeps the simplified output stable so that the MD5 hash used by the
 `targets` indirect cache is independent of the symbol the caller bound
 the model function to.
 
