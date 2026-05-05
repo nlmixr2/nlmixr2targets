@@ -153,6 +153,8 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table, object_simpl
 #' @keywords Internal
 #' @export
 assign_origData <- function(fit, data) {
+  checkmate::assert_environment(fit$env)
+  checkmate::assert_data_frame(fit$env$origData)
   # The data being replaced must have the same number of rows as the original
   # data
   checkmate::assert_data_frame(data, nrows = nrow(fit$env$origData))
