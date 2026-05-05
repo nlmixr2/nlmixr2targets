@@ -26,6 +26,63 @@ test_that("tar_nlmixr expected errors", {
     regexp = "'est' must not be null",
     fixed = TRUE
   )
+  expect_error(
+    tar_nlmixr(
+      name = pheno_model, object = pheno, data = nlmixr2data::pheno_sd,
+      est = "saem", env = "not an environment"
+    ),
+    regexp = "Must be an environment",
+    fixed = TRUE
+  )
+})
+
+# Helper: build a minimal fit-like object that assign_origData() will
+# accept. The function only touches fit$env (an environment) and
+# fit$env$origData (a data frame), so we don't need real nlmixr2 here.
+make_fake_fit <- function(orig = data.frame(x = 1:3, y = 4:6)) {
+  e <- new.env(parent = emptyenv())
+  e$origData <- orig
+  list(env = e)
+}
+
+test_that("assign_origData swaps origData in place", {
+  fit <- make_fake_fit(data.frame(x = 1:3, y = 4:6))
+  new_data <- data.frame(x = 11:13, y = 14:16)
+  out <- assign_origData(fit = fit, data = new_data)
+  expect_identical(out$env$origData, new_data)
+  # Same env, mutated in place
+  expect_identical(fit$env$origData, new_data)
+})
+
+test_that("assign_origData rejects nrow mismatch", {
+  fit <- make_fake_fit(data.frame(x = 1:3))
+  expect_error(
+    assign_origData(fit = fit, data = data.frame(x = 1:4)),
+    regexp = "Must have exactly 3 rows"
+  )
+})
+
+test_that("assign_origData rejects non-data-frame inputs", {
+  fit <- make_fake_fit()
+  expect_error(
+    assign_origData(fit = fit, data = list(x = 1:3)),
+    regexp = "Must be of type 'data.frame'"
+  )
+})
+
+test_that("assign_origData rejects fits without an env", {
+  expect_error(
+    assign_origData(fit = list(env = NULL), data = data.frame(x = 1:3)),
+    regexp = "Must be an environment"
+  )
+})
+
+test_that("assign_origData rejects fits without origData", {
+  e <- new.env(parent = emptyenv())
+  expect_error(
+    assign_origData(fit = list(env = e), data = data.frame(x = 1:3)),
+    regexp = "Must be of type 'data.frame'"
+  )
 })
 
 # targets::tar_test() runs the test code inside a temporary directory
