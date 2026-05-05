@@ -10,8 +10,8 @@ nlmixr_object_simplify(object)
 \item{object}{Fitted object or function specifying the model.}
 }
 \value{
-The hash to be able to load \code{object} from the converted to a
-nlmixrui object. The model name is always "object".
+The md5 hash used to load the simplified \code{nlmixrui} object back
+from the \code{nlmixr2targets} indirect cache.
 }
 \description{
 This function is typically not needed by end users.
@@ -24,6 +24,11 @@ to a "nlmixrui" object.
 Since setting initial conditions with \code{cmt(0)} does not work with \code{targets},
 the function definition of the object must set it with \code{cmt(initial)}.
 \code{cmt(initial)} will be converted to \code{cmt(0)} before passing to nlmixr2.
+
+The simplified model's \code{model.name} is always set to \code{"object"}. This keeps
+the simplified output stable so that the md5 hash used by the \code{targets}
+indirect cache is independent of the symbol the caller bound the model
+function to.
 }
 \seealso{
 Other Simplifiers:

@@ -10,9 +10,14 @@
 #' the function definition of the object must set it with `cmt(initial)`.
 #' `cmt(initial)` will be converted to `cmt(0)` before passing to nlmixr2.
 #'
+#' The simplified model's `model.name` is always set to `"object"`. This keeps
+#' the simplified output stable so that the md5 hash used by the `targets`
+#' indirect cache is independent of the symbol the caller bound the model
+#' function to.
+#'
 #' @inheritParams nlmixr2est::nlmixr
-#' @returns The hash to be able to load `object` from the converted to a
-#'   nlmixrui object. The model name is always "object".
+#' @returns The md5 hash used to load the simplified `nlmixrui` object back
+#'   from the `nlmixr2targets` indirect cache.
 #' @family Simplifiers
 #' @export
 nlmixr_object_simplify <- function(object) {
@@ -22,9 +27,6 @@ nlmixr_object_simplify <- function(object) {
   attr(object, "srcref") <- NULL
   object <- nlmixr_object_simplify_zero_initial(object)
   ret <- nlmixr2est::nlmixr(object)
-  # TODO: ret$model.name is always "object"; it may be better to set it to
-  # as.character(substitute(object)), but that didn't work with initial testing.
-  # (Or, maybe it's better to have it just be "object" so that it is simpler.)
   save_nlmixr2obj_indirect(ret)
 }
 
@@ -43,6 +45,9 @@ nlmixr_object_simplify_zero_initial <- function(object) {
 }
 
 nlmixr_object_simplify_zero_initial_helper <- function(object) {
+  # rxode2::.matchesLangTemplate() is exported from rxode2 but its dotted
+  # name signals it is conventionally internal. If rxode2 ever renames it,
+  # this and the call sites in tar_nlmixr_multimodel.R must be updated.
   if (rxode2::.matchesLangTemplate(object, str2lang(".name(initial) <- ."))) {
     object[[2]][[2]] <- 0
   } else if (is.call(object)) {
@@ -70,6 +75,8 @@ nlmixr_object_simplify_zero_initial_helper <- function(object) {
 #' @family Simplifiers
 #' @export
 nlmixr_data_simplify <- function(data, object, table = list()) {
+  checkmate::assert_data_frame(data)
+  checkmate::assert_list(table)
   if (is.character(object)) {
     # load from the hash
     object <- read_nlmixr2obj_indirect(hash = object)
