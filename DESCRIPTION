@@ -26,9 +26,9 @@ Suggests:
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Encoding: UTF-8
-LazyData: true
 Roxygen: list(markdown = TRUE)
 URL: https://nlmixr2.github.io/nlmixr2targets/
+BugReports: https://github.com/nlmixr2/nlmixr2targets/issues
 VignetteBuilder: knitr
 Config/roxygen2/version: 8.0.0
 Language: en-US
