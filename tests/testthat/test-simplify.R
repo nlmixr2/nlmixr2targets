@@ -211,3 +211,155 @@ test_that("re-estimating a model works with covariates (#9)", {
     "WT" %in% names(nlmixr_data_simplify(data = nlmixr2data::pheno_sd, object = fit_estimated))
   )
 })
+
+# Tests for the strip-and-restore round trip introduced for #28.
+
+test_that("nlmixr_object_simplify writes the simplified rxUi with labels and meta stripped", {
+  cached <- read_nlmixr2obj_indirect(model_simple)
+  expect_true(all(is.na(cached$iniDf$label)))
+  expect_equal(ls(envir = cached$meta, all.names = TRUE), character(0))
+})
+
+test_that("nlmixr_object_simplify yields the same hash for models that differ only in labels (#28)", {
+  model_with <- function() {
+    ini({
+      lcl <- log(0.008); label("Typical clearance")
+      cpaddSd <- 0.1; label("residual variability")
+    })
+    model({
+      cl <- exp(lcl)
+      d/dt(central) <- -cl/1*central
+      cp <- central/1
+      cp ~ add(cpaddSd)
+    })
+  }
+  model_relabeled <- function() {
+    ini({
+      lcl <- log(0.008); label("Different clearance label")
+      cpaddSd <- 0.1; label("Different residual label")
+    })
+    model({
+      cl <- exp(lcl)
+      d/dt(central) <- -cl/1*central
+      cp <- central/1
+      cp ~ add(cpaddSd)
+    })
+  }
+  hash_with <- suppressMessages(suppressWarnings(nlmixr_object_simplify(model_with)))
+  hash_relabeled <- suppressMessages(suppressWarnings(nlmixr_object_simplify(model_relabeled)))
+  expect_identical(hash_with, hash_relabeled)
+})
+
+test_that("nlmixr_object_complicate restores labels, meta, and data from the original model", {
+  model <- function() {
+    ini({
+      lcl <- log(0.008); label("Typical clearance")
+      cpaddSd <- 0.1; label("residual variability")
+    })
+    model({
+      cl <- exp(lcl)
+      d/dt(central) <- -cl/1*central
+      cp <- central/1
+      cp ~ add(cpaddSd)
+    })
+  }
+  # Build a fake fit that mimics the post-fit shape: fit$env holds origData
+  # and a "ui" slot, and fit$ui is a list (with class rxUi) keyed off
+  # fit$env$ui (the same shape nlmixr2est attaches to fitted objects).
+  fit <- list(env = new.env(parent = emptyenv()))
+  fit$env$origData <- data.frame(x = 1:3)
+  source_ui <- suppressMessages(suppressWarnings(nlmixr2est::nlmixr(model)))
+  source_ui$iniDf$label <- NA_character_
+  rm(list = ls(envir = source_ui$meta, all.names = TRUE), envir = source_ui$meta)
+  # Snapshot to a list (the way targets serialization produces it):
+  fit$env$ui <-
+    structure(
+      list(
+        iniDf = source_ui$iniDf,
+        meta = list()
+      ),
+      class = c("rxUi", "list")
+    )
+  out <-
+    nlmixr_object_complicate(
+      fit = fit,
+      object = model,
+      data = data.frame(x = 11:13)
+    )
+  iniDf <- out$env$ui$iniDf
+  expect_equal(iniDf$label[iniDf$name == "lcl"], "Typical clearance")
+  expect_equal(iniDf$label[iniDf$name == "cpaddSd"], "residual variability")
+  expect_identical(out$env$origData, data.frame(x = 11:13))
+})
+
+test_that("nlmixr_object_complicate works when fit$ui is an environment (no fit$env$ui)", {
+  model <- function() {
+    ini({
+      lcl <- log(0.008); label("Typical clearance")
+      cpaddSd <- 0.1; label("residual variability")
+    })
+    model({
+      cl <- exp(lcl)
+      d/dt(central) <- -cl/1*central
+      cp <- central/1
+      cp ~ add(cpaddSd)
+    })
+  }
+  fit <- list(env = new.env(parent = emptyenv()))
+  fit$env$origData <- data.frame(x = 1:3)
+  ui <- suppressMessages(suppressWarnings(nlmixr2est::nlmixr(model)))
+  ui$iniDf$label <- NA_character_
+  rm(list = ls(envir = ui$meta, all.names = TRUE), envir = ui$meta)
+  fit$ui <- ui
+  out <-
+    nlmixr_object_complicate(
+      fit = fit,
+      object = model,
+      data = data.frame(x = 11:13)
+    )
+  iniDf <- out$ui$iniDf
+  expect_equal(iniDf$label[iniDf$name == "lcl"], "Typical clearance")
+  expect_equal(iniDf$label[iniDf$name == "cpaddSd"], "residual variability")
+  expect_identical(out$env$origData, data.frame(x = 11:13))
+})
+
+test_that("nlmixr_object_complicate errors when no ui is present", {
+  # Neither fit$env$ui nor fit$ui — should fail before even touching the
+  # source model.
+  fit <- list(env = new.env(parent = emptyenv()), ui = NULL)
+  fit$env$origData <- data.frame(x = 1:3)
+  expect_error(
+    nlmixr_object_complicate(
+      fit = fit,
+      object = quote(unused_because_we_fail_early),
+      data = data.frame(x = 1:3)
+    ),
+    regexp = "Could not find a ui on the fit"
+  )
+})
+
+test_that("nlmixr_object_complicate rejects nrow-mismatched data via assign_origData", {
+  model <- function() {
+    ini({lcl <- log(0.008); cpaddSd <- 0.1})
+    model({
+      cl <- exp(lcl)
+      d/dt(central) <- -cl/1*central
+      cp <- central/1
+      cp ~ add(cpaddSd)
+    })
+  }
+  fit <- list(env = new.env(parent = emptyenv()))
+  fit$env$origData <- data.frame(x = 1:3)
+  ui <- suppressMessages(suppressWarnings(nlmixr2est::nlmixr(model)))
+  ui$iniDf$label <- NA_character_
+  rm(list = ls(envir = ui$meta, all.names = TRUE), envir = ui$meta)
+  fit$ui <- ui
+  expect_error(
+    nlmixr_object_complicate(
+      fit = fit,
+      object = model,
+      data = data.frame(x = 1:4)
+    ),
+    regexp = "Must have exactly 3 rows"
+  )
+})

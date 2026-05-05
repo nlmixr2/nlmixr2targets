@@ -30,6 +30,7 @@ converted to lower case.
 }
 \seealso{
 Other Simplifiers:
+\code{\link[=nlmixr_object_complicate]{nlmixr_object_complicate()}},
 \code{\link[=nlmixr_object_simplify]{nlmixr_object_simplify()}}
 }
 \concept{Simplifiers}

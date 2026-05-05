@@ -131,9 +131,10 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table, object_simpl
         name = name,
         command =
           substitute(
-            assign_origData(fit = fit, data = data),
+            nlmixr_object_complicate(fit = fit, object = object, data = data),
             list(
               fit = as.name(fit_simple_name),
+              object = object,
               data = data
             )
           ),

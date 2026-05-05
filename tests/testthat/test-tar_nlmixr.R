@@ -203,6 +203,24 @@ targets::tar_test("tar_nlmixr execution", {
     tar_read(pheno_model)$env$origData,
     nlmixr2data::pheno_sd
   )
+  # tar_nlmixr restores parameter labels on the final fit (#28). The
+  # simplified-and-stripped fit has all-NA labels; the final fit reads
+  # them back from the original model.
+  fit_simple <- targets::tar_read(pheno_model_tar_fit_simple)
+  expect_true(all(is.na(fit_simple$ui$iniDf$label)))
+  iniDf_final <- targets::tar_read(pheno_model)$ui$iniDf
+  expect_equal(
+    iniDf_final$label[iniDf_final$name == "lcl"],
+    "Typical value of clearance"
+  )
+  expect_equal(
+    iniDf_final$label[iniDf_final$name == "lvc"],
+    "Typical value of volume of distribution"
+  )
+  expect_equal(
+    iniDf_final$label[iniDf_final$name == "cpaddSd"],
+    "residual variability"
+  )
 })
 
 targets::tar_test("tar_nlmixr handling with initial conditions central(0), without running the target", {

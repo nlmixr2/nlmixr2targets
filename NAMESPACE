@@ -3,6 +3,7 @@
 export(assign_origData)
 export(nlmixr2_indirect)
 export(nlmixr_data_simplify)
+export(nlmixr_object_complicate)
 export(nlmixr_object_simplify)
 export(tar_nlmixr)
 export(tar_nlmixr_multimodel)
