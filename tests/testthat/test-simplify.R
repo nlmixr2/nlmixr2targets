@@ -152,6 +152,49 @@ test_that("nlmixr_object_simplify_zero_initial returns non-functions unchanged",
   expect_identical(nlmixr_object_simplify_zero_initial("foo"), "foo")
 })
 
+test_that("nlmixr_data_simplify_cols returns cols unchanged when all present", {
+  d <- data.frame(WT = 1, AGE = 2, ID = 3)
+  expect_identical(
+    nlmixr_data_simplify_cols(d, cols = c("WT", "AGE"), type = "covariate"),
+    c("WT", "AGE")
+  )
+  # NULL cols are preserved (used for table$keep when keep is unset)
+  expect_null(nlmixr_data_simplify_cols(d, cols = NULL, type = "keep"))
+  # Empty character vector also preserved
+  expect_identical(
+    nlmixr_data_simplify_cols(d, cols = character(0), type = "covariate"),
+    character(0)
+  )
+})
+
+test_that("nlmixr_data_simplify_cols error message names the type and missing column", {
+  d <- data.frame(WT = 1)
+  expect_error(
+    nlmixr_data_simplify_cols(d, cols = c("WT", "AGE"), type = "covariate"),
+    regexp = "The following covariate column(s) are missing from the data: 'AGE'",
+    fixed = TRUE
+  )
+  expect_error(
+    nlmixr_data_simplify_cols(d, cols = c("APGR"), type = "keep"),
+    regexp = "The following keep column(s) are missing from the data: 'APGR'",
+    fixed = TRUE
+  )
+})
+
+test_that("nlmixr_data_simplify rejects non-data-frame data", {
+  expect_error(
+    nlmixr_data_simplify(data = list(a = 1), object = model_simple),
+    regexp = "Must be of type 'data.frame'"
+  )
+})
+
+test_that("nlmixr_data_simplify rejects non-list table", {
+  expect_error(
+    nlmixr_data_simplify(data = nlmixr2data::pheno_sd, object = model_simple, table = "bad"),
+    regexp = "Must be of type 'list'"
+  )
+})
+
 test_that("re-estimating a model works with covariates (#9)", {
   bad_data_lower_case <- nlmixr2data::pheno_sd
   bad_data_lower_case$id <- bad_data_lower_case$ID
