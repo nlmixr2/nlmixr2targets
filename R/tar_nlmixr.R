@@ -53,6 +53,7 @@ tar_nlmixr <- function(name, object, data, est = NULL, control = list(), table =
   if (is.null(est)) {
     stop("'est' must not be null")
   }
+  checkmate::assert_environment(env)
   name_parsed <- targets::tar_deparse_language(substitute(name))
   tar_nlmixr_raw(
     name = name_parsed,
