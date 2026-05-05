@@ -44,6 +44,7 @@
 <li>Indirect cache (<code>save_nlmixr2obj_indirect()</code> / <code>read_nlmixr2obj_indirect()</code>) now reports a clear error mentioning the missing hash and cache directory on cache misses, instead of bubbling up a <code><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS()</a></code> failure.</li>
 <li>
 <code><a href="../reference/tar_nlmixr.html">tar_nlmixr()</a></code>, <code><a href="../reference/tar_nlmixr_multimodel.html">tar_nlmixr_multimodel()</a></code>, <code><a href="../reference/assign_origData.html">assign_origData()</a></code>, and <code><a href="../reference/nlmixr_data_simplify.html">nlmixr_data_simplify()</a></code> now validate their key arguments at function entry so misuse fails loudly at the call site.</li>
+<li>Object metadata (<code>ui$meta</code>) and parameter labels (<code>ui$iniDf$label</code>) are now stripped from the simplified model before fitting and re-attached to the final fit by the new <code><a href="../reference/nlmixr_object_complicate.html">nlmixr_object_complicate()</a></code> helper, which also re-attaches the original data. Editing only labels or metadata in the source model no longer invalidates the cached <code>_fit_simple</code> target. (<a href="https://github.com/nlmixr2/nlmixr2targets/issues/28" class="external-link">#28</a>)</li>
 </ul></div>
   </main></div>
 

@@ -38,4 +38,5 @@ are converted to lower case.
 ## See also
 
 Other Simplifiers:
+[`nlmixr_object_complicate()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_object_complicate.md),
 [`nlmixr_object_simplify()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_object_simplify.md)

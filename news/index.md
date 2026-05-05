@@ -17,3 +17,11 @@
   [`nlmixr_data_simplify()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_data_simplify.md)
   now validate their key arguments at function entry so misuse fails
   loudly at the call site.
+- Object metadata (`ui$meta`) and parameter labels (`ui$iniDf$label`)
+  are now stripped from the simplified model before fitting and
+  re-attached to the final fit by the new
+  [`nlmixr_object_complicate()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_object_complicate.md)
+  helper, which also re-attaches the original data. Editing only labels
+  or metadata in the source model no longer invalidates the cached
+  `_fit_simple` target.
+  ([\#28](https://github.com/nlmixr2/nlmixr2targets/issues/28))

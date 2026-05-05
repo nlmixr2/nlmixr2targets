@@ -13,6 +13,9 @@
 - [`nlmixr_data_simplify()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_data_simplify.md)
   : Standardize and simplify data for nlmixr2 estimation
 
+- [`nlmixr_object_complicate()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_object_complicate.md)
+  : Re-attach labels, metadata, and original data to a simplified fit
+
 - [`nlmixr_object_simplify()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_object_simplify.md)
   : Simplify an nlmixr object
 

@@ -64,6 +64,13 @@ from the <code>nlmixr2targets</code> indirect cache.</p>
     <p>The object simplification removes comments (so please use <code>label()</code>
 instead of comments to label parameters) and then converts the <code>object</code>
 to a "nlmixrui" object.</p>
+<p>Object metadata (<code>ui$meta</code>) and parameter labels (<code>ui$iniDf$label</code>) are
+also stripped from the simplified object before it is written to the
+indirect cache. They do not affect estimation, and stripping them keeps
+the cache hash stable across edits to either, so editing only labels or
+metadata will not invalidate the cached fit. The stripped values are
+restored on the final fit by <code><a href="nlmixr_object_complicate.html">nlmixr_object_complicate()</a></code>, which reads
+them straight back off the original model.</p>
 <p>Since setting initial conditions with <code>cmt(0)</code> does not work with <code>targets</code>,
 the function definition of the object must set it with <code>cmt(initial)</code>.
 <code>cmt(initial)</code> will be converted to <code>cmt(0)</code> before passing to nlmixr2.</p>
@@ -74,8 +81,11 @@ function to.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p>Other Simplifiers:
-<code><a href="nlmixr_data_simplify.html">nlmixr_data_simplify()</a></code></p></div>
+    <div class="dont-index"><p><code><a href="nlmixr_object_complicate.html">nlmixr_object_complicate()</a></code> for the inverse operation that
+re-attaches labels, metadata, and the original data on the final fit.</p>
+<p>Other Simplifiers:
+<code><a href="nlmixr_data_simplify.html">nlmixr_data_simplify()</a></code>,
+<code><a href="nlmixr_object_complicate.html">nlmixr_object_complicate()</a></code></p></div>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
