@@ -10,7 +10,7 @@ nlmixr_object_simplify(object)
 \item{object}{Fitted object or function specifying the model.}
 }
 \value{
-The md5 hash used to load the simplified \code{nlmixrui} object back
+The MD5 hash used to load the simplified \code{nlmixrui} object back
 from the \code{nlmixr2targets} indirect cache.
 }
 \description{
@@ -26,7 +26,7 @@ the function definition of the object must set it with \code{cmt(initial)}.
 \code{cmt(initial)} will be converted to \code{cmt(0)} before passing to nlmixr2.
 
 The simplified model's \code{model.name} is always set to \code{"object"}. This keeps
-the simplified output stable so that the md5 hash used by the \code{targets}
+the simplified output stable so that the MD5 hash used by the \code{targets}
 indirect cache is independent of the symbol the caller bound the model
 function to.
 }

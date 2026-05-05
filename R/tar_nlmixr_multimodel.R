@@ -58,12 +58,16 @@ tar_nlmixr_multimodel_parse <- function(name, data, est, control, table, model_l
   iter <- 0L
   while (any(mask_self_referential)) {
     iter <- iter + 1L
-    if (iter > max_iter) {
+    if (iter > max_iter) { # nocov start
+      # Unreachable through any model_list shape we have constructed: the
+      # circular-reference check below fires before this iteration cap can
+      # ever trigger. Kept as a defensive guard against future input we
+      # have not anticipated.
       stop(
         "Internal error: self-reference resolution did not terminate after ",
         max_iter, " iterations. Please report this with a reproducible example."
       )
-    }
+    } # nocov end
     mask_self_referential_orig <- mask_self_referential
     model_list_self_reference <- model_list[mask_self_referential]
     # Generate a mapping of names to their target names, only for

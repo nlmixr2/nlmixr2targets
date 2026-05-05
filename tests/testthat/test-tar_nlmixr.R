@@ -26,6 +26,125 @@ test_that("tar_nlmixr expected errors", {
     regexp = "'est' must not be null",
     fixed = TRUE
   )
+  expect_error(
+    tar_nlmixr(
+      name = pheno_model, object = pheno, data = nlmixr2data::pheno_sd,
+      est = "saem", env = "not an environment"
+    ),
+    regexp = "Must be an environment",
+    fixed = TRUE
+  )
+})
+
+# Helper: build a minimal fit-like object that assign_origData() will
+# accept. The function only touches fit$env (an environment) and
+# fit$env$origData (a data frame), so we don't need real nlmixr2 here.
+make_fake_fit <- function(orig = data.frame(x = 1:3, y = 4:6)) {
+  e <- new.env(parent = emptyenv())
+  e$origData <- orig
+  list(env = e)
+}
+
+test_that("assign_origData swaps origData in place", {
+  fit <- make_fake_fit(data.frame(x = 1:3, y = 4:6))
+  new_data <- data.frame(x = 11:13, y = 14:16)
+  out <- assign_origData(fit = fit, data = new_data)
+  expect_identical(out$env$origData, new_data)
+  # Same env, mutated in place
+  expect_identical(fit$env$origData, new_data)
+})
+
+test_that("assign_origData rejects nrow mismatch", {
+  fit <- make_fake_fit(data.frame(x = 1:3))
+  expect_error(
+    assign_origData(fit = fit, data = data.frame(x = 1:4)),
+    regexp = "Must have exactly 3 rows"
+  )
+})
+
+test_that("assign_origData rejects non-data-frame inputs", {
+  fit <- make_fake_fit()
+  expect_error(
+    assign_origData(fit = fit, data = list(x = 1:3)),
+    regexp = "Must be of type 'data.frame'"
+  )
+})
+
+test_that("assign_origData rejects fits without an env", {
+  expect_error(
+    assign_origData(fit = list(env = NULL), data = data.frame(x = 1:3)),
+    regexp = "Must be an environment"
+  )
+})
+
+test_that("assign_origData rejects fits without origData", {
+  e <- new.env(parent = emptyenv())
+  expect_error(
+    assign_origData(fit = list(env = e), data = data.frame(x = 1:3)),
+    regexp = "Must be of type 'data.frame'"
+  )
+})
+
+test_that("tar_nlmixr_raw constructs four targets with expected names", {
+  out <- tar_nlmixr_raw(
+    name = "fit_x",
+    object = quote(my_model),
+    data = quote(my_data),
+    est = "saem",
+    control = quote(list()),
+    table = quote(list()),
+    object_simple_name = "fit_x_osimple",
+    data_simple_name = "fit_x_dsimple",
+    fit_simple_name = "fit_x_fitsimple",
+    env = environment()
+  )
+  expect_named(out, c("object_simple", "data_simple", "fit_simple", "fit"))
+  expect_equal(out$object_simple$settings$name, "fit_x_osimple")
+  expect_equal(out$data_simple$settings$name, "fit_x_dsimple")
+  expect_equal(out$fit_simple$settings$name, "fit_x_fitsimple")
+  expect_equal(out$fit$settings$name, "fit_x")
+  # Verify dependency wiring: data_simple consumes object_simple,
+  # fit_simple consumes both, fit consumes fit_simple.
+  expect_true("fit_x_osimple" %in% targets::tar_deps_raw(out$data_simple$command$expr))
+  expect_true("fit_x_osimple" %in% targets::tar_deps_raw(out$fit_simple$command$expr))
+  expect_true("fit_x_dsimple" %in% targets::tar_deps_raw(out$fit_simple$command$expr))
+  expect_true("fit_x_fitsimple" %in% targets::tar_deps_raw(out$fit$command$expr))
+})
+
+test_that("tar_nlmixr_raw rejects malformed name arguments", {
+  args <- list(
+    object = quote(my_model),
+    data = quote(my_data),
+    est = "saem",
+    control = quote(list()),
+    table = quote(list()),
+    object_simple_name = "fit_x_osimple",
+    data_simple_name = "fit_x_dsimple",
+    fit_simple_name = "fit_x_fitsimple",
+    env = environment()
+  )
+  expect_error(do.call(tar_nlmixr_raw, c(list(name = ""),       args)), regexp = "name")
+  expect_error(do.call(tar_nlmixr_raw, c(list(name = NA_character_), args)), regexp = "name")
+  expect_error(do.call(tar_nlmixr_raw, c(list(name = c("a", "b")), args)), regexp = "name")
+})
+
+test_that("tar_nlmixr_raw rejects malformed simple_name arguments", {
+  base_args <- list(
+    name = "fit_x",
+    object = quote(my_model),
+    data = quote(my_data),
+    est = "saem",
+    control = quote(list()),
+    table = quote(list()),
+    object_simple_name = "fit_x_osimple",
+    data_simple_name = "fit_x_dsimple",
+    fit_simple_name = "fit_x_fitsimple",
+    env = environment()
+  )
+  bad_object <- base_args; bad_object$object_simple_name <- ""
+  bad_data <- base_args; bad_data$data_simple_name <- NA_character_
+  expect_error(do.call(tar_nlmixr_raw, bad_object), regexp = "object_simple_name")
+  expect_error(do.call(tar_nlmixr_raw, bad_data), regexp = "data_simple_name")
 })
 
 # targets::tar_test() runs the test code inside a temporary directory

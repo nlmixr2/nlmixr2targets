@@ -11,12 +11,12 @@
 #' `cmt(initial)` will be converted to `cmt(0)` before passing to nlmixr2.
 #'
 #' The simplified model's `model.name` is always set to `"object"`. This keeps
-#' the simplified output stable so that the md5 hash used by the `targets`
+#' the simplified output stable so that the MD5 hash used by the `targets`
 #' indirect cache is independent of the symbol the caller bound the model
 #' function to.
 #'
 #' @inheritParams nlmixr2est::nlmixr
-#' @returns The md5 hash used to load the simplified `nlmixrui` object back
+#' @returns The MD5 hash used to load the simplified `nlmixrui` object back
 #'   from the `nlmixr2targets` indirect cache.
 #' @family Simplifiers
 #' @export
