@@ -2,13 +2,16 @@ Package: nlmixr2targets
 Title: Targets for 'nlmixr2' Pipelines
 Version: 0.0.0.9000
 Authors@R: 
-    person("Bill", "Denney", email="wdenney@humanpredictions.com", role=c("aut", "cre"), comment=c(ORCID="0000-0002-5759-428X"))
-Description:
-  'nlmixr2' often has long runtimes.  A pipeline toolkit tailored to 'nlmixr2'
-  workflows leverages 'targets' and 'nlmixr2' to ease reproducible workflows.
-  'nlmixr2targets' ensures minimal rework in model development with 'nlmixr2'
-  and 'targets' by simplifying and standardizing models and datasets.
+    person("Bill", "Denney", , "wdenney@humanpredictions.com", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-5759-428X"))
+Description: 'nlmixr2' often has long runtimes.  A pipeline toolkit
+    tailored to 'nlmixr2' workflows leverages 'targets' and 'nlmixr2' to
+    ease reproducible workflows.  'nlmixr2targets' ensures minimal rework
+    in model development with 'nlmixr2' and 'targets' by simplifying and
+    standardizing models and datasets.
 License: GPL (>= 2)
+URL: https://nlmixr2.github.io/nlmixr2targets/
+BugReports: https://github.com/nlmixr2/nlmixr2targets/issues
 Depends: 
     R (>= 4.1)
 Imports: 
@@ -24,11 +27,10 @@ Suggests:
     rmarkdown,
     spelling,
     testthat (>= 3.0.0)
+VignetteBuilder: 
+    knitr
+Config/roxygen2/version: 8.0.0
 Config/testthat/edition: 3
 Encoding: UTF-8
-Roxygen: list(markdown = TRUE)
-URL: https://nlmixr2.github.io/nlmixr2targets/
-BugReports: https://github.com/nlmixr2/nlmixr2targets/issues
-VignetteBuilder: knitr
-Config/roxygen2/version: 8.0.0
 Language: en-US
+Roxygen: list(markdown = TRUE)
