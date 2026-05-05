@@ -30,7 +30,9 @@ tar_nlmixr_multimodel <- function(name, ..., data, est, control = list(), table 
 #' @param model_list A named list of calls for model targets to be created
 #' @keywords Internal
 tar_nlmixr_multimodel_parse <- function(name, data, est, control, table, model_list, env) {
+  checkmate::assert_string(name, min.chars = 1)
   checkmate::assert_named(model_list, type = "unique")
+  checkmate::assert_environment(env)
 
   ret_prep <-
     lapply(
@@ -43,8 +45,25 @@ tar_nlmixr_multimodel_parse <- function(name, data, est, control, table, model_l
       table = table,
       env = env
     )
+  # Within-list piping (e.g. `models[["A"]] |> ini(...)` referenced from
+  # another list entry) is resolved iteratively: each pass rewrites
+  # references to already-resolved models with their `_fitsimple` target
+  # names, then re-checks. The number of self-referential models must
+  # strictly decrease each pass; otherwise there is a circular reference
+  # and we stop. The loop runs at most `length(model_list)` times in the
+  # worst case (one model resolved per pass), so we cap iterations as
+  # belt-and-braces against any pathological input we have not anticipated.
   mask_self_referential <- tar_nlmixr_multimodel_has_self_reference(model_list = model_list, name = name)
+  max_iter <- length(model_list)
+  iter <- 0L
   while (any(mask_self_referential)) {
+    iter <- iter + 1L
+    if (iter > max_iter) {
+      stop(
+        "Internal error: self-reference resolution did not terminate after ",
+        max_iter, " iterations. Please report this with a reproducible example."
+      )
+    }
     mask_self_referential_orig <- mask_self_referential
     model_list_self_reference <- model_list[mask_self_referential]
     # Generate a mapping of names to their target names, only for
