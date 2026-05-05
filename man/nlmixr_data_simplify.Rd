@@ -29,7 +29,7 @@ alphabetically sorted covariates), and rxode2 and nlmixr2 column names are
 converted to lower case.
 }
 \seealso{
-Other Simplifiers: 
-\code{\link{nlmixr_object_simplify}()}
+Other Simplifiers:
+\code{\link[=nlmixr_object_simplify]{nlmixr_object_simplify()}}
 }
 \concept{Simplifiers}

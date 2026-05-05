@@ -10,8 +10,8 @@ nlmixr_object_simplify(object)
 \item{object}{Fitted object or function specifying the model.}
 }
 \value{
-\code{object} converted to a nlmixrui object.  The model name is
-always "object".
+The hash to be able to load \code{object} from the converted to a
+nlmixrui object. The model name is always "object".
 }
 \description{
 This function is typically not needed by end users.
@@ -26,7 +26,7 @@ the function definition of the object must set it with \code{cmt(initial)}.
 \code{cmt(initial)} will be converted to \code{cmt(0)} before passing to nlmixr2.
 }
 \seealso{
-Other Simplifiers: 
-\code{\link{nlmixr_data_simplify}()}
+Other Simplifiers:
+\code{\link[=nlmixr_data_simplify]{nlmixr_data_simplify()}}
 }
 \concept{Simplifiers}
