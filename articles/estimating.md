@@ -1,0 +1,213 @@
+# Estimating nlmixr2 models with 'nlmixr2targets'
+
+``` r
+
+library(nlmixr2targets)
+```
+
+## Introduction to `nlmixr2targets`
+
+The `nlmixr2targets` improves reproducibility by ensuring that your
+model is up-to-date with your data, and it speeds your workflow using
+the `targets` package to only run models when the model or data have
+changed.
+
+There are two main functions that are used within the package:
+
+- [`tar_nlmixr()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
+  which runs a single model, and
+- [`tar_nlmixr_multimodel()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel.md)
+  which runs multiple models for a single dataset.
+
+Using `nlmixr2targets` requires the use of the `targets` package. To
+learn about the `targets` package, see
+(<https://docs.ropensci.org/targets/>)\[the targets website\].
+
+## Running one model with one dataset (`tar_nlmixr()`)
+
+The
+[`tar_nlmixr()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
+function allows you to estimate one model with one dataset. It will
+generate three targets: a simplified version of the model, a minimal
+version of the dataset, and the estimation step.
+
+The simplified version of the model removes parts that are less
+reproducible but changes none of the model intent. (Advanced
+information: The parts that are removed are that the source references
+and the model name. Also, the model is modified at this step for setting
+initial values as described in the previous section of this vignette.)
+
+``` r
+
+library(targets)
+library(tarchetypes)
+library(nlmixr2targets)
+
+pheno <- function() {
+  ini({
+    lcl <- log(0.008); label("Typical value of clearance")
+    lvc <-  log(0.6); label("Typical value of volume of distribution")
+    etalcl + etalvc ~ c(1,
+                        0.01, 1)
+    cpaddSd <- 0.1; label("residual variability")
+  })
+  model({
+    cl <- exp(lcl + etalcl)
+    vc <- exp(lvc + etalvc)
+    kel <- cl/vc
+    d/dt(central) <- -kel*central
+    cp <- central/vc
+    cp ~ add(cpaddSd)
+  })
+}
+
+plan_model <-
+  tar_plan(
+    myData = nlmixr2data::pheno_sd,
+    tar_nlmixr(
+      model_pheno,
+      object = pheno,
+      data = myData,
+      est = "saem"
+    )
+  )
+
+list(
+  plan_model
+)
+```
+
+## Running multiple models with one dataset (`tar_nlmixr_multimodel()`)
+
+A common use case is to generate multiple models using a single dataset
+and estimation method.
+[`tar_nlmixr_multimodel()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel.md)
+allows the generation of a named list of models to allow subsequent
+analysis of all models.
+
+Internally,
+[`tar_nlmixr_multimodel()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel.md)
+passes all the models to
+[`tar_nlmixr()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
+so that the data set simplification and equivalent steps run once per
+model, and not model is run more often than required for dataset or
+model changes.
+
+``` r
+
+library(targets)
+library(tarchetypes)
+library(nlmixr2targets)
+
+pheno <- function() {
+  ini({
+    lcl <- log(0.008); label("Typical value of clearance")
+    lvc <-  log(0.6); label("Typical value of volume of distribution")
+    etalcl + etalvc ~ c(1,
+                        0.01, 1)
+    cpaddSd <- 0.1; label("residual variability")
+  })
+  model({
+    cl <- exp(lcl + etalcl)
+    vc <- exp(lvc + etalvc)
+    kel <- cl/vc
+    d/dt(central) <- -kel*central
+    cp <- central/vc
+    cp ~ add(cpaddSd)
+  })
+}
+
+pheno2 <- function() {
+  ini({
+    lcl <- log(0.008); label("Typical value of clearance")
+    lvc <-  log(0.6); label("Typical value of volume of distribution")
+    etalcl + etalvc ~ c(2,
+                        0.01, 2)
+    cpaddSd <- 3.0; label("residual variability")
+  })
+  model({
+    cl <- exp(lcl + etalcl)
+    vc <- exp(lvc + etalvc)
+    kel <- cl/vc
+    d/dt(central) <- -kel*central
+    cp <- central/vc
+    cp ~ add(cpaddSd)
+  })
+}
+
+plan_model <-
+  tar_nlmixr_multimodel(
+    all_models,
+    data = nlmixr2data::pheno_sd,
+    est = "saem",
+    "Base model; additive residual error = 1" = pheno,
+    "Base model; additive residual error = 3" = pheno2
+  )
+
+plan_report <-
+  tar_plan(
+    # Determine the AIC for all tested models
+    aic_list = sapply(X = all_models, FUN = AIC)
+  )
+
+list(
+  plan_model,
+  plan_report
+)
+```
+
+### Model piping for multiple models estimated with one dataset
+
+Model piping for `nlmixr2` models (see
+[`vignette("modelPiping", package = "nlmixr2")`](https://nlmixr2.github.io/nlmixr2/articles/modelPiping.html))
+is possible within the multiple models being estimated with
+[`tar_nlmixr_multimodel()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel.md).
+It simplifies examples like the one above so that you can focus on the
+model content and avoid rewriting models, as with all `nlmixr2` model
+piping.
+
+To use model piping, simply refer to the model by its name like a named
+list. Behind the scenes, `nlmixr2targets` will work out the dependencies
+between the models and only rerun the dependent model if it or the
+dependent model changes.
+
+``` r
+
+library(targets)
+library(tarchetypes)
+library(nlmixr2targets)
+library(nlmixr2)
+
+pheno <- function() {
+  ini({
+    lcl <- log(0.008); label("Typical value of clearance")
+    lvc <-  log(0.6); label("Typical value of volume of distribution")
+    etalcl + etalvc ~ c(1,
+                        0.01, 1)
+    cpaddSd <- 0.1; label("residual variability")
+  })
+  model({
+    cl <- exp(lcl + etalcl)
+    vc <- exp(lvc + etalvc)
+    kel <- cl/vc
+    d/dt(central) <- -kel*central
+    cp <- central/vc
+    cp ~ add(cpaddSd)
+  })
+}
+
+plan_model <-
+  tar_nlmixr_multimodel(
+    all_models,
+    data = nlmixr2data::pheno_sd,
+    est = "saem",
+    "Base model; additive residual error = 1" = pheno,
+    "Base model; additive residual error = 3" =
+      all_models[["Base model; additive residual error = 1"]] |>
+      ini(cpaddSd = 3)
+  )
+
+list(
+  plan_model
+)
+```

@@ -1,9 +1,9 @@
-pandoc: 3.1.11
-pkgdown: 2.1.1
+pandoc: 3.8.3
+pkgdown: 2.2.0
 pkgdown_sha: ~
 articles:
   estimating: estimating.html
-last_built: 2025-02-23T15:17Z
+last_built: 2026-05-05T17:12Z
 urls:
   reference: https://nlmixr2.github.io/nlmixr2targets/reference
   article: https://nlmixr2.github.io/nlmixr2targets/articles
