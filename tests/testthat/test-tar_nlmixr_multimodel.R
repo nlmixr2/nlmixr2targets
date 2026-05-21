@@ -285,12 +285,12 @@ targets::tar_test("tar_nlmixr_multimodel works for within-list model piping (#19
       )
   })
   dependencies <- targets::tar_network()$edges
-  # There is one fitsimple object (estimated model result) that generates an
-  # osimple (prepared model) object
+  # There is one fit_simple object (estimated model result) that generates an
+  # object_simple (prepared model) object
   expect_equal(
     sum(
-      grepl(x = dependencies$from, pattern = "foo_.{8}_fitsimple") &
-        grepl(x = dependencies$to, pattern = "foo_.{8}_osimple")
+      grepl(x = dependencies$from, pattern = "foo_.{8}_fit_simple") &
+        grepl(x = dependencies$to, pattern = "foo_.{8}_object_simple")
     ),
     1
   )
@@ -326,14 +326,14 @@ test_that("tar_nlmixr_multimodel_remove_self_reference_single rewrites reference
   out <- tar_nlmixr_multimodel_remove_self_reference_single(
     model = quote(foo[["A"]]), name_map = name_map
   )
-  expect_equal(out, quote(foo_aaaaaaaa_fitsimple))
+  expect_equal(out, quote(foo_aaaaaaaa_fit_simple))
   # nested rewrite (inside a pipe)
   out2 <- tar_nlmixr_multimodel_remove_self_reference_single(
     model = quote(foo[["A"]] |> rxode2::ini(x = 1)), name_map = name_map
   )
   expect_true(rxode2::.matchesLangTemplate(
     x = out2,
-    template = str2lang("foo_aaaaaaaa_fitsimple |> rxode2::ini(x = 1)")
+    template = str2lang("foo_aaaaaaaa_fit_simple |> rxode2::ini(x = 1)")
   ))
   # symbol input is returned unchanged (length <= 1 short-circuit)
   expect_equal(

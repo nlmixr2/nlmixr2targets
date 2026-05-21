@@ -7,6 +7,57 @@
 #' @inheritParams tar_nlmixr
 #' @returns A list of targets for the model simplification, data simplification,
 #'   and model estimation.
+#' @seealso [tar_nlmixr()] for fitting a single model.
+#' @examples
+#' \dontrun{
+#' library(targets)
+#' targets::tar_script({
+#' pheno <- function() {
+#'   ini({
+#'     lcl <- log(0.008); label("Typical value of clearance")
+#'     lvc <-  log(0.6); label("Typical value of volume of distribution")
+#'     etalcl + etalvc ~ c(1,
+#'                         0.01, 1)
+#'     cpaddSd <- 0.1; label("residual variability")
+#'   })
+#'   model({
+#'     cl <- exp(lcl + etalcl)
+#'     vc <- exp(lvc + etalvc)
+#'     kel <- cl/vc
+#'     d/dt(central) <- -kel*central
+#'     cp <- central/vc
+#'     cp ~ add(cpaddSd)
+#'   })
+#' }
+#' pheno2 <- function() {
+#'   ini({
+#'     lcl <- log(0.008); label("Typical value of clearance")
+#'     lvc <-  log(0.6); label("Typical value of volume of distribution")
+#'     etalcl + etalvc ~ c(2,
+#'                         0.01, 2)
+#'     cpaddSd <- 3.0; label("residual variability")
+#'   })
+#'   model({
+#'     cl <- exp(lcl + etalcl)
+#'     vc <- exp(lvc + etalvc)
+#'     kel <- cl/vc
+#'     d/dt(central) <- -kel*central
+#'     cp <- central/vc
+#'     cp ~ add(cpaddSd)
+#'   })
+#' }
+#' list(
+#'   tar_nlmixr_multimodel(
+#'     name = all_models,
+#'     data = nlmixr2data::pheno_sd,
+#'     est = "saem",
+#'     "Base model" = pheno,
+#'     "Alternative residual error" = pheno2
+#'   )
+#' )
+#' })
+#' targets::tar_make()
+#' }
 #' @export
 tar_nlmixr_multimodel <- function(name, ..., data, est, control = list(), table = nlmixr2est::tableControl(), env = parent.frame()) {
   tar_nlmixr_multimodel_parse(
@@ -47,7 +98,7 @@ tar_nlmixr_multimodel_parse <- function(name, data, est, control, table, model_l
     )
   # Within-list piping (e.g. `models[["A"]] |> ini(...)` referenced from
   # another list entry) is resolved iteratively: each pass rewrites
-  # references to already-resolved models with their `_fitsimple` target
+  # references to already-resolved models with their `_fit_simple` target
   # names, then re-checks. The number of self-referential models must
   # strictly decrease each pass; otherwise there is a circular reference
   # and we stop. The loop runs at most `length(model_list)` times in the
@@ -133,7 +184,12 @@ tar_nlmixr_multimodel_parse <- function(name, data, est, control, table, model_l
 #'   model is self-referential to another model in the list
 #' @keywords Internal
 tar_nlmixr_multimodel_has_self_reference <- function(model_list, name) {
-  sapply(X = model_list, FUN = tar_nlmixr_multimodel_has_self_reference_single, name = name)
+  vapply(
+    X = model_list,
+    FUN = tar_nlmixr_multimodel_has_self_reference_single,
+    FUN.VALUE = TRUE,
+    name = name
+  )
 }
 #' @describeIn tar_nlmixr_multimodel_has_self_reference A helper function to
 #'   look at each call for each model separately
@@ -168,9 +224,16 @@ tar_nlmixr_multimodel_remove_self_reference_single <- function(model, name_map) 
         x = model
       )
     if (any(mask_template_match)) {
-      # Use the fitsimple version of the model fitting so that it is not
-      # dependent on data changes.
-      model <- str2lang(paste0(name_map[[which(mask_template_match)]], "_fitsimple"))
+      # Use the fit_simple version of the model fitting so that it is not
+      # dependent on data changes. The model can match at most one template
+      # per pass; guard against the assumption silently breaking.
+      if (sum(mask_template_match) > 1L) {
+        stop(
+          "Internal error: model references multiple templates simultaneously. ",
+          "Please report with a reproducible example."
+        )
+      }
+      model <- str2lang(paste0(name_map[[which(mask_template_match)]], "_fit_simple"))
     } else {
       for (idx in seq_along(model)) {
         model[[idx]] <-
@@ -199,6 +262,7 @@ tar_nlmixr_multimodel_single <- function(object, name, data, est, control, table
   #
   # Choice: Use the computationally-cheap option here.
   hash_long <- digest::digest(object)
+  # 8-char prefix; collision probability ~10^-9 for 1000 distinct models.
   hash <- substr(hash_long, 1, 8)
   name_hash <- paste(name, hash, sep = "_")
   tar_prep <-
@@ -209,9 +273,9 @@ tar_nlmixr_multimodel_single <- function(object, name, data, est, control, table
       est = est,
       control = control,
       table = table,
-      object_simple_name = paste0(name_hash, "_osimple"),
-      data_simple_name = paste0(name_hash, "_dsimple"),
-      fit_simple_name = paste0(name_hash, "_fitsimple"),
+      object_simple_name = paste0(name_hash, "_object_simple"),
+      data_simple_name = paste0(name_hash, "_data_simple"),
+      fit_simple_name = paste0(name_hash, "_fit_simple"),
       env = env
     )
   list(

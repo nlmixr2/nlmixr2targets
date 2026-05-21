@@ -1,14 +1,26 @@
 #' Generate a set of targets for nlmixr estimation
 #'
 #' The targets generated will include the `name` as the final estimation step,
-#' `paste(name, "object_simple", sep = "_tar_")` (e.g.
-#' "pheno_tar_object_simple") as the simplified model object, and
-#' `paste(name, "data_simple", sep = "_tar_")` (e.g. "pheno_tar_data_simple") as
+#' `paste(name, "object_simple", sep = "_")` (e.g.
+#' `"pheno_object_simple"`) as the simplified model object, and
+#' `paste(name, "data_simple", sep = "_")` (e.g. `"pheno_data_simple"`) as
 #' the simplified data object.
 #'
 #' For the way that the objects are simplified, see `nlmixr_object_simplify()`
 #' and `nlmixr_data_simplify()`.  To see how to write initial conditions to work
 #' with targets, see `nlmixr_object_simplify()`.
+#'
+#' @section Side effects:
+#' When the user's model function body contains `cmt(0) <- value` inside a
+#' `model({...})` block, `tar_nlmixr()` rewrites those lines to
+#' `cmt(initial) <- value` directly in the function's binding in `env` so that
+#' `targets`' static analysis (which walks every function in env via
+#' `codetools::findGlobals()`) accepts the model. The rewrite is reversed at
+#' evaluation time, so fitting and downstream behaviour are unchanged. The
+#' user-visible consequence is that printing `body(my_model)` at the REPL
+#' after a call to `tar_nlmixr()` will show `cmt(initial)` rather than the
+#' originally-written `cmt(0)`. Manual `cmt(initial) <- value` is also still
+#' accepted and is not affected.
 #'
 #' @inheritParams nlmixr2est::nlmixr
 #' @inheritParams targets::tar_target
@@ -16,6 +28,8 @@
 #'   use)
 #' @returns A list of targets for the model simplification, data simplification,
 #'   and model estimation.
+#' @seealso [tar_nlmixr_multimodel()] for fitting many models against one
+#'   dataset.
 #' @examples
 #' \dontrun{
 #' library(targets)
@@ -62,9 +76,9 @@ tar_nlmixr <- function(name, object, data, est = NULL, control = list(), table =
     est = substitute(est),
     control = substitute(control),
     table = substitute(table),
-    object_simple_name = paste(name_parsed, "object_simple", sep = "_tar_"),
-    data_simple_name = paste(name_parsed, "data_simple", sep = "_tar_"),
-    fit_simple_name = paste(name_parsed, "fit_simple", sep = "_tar_"),
+    object_simple_name = paste(name_parsed, "object_simple", sep = "_"),
+    data_simple_name = paste(name_parsed, "data_simple", sep = "_"),
+    fit_simple_name = paste(name_parsed, "fit_simple", sep = "_"),
     env = env
   )
 }
@@ -207,7 +221,7 @@ tar_nlmixr_protect_zero_initial <- function(object, env) {
   # `rxode2::ini` or `base::model`. We also do not need to walk their
   # bodies for cmt(0) patterns since codetools accepts them as-is
   # (they have no DSL constructs).
-  for (sym in tar_nlmixr_collect_top_symbols(object)) {
+  for (sym in .collect_top_symbols(object)) {
     if (exists(sym, envir = env, inherits = TRUE)) {
       fn <- get(sym, envir = env, inherits = TRUE)
       fn_env <- if (is.function(fn)) environment(fn) else NULL
@@ -241,23 +255,3 @@ tar_nlmixr_protect_zero_initial <- function(object, env) {
   )
 }
 
-# Walk a captured expression and collect symbol names that could refer
-# to user-defined functions. Skips the head of every call (`f(x)` -> we
-# do not add `f`), since the head is the function being called and
-# not a candidate model function. The model function appears either
-# as the whole expression (`object = pheno`), as a `|>` desugared
-# first arg (`object = pheno |> model({...})` -> `model(pheno, ...)`,
-# first arg is `pheno`), or as a nested non-head symbol.
-tar_nlmixr_collect_top_symbols <- function(expr) {
-  out <- character()
-  visit <- function(e, is_head = FALSE) {
-    if (is.symbol(e) && !is_head) {
-      out[[length(out) + 1L]] <<- as.character(e)
-    } else if (is.call(e)) {
-      visit(e[[1L]], is_head = TRUE)
-      for (idx in seq_along(e)[-1L]) visit(e[[idx]])
-    }
-  }
-  visit(expr)
-  unique(out)
-}
