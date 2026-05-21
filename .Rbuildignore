@@ -9,5 +9,6 @@
 ^_pkgdown\.yml$
 ^docs$
 ^pkgdown$
+^\.lintr$
 _targets.R
 _targets

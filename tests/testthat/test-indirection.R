@@ -52,6 +52,79 @@ test_that("read_nlmixr2obj_indirect rejects bad hashes", {
   expect_error(read_nlmixr2obj_indirect(hash = c("a", "b"), directory = tmp))
 })
 
+test_that("nlmixr2targets_cache_status returns an empty data frame for a missing or empty directory", {
+  empty <- nlmixr2targets_cache_status(directory = tempfile("does-not-exist-"))
+  expect_s3_class(empty, "data.frame")
+  expect_named(empty, c("hash", "size_bytes", "mtime"))
+  expect_equal(nrow(empty), 0L)
+
+  tmp <- withr::local_tempdir()
+  empty2 <- nlmixr2targets_cache_status(directory = tmp)
+  expect_equal(nrow(empty2), 0L)
+})
+
+test_that("nlmixr2targets_cache_status lists files with size and mtime", {
+  tmp <- withr::local_tempdir()
+  save_nlmixr2obj_indirect(list(md5 = "aaaaaaaa", payload = 1:3), directory = tmp)
+  save_nlmixr2obj_indirect(list(md5 = "bbbbbbbb", payload = "x"), directory = tmp)
+
+  status <- nlmixr2targets_cache_status(directory = tmp)
+  expect_equal(nrow(status), 2L)
+  expect_setequal(status$hash, c("aaaaaaaa", "bbbbbbbb"))
+  expect_true(all(status$size_bytes > 0))
+  expect_s3_class(status$mtime, "POSIXct")
+})
+
+test_that("nlmixr2targets_cache_prune flags orphans against an explicit `keep` set", {
+  tmp <- withr::local_tempdir()
+  save_nlmixr2obj_indirect(list(md5 = "keep1", payload = 1), directory = tmp)
+  save_nlmixr2obj_indirect(list(md5 = "keep2", payload = 2), directory = tmp)
+  save_nlmixr2obj_indirect(list(md5 = "orphan", payload = 3), directory = tmp)
+
+  # dry-run by default: nothing is deleted, orphans are reported
+  orphans <- nlmixr2targets_cache_prune(
+    keep = c("keep1", "keep2"),
+    directory = tmp
+  )
+  expect_equal(orphans, "orphan")
+  expect_true(file.exists(file.path(tmp, "orphan")))
+
+  # dry_run = FALSE actually removes the orphan
+  removed <- nlmixr2targets_cache_prune(
+    keep = c("keep1", "keep2"),
+    dry_run = FALSE,
+    directory = tmp
+  )
+  expect_equal(removed, "orphan")
+  expect_false(file.exists(file.path(tmp, "orphan")))
+  expect_true(file.exists(file.path(tmp, "keep1")))
+  expect_true(file.exists(file.path(tmp, "keep2")))
+})
+
+test_that("nlmixr2targets_cache_prune with keep = character() prunes everything", {
+  tmp <- withr::local_tempdir()
+  save_nlmixr2obj_indirect(list(md5 = "x", payload = 1), directory = tmp)
+  save_nlmixr2obj_indirect(list(md5 = "y", payload = 2), directory = tmp)
+
+  removed <- nlmixr2targets_cache_prune(
+    keep = character(),
+    dry_run = FALSE,
+    directory = tmp
+  )
+  expect_setequal(removed, c("x", "y"))
+  expect_equal(length(list.files(tmp)), 0L)
+})
+
+test_that("nlmixr2targets_cache_prune returns empty for a missing directory", {
+  expect_identical(
+    nlmixr2targets_cache_prune(
+      keep = character(),
+      directory = tempfile("does-not-exist-")
+    ),
+    character()
+  )
+})
+
 # tar_test() cd's into an isolated tempdir and resets targets config on
 # exit, so the default `tar_config_get("store")` resolves to that dir.
 targets::tar_test("nlmixr2_indirect loads from cache and forwards to nlmixr2est::nlmixr", {

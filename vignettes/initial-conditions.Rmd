@@ -1,0 +1,121 @@
+---
+title: "Initial conditions cheatsheet"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Initial conditions cheatsheet}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(nlmixr2targets)
+```
+
+# Two equivalent forms
+
+nlmixr2's DSL accepts two notations for setting a compartment's initial
+value inside a `model({...})` block. Both work in `tar_nlmixr()` and
+`tar_nlmixr_multimodel()`, and both produce the same fit:
+
+```{r both-forms, eval = FALSE}
+# Form 1: natural DSL syntax
+model({
+  d/dt(central) <- -kel*central
+  central(0) <- 0          # initial value at time 0
+  cp <- central/vc
+  cp ~ add(cpaddSd)
+})
+
+# Form 2: the older `cmt(initial) <- value` workaround
+model({
+  d/dt(central) <- -kel*central
+  central(initial) <- 0    # same meaning as central(0) <- 0
+  cp <- central/vc
+  cp ~ add(cpaddSd)
+})
+```
+
+# What `tar_nlmixr()` does behind the scenes
+
+`targets` walks every function in the user's environment with
+`codetools::findGlobals()` and rejects replacement-style assignments
+whose target is not a symbol -- which is exactly what `central(0) <- 0`
+looks like. To allow the natural DSL syntax, `tar_nlmixr()` walks the
+captured `object` expression at construction time and rewrites every
+`cmt(0) <- value` inside `model({...})` to `cmt(initial) <- value`. The
+rewrite is reversed at runtime before the model is handed to nlmixr2, so
+the fit you get is identical.
+
+The rewrite mutates the function binding **in place** in the
+environment where it was found, so if you later print
+
+```{r print-body, eval = FALSE}
+body(my_model)
+```
+
+at the REPL after calling `tar_nlmixr()`, you will see
+`central(initial) <- 0` rather than the originally-typed
+`central(0) <- 0`. This is the only user-visible side effect.
+
+# Pipe forms
+
+Both pipe forms below also work, including with `cmt(0)`:
+
+```{r pipe-forms, eval = FALSE}
+tar_nlmixr(
+  name = m1,
+  object = pheno |> model({ central(0) <- 0 }, append = TRUE),
+  data  = nlmixr2data::pheno_sd,
+  est   = "saem"
+)
+
+tar_nlmixr(
+  name = m2,
+  object = pheno |> ini(cpaddSd = 0.3),
+  data  = nlmixr2data::pheno_sd,
+  est   = "saem"
+)
+```
+
+A runtime delayed-eval wrapper restores `cmt(0)` before nlmixr2's pipe
+handlers see the parsed body.
+
+# Known limitation: env functions never routed through `tar_nlmixr()`
+
+`targets` walks **every** function in the analysed environment, not just
+the ones referenced by a target. If you define
+
+```{r unused-function, eval = FALSE}
+sketch <- function() {
+  ini({ a <- 1 })
+  model({ central(0) <- 0 })
+}
+```
+
+in the same environment but never pass `sketch` to `tar_nlmixr()`,
+`targets`' static analysis will still try to walk its body and will
+report a `codetools::findGlobals()` error. The workaround is either:
+
+- pass the function through `tar_nlmixr()` (the construction-time
+  rewriter cleans it up), or
+- write the manual `central(initial) <- 0` form by hand.
+
+This case is pinned by a test in `tests/testthat/test-tar_nlmixr.R`.
+
+# Summary
+
+- Both `cmt(0) <- value` and `cmt(initial) <- value` are accepted.
+- `tar_nlmixr()` quietly rewrites the former to the latter in env, and
+  back again at evaluation time.
+- After `tar_nlmixr()`, `body(my_model)` will show the rewritten form;
+  this is cosmetic only.
+- Pipe forms work too via a runtime wrapper.
+- Functions in env that contain `cmt(0)` but are never routed through
+  `tar_nlmixr()` still need the manual `cmt(initial)` form.
