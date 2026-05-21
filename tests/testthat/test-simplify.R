@@ -152,6 +152,105 @@ test_that("nlmixr_object_simplify_zero_initial returns non-functions unchanged",
   expect_identical(nlmixr_object_simplify_zero_initial("foo"), "foo")
 })
 
+test_that("nlmixr_object_protect_zero_initial rewrites cmt(0) inside model({})", {
+  body_with_zero <- quote({
+    ini({
+      lcl <- log(0.008); cpaddSd <- 0.1
+    })
+    model({
+      cl <- exp(lcl)
+      d/dt(eff) <- -cl * eff
+      eff(0) <- 1.5
+    })
+  })
+  body_with_initial <- quote({
+    ini({
+      lcl <- log(0.008); cpaddSd <- 0.1
+    })
+    model({
+      cl <- exp(lcl)
+      d/dt(eff) <- -cl * eff
+      eff(initial) <- 1.5
+    })
+  })
+  res <- nlmixr_object_protect_zero_initial(body_with_zero)
+  expect_equal(res$n_rewrites, 1L)
+  expect_equal(res$expr, body_with_initial)
+
+  # Round-trip via the existing inverse must recover the original.
+  expect_equal(
+    nlmixr_object_simplify_zero_initial_helper(res$expr),
+    body_with_zero
+  )
+})
+
+test_that("nlmixr_object_protect_zero_initial rewrites multiple cmt(0) entries", {
+  body_with_zero <- quote({
+    model({
+      central(0) <- 0
+      depot(0) <- 1
+    })
+  })
+  body_with_initial <- quote({
+    model({
+      central(initial) <- 0
+      depot(initial) <- 1
+    })
+  })
+  res <- nlmixr_object_protect_zero_initial(body_with_zero)
+  expect_equal(res$n_rewrites, 2L)
+  expect_equal(res$expr, body_with_initial)
+})
+
+test_that("nlmixr_object_protect_zero_initial scopes to model({}) only", {
+  # `cmt(0)` outside any `model({...})` block is left alone -- the user
+  # explicitly asked for this scoping. (codetools would still reject it,
+  # but no realistic nlmixr2 model has cmt(0) outside model({}) anyway.)
+  expr <- quote({
+    ini({ a <- 1 })
+    eff(0) <- 2
+  })
+  res <- nlmixr_object_protect_zero_initial(expr)
+  expect_equal(res$n_rewrites, 0L)
+  expect_equal(res$expr, expr)
+})
+
+test_that("nlmixr_object_protect_zero_initial is a no-op for non-call values", {
+  for (val in list(quote(make_model()), as.name("pheno"), 1, "x")) {
+    res <- nlmixr_object_protect_zero_initial(val)
+    expect_equal(res$n_rewrites, 0L)
+  }
+})
+
+test_that("nlmixr_object_zero_initial_eval restores cmt(0) at runtime", {
+  envir <- new.env(parent = baseenv())
+  # Fake nlmixr2 model() function: captures its second arg unevaluated
+  # so we can compare against the rewritten block.
+  envir$fake_model <- function(x, expr) substitute(expr)
+  expr <- quote(fake_model(0, { eff(initial) <- 1 }))
+  res <- nlmixr_object_zero_initial_eval(expr, envir = envir)
+  expect_equal(res, quote({ eff(0) <- 1 }))
+})
+
+test_that("nlmixr_object_zero_initial_eval supplies corrected closures for symbols", {
+  envir <- new.env(parent = baseenv())
+  envir$pheno <- function() {
+    model({
+      eff(initial) <- 1
+    })
+  }
+  envir$grab_body <- function(fn) body(fn)
+  expr <- quote(grab_body(pheno))
+  res <- nlmixr_object_zero_initial_eval(expr, envir = envir)
+  expect_equal(res, quote({ model({ eff(0) <- 1 }) }))
+  # The original binding in envir is left untouched -- the corrected
+  # copy only lives in the override frame.
+  expect_equal(
+    body(envir$pheno),
+    quote({ model({ eff(initial) <- 1 }) })
+  )
+})
+
 test_that("nlmixr_data_simplify_cols returns cols unchanged when all present", {
   d <- data.frame(WT = 1, AGE = 2, ID = 3)
   expect_identical(

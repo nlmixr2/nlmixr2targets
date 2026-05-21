@@ -29,9 +29,18 @@ metadata will not invalidate the cached fit. The stripped values are
 restored on the final fit by \code{\link[=nlmixr_object_complicate]{nlmixr_object_complicate()}}, which reads
 them straight back off the original model.
 
-Since setting initial conditions with \code{cmt(0)} does not work with \code{targets},
-the function definition of the object must set it with \code{cmt(initial)}.
-\code{cmt(initial)} will be converted to \code{cmt(0)} before passing to nlmixr2.
+The natural nlmixr2 DSL form for compartment initial conditions
+(\code{cmt(0) <- value} inside a \code{model({...})} block) trips \code{targets}'
+static analysis because \code{codetools::findGlobals()} interprets it as
+a replacement-function assignment with a non-symbol target.
+\code{tar_nlmixr()} auto-rewrites \code{cmt(0) <- value} to \code{cmt(initial) <- value}
+inside \code{model({...})} blocks at construction time (mutating the
+user's model function in env), and converts back to \code{cmt(0) <- value}
+before nlmixr2 sees the model. The user can therefore write
+\code{cmt(0) <- value} directly. Manual \code{cmt(initial) <- value} is also
+still accepted. Note: because the rewrite mutates the function in
+env, calling the model function directly (outside \code{tar_make()})
+after \code{tar_nlmixr()} will see \code{cmt(initial)} in its body.
 
 The simplified model's \code{model.name} is always set to \code{"object"}. This keeps
 the simplified output stable so that the MD5 hash used by the \code{targets}

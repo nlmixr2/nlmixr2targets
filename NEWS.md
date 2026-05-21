@@ -1,7 +1,20 @@
 # nlmixr2targets 0.0.0.9000
 
-* Setting initial conditions can now be done with `cmt(initial)` which will be
-  automatically recoded to `cmt(0)`.
+* Setting initial conditions can now be done with the natural
+  `cmt(0) <- value` form directly inside `model({...})` blocks.
+  `tar_nlmixr()` rewrites the user's model function body in env to
+  use `cmt(initial) <- value` (codetools-safe) at construction time
+  and restores `cmt(0) <- value` before nlmixr2 sees the model. The
+  pipe forms `pheno |> model({...})` and `pheno |> ini(...)` are
+  also supported via a runtime delayed-eval wrapper. Note: the
+  in-env rewrite mutates the user's binding, so calling the model
+  function directly (outside `tar_make()`) after `tar_nlmixr()`
+  will see the rewritten body. Functions with `cmt(0)` declared in
+  env but never routed through `tar_nlmixr()` still trigger
+  `codetools::findGlobals()` errors during `targets` analysis --
+  this is a known limitation, pinned by a test.
+* Setting initial conditions can also still be done with
+  `cmt(initial)` directly, which is automatically recoded to `cmt(0)`.
 * Added "cens" and "limit" columns as nlmixr2 columns.
 * Keep columns from the `table` argument's `keep` element.
 * Indirect cache (`save_nlmixr2obj_indirect()` / `read_nlmixr2obj_indirect()`)
