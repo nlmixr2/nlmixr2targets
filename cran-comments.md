@@ -7,8 +7,6 @@
   - ubuntu-latest, R-oldrel-1
   - macos-latest, R-release
   - windows-latest, R-release
-* Win-builder via `devtools::check_win_devel()` and `devtools::check_win_release()`
-  (URLs to be appended immediately before submission)
 
 ## R CMD check results
 
