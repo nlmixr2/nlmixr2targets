@@ -34,10 +34,24 @@ restored on the final fit by
 [`nlmixr_object_complicate()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_object_complicate.md),
 which reads them straight back off the original model.
 
-Since setting initial conditions with `cmt(0)` does not work with
-`targets`, the function definition of the object must set it with
-`cmt(initial)`. `cmt(initial)` will be converted to `cmt(0)` before
-passing to nlmixr2.
+The natural nlmixr2 DSL form for compartment initial conditions
+(`cmt(0) <- value` inside a `model({...})` block) trips `targets`'
+static analysis because
+[`codetools::findGlobals()`](https://rdrr.io/pkg/codetools/man/findGlobals.html)
+interprets it as a replacement-function assignment with a non-symbol
+target.
+[`tar_nlmixr()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
+auto-rewrites `cmt(0) <- value` to `cmt(initial) <- value` inside
+`model({...})` blocks at construction time (mutating the user's model
+function in env), and converts back to `cmt(0) <- value` before nlmixr2
+sees the model. The user can therefore write `cmt(0) <- value` directly.
+Manual `cmt(initial) <- value` is also still accepted. Note: because the
+rewrite mutates the function in env, calling the model function directly
+(outside
+[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html))
+after
+[`tar_nlmixr()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
+will see `cmt(initial)` in its body.
 
 The simplified model's `model.name` is always set to `"object"`. This
 keeps the simplified output stable so that the MD5 hash used by the

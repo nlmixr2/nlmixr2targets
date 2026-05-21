@@ -19,6 +19,12 @@
 - [`nlmixr_object_simplify()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_object_simplify.md)
   : Simplify an nlmixr object
 
+- [`nlmixr_object_zero_initial_eval()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_object_zero_initial_eval.md)
+  :
+
+  Runtime helper: undo the `cmt(0) -> cmt(initial)` rewrite before
+  evaluating the captured `object` expression.
+
 - [`tar_nlmixr()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
   [`tar_nlmixr_raw()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
   : Generate a set of targets for nlmixr estimation
