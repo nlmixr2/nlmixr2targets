@@ -80,6 +80,8 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table, object_simpl
   checkmate::assert_character(object_simple_name, len = 1, min.chars = 1, any.missing = FALSE)
   checkmate::assert_character(data_simple_name, len = 1, min.chars = 1, any.missing = FALSE)
 
+  object <- tar_nlmixr_protect_zero_initial(object, env = env)
+
   list(
     object_simple =
       targets::tar_target_raw(
@@ -161,4 +163,101 @@ assign_origData <- function(fit, data) {
   checkmate::assert_data_frame(data, nrows = nrow(fit$env$origData))
   assign(x = "origData", value = data, envir = fit$env)
   fit
+}
+
+#' Construction-time protection that makes user-written `cmt(0)` syntax
+#' safe for `targets`' static analysis.
+#'
+#' Three things happen:
+#' \enumerate{
+#'   \item For each symbol in the captured `object` expression that
+#'   resolves to a function in `env`, walk its body and rewrite
+#'   `name(0) <- val` to `name(initial) <- val` inside any
+#'   `model({...})` block. The rewritten function is assigned back into
+#'   the same env where it came from -- yes, this mutates the user's
+#'   binding. It is the only path that survives `targets`' env-wide
+#'   function walk (`codetools::findGlobals()` is called on every
+#'   function in env, even ones unreferenced by any target).
+#'   \item Rewrite the captured expression itself the same way, so any
+#'   inline `model({eff(0) <- ...})` block (e.g. on the RHS of a `|>`
+#'   pipe) is also safe.
+#'   \item If anything was rewritten, wrap the captured expression in
+#'   a `nlmixr_object_zero_initial_eval(quote(...))` call so the
+#'   runtime restores the `cmt(0)` form before the expression is
+#'   evaluated. Needed for pipe forms; harmless for symbol-only forms.
+#' }
+#'
+#' @param object The captured `object` expression from
+#'   `tar_nlmixr_raw()`.
+#' @param env The user's environment (`parent.frame()` of
+#'   `tar_nlmixr()`).
+#' @returns Either the original `object` (no rewrites needed) or a
+#'   `bquote()`d call to `nlmixr_object_zero_initial_eval()` that
+#'   restores the user's natural syntax at target execution time.
+#' @noRd
+tar_nlmixr_protect_zero_initial <- function(object, env) {
+  total_n <- 0L
+
+  # Pass 1: every symbol in the captured expression that points to a
+  # user-defined function in env gets its body rewritten in place.
+  # `assign(..., inherits = TRUE)` walks env upward and modifies the
+  # binding in the frame where it was originally found, so the
+  # rewrite reaches globalenv() -- which is what targets walks.
+  # Package functions are skipped: we never want to mutate, say,
+  # `rxode2::ini` or `base::model`. We also do not need to walk their
+  # bodies for cmt(0) patterns since codetools accepts them as-is
+  # (they have no DSL constructs).
+  for (sym in tar_nlmixr_collect_top_symbols(object)) {
+    if (exists(sym, envir = env, inherits = TRUE)) {
+      fn <- get(sym, envir = env, inherits = TRUE)
+      fn_env <- if (is.function(fn)) environment(fn) else NULL
+      if (is.function(fn) &&
+          !is.null(base::body(fn)) &&
+          !is.null(fn_env) &&
+          !isNamespace(fn_env)) {
+        res <- nlmixr_object_protect_zero_initial(base::body(fn))
+        if (res$n_rewrites > 0L) {
+          base::body(fn) <- res$expr
+          assign(sym, fn, envir = env, inherits = TRUE)
+          total_n <- total_n + res$n_rewrites
+        }
+      }
+    }
+  }
+
+  # Pass 2: rewrite the captured expression itself.
+  res2 <- nlmixr_object_protect_zero_initial(object)
+  object <- res2$expr
+  total_n <- total_n + res2$n_rewrites
+
+  if (total_n == 0L) {
+    return(object)
+  }
+
+  # Pass 3: wrap so runtime restores cmt(0) before evaluation.
+  bquote(
+    nlmixr2targets::nlmixr_object_zero_initial_eval(quote(.(x))),
+    list(x = object)
+  )
+}
+
+# Walk a captured expression and collect symbol names that could refer
+# to user-defined functions. Skips the head of every call (`f(x)` -> we
+# do not add `f`), since the head is the function being called and
+# not a candidate model function. The model function appears either
+# as the whole expression (`object = pheno`), as a `|>` desugared
+# first arg (`object = pheno |> model({...})` -> `model(pheno, ...)`,
+# first arg is `pheno`), or as a nested non-head symbol.
+tar_nlmixr_collect_top_symbols <- function(expr) {
+  out <- character()
+  visit <- function(e, is_head = FALSE) {
+    if (is.symbol(e) && !is_head) {
+      out[[length(out) + 1L]] <<- as.character(e)
+    } else if (is.call(e)) {
+      visit(e[[1L]], is_head = TRUE)
+      for (idx in seq_along(e)[-1L]) visit(e[[idx]])
+    }
+  }
+  visit(expr)
+  unique(out)
 }

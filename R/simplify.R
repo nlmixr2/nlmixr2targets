@@ -14,9 +14,18 @@
 #' restored on the final fit by [nlmixr_object_complicate()], which reads
 #' them straight back off the original model.
 #'
-#' Since setting initial conditions with `cmt(0)` does not work with `targets`,
-#' the function definition of the object must set it with `cmt(initial)`.
-#' `cmt(initial)` will be converted to `cmt(0)` before passing to nlmixr2.
+#' The natural nlmixr2 DSL form for compartment initial conditions
+#' (`cmt(0) <- value` inside a `model({...})` block) trips `targets`'
+#' static analysis because `codetools::findGlobals()` interprets it as
+#' a replacement-function assignment with a non-symbol target.
+#' `tar_nlmixr()` auto-rewrites `cmt(0) <- value` to `cmt(initial) <- value`
+#' inside `model({...})` blocks at construction time (mutating the
+#' user's model function in env), and converts back to `cmt(0) <- value`
+#' before nlmixr2 sees the model. The user can therefore write
+#' `cmt(0) <- value` directly. Manual `cmt(initial) <- value` is also
+#' still accepted. Note: because the rewrite mutates the function in
+#' env, calling the model function directly (outside `tar_make()`)
+#' after `tar_nlmixr()` will see `cmt(initial)` in its body.
 #'
 #' The simplified model's `model.name` is always set to `"object"`. This keeps
 #' the simplified output stable so that the MD5 hash used by the `targets`
@@ -181,6 +190,140 @@ nlmixr_object_simplify_zero_initial_helper <- function(object) {
     }
   }
   object
+}
+
+#' Rewrite `name(0) <- val` to `name(initial) <- val` inside `model({...})`.
+#'
+#' Used at construction time by `tar_nlmixr()` so the function body
+#' that `codetools::findGlobals()` walks does not contain the
+#' replacement-function-style assignment that codetools rejects.
+#' Scoped to inside `model({...})` blocks so other code is untouched.
+#'
+#' Returns a list with the (possibly mutated) expression and a count
+#' of rewrites performed, so callers can branch on whether any change
+#' was needed.
+#'
+#' @param expr A language object (typically a function body or a
+#'   captured `object` expression).
+#' @returns A list with elements `expr` (rewritten expression) and
+#'   `n_rewrites` (count of rewrites performed).
+#' @noRd
+nlmixr_object_protect_zero_initial <- function(expr) {
+  state <- new.env(parent = emptyenv())
+  state$n <- 0L
+  expr <- nlmixr_object_protect_zero_initial_helper(
+    expr, in_model = FALSE, state = state
+  )
+  list(expr = expr, n_rewrites = state$n)
+}
+
+nlmixr_object_protect_zero_initial_helper <- function(expr, in_model, state) {
+  if (in_model &&
+      rxode2::.matchesLangTemplate(expr, str2lang(".name(0) <- ."))) {
+    arg <- expr[[2]][[2]]
+    if (identical(arg, 0) || identical(arg, 0L)) {
+      expr[[2]][[2]] <- as.name("initial")
+      state$n <- state$n + 1L
+    }
+    return(expr)
+  }
+  if (is.call(expr)) {
+    enters_model <-
+      !in_model &&
+      length(expr) >= 1L &&
+      identical(expr[[1L]], as.name("model"))
+    for (idx in seq_along(expr)) {
+      child <- expr[[idx]]
+      # Skip NULL children: assigning NULL back to a call slot would
+      # remove the slot and shift subsequent indices, leading to
+      # "subscript out of bounds" on the next iteration.
+      if (is.null(child)) next
+      child_in_model <- in_model || (enters_model && idx > 1L)
+      expr[[idx]] <- nlmixr_object_protect_zero_initial_helper(
+        child, in_model = child_in_model, state = state
+      )
+    }
+  }
+  expr
+}
+
+#' Runtime helper: undo the `cmt(0) -> cmt(initial)` rewrite before
+#' evaluating the captured `object` expression.
+#'
+#' Wrapped around the captured expression at construction time when
+#' `tar_nlmixr_protect_zero_initial()` performed any rewrites. Needed
+#' for pipe forms like `pheno |> model({...})` and `pheno |> ini(...)`,
+#' because nlmixr2's pipe handlers parse pheno's body before the
+#' existing `nlmixr_object_simplify_zero_initial_helper()` could
+#' intervene. Harmless for symbol-only forms (the existing helper
+#' reaches them at simplify time anyway).
+#'
+#' Mechanism:
+#' \itemize{
+#'   \item Walk the quoted expression, rewriting
+#'   `name(initial) <- val` back to `name(0) <- val` via the existing
+#'   inverse helper.
+#'   \item Walk the (rewritten) expression for symbols. For each that
+#'   resolves to a function whose body still contains
+#'   `name(initial) <- val` inside `model({...})`, build a corrected
+#'   closure with `name(0) <- val` and bind it in an override frame.
+#'   \item Evaluate the rewritten expression in the override frame
+#'   (whose parent is `envir`), so any lookup of a rewritten symbol
+#'   hits the corrected closure first.
+#' }
+#'
+#' The corrected copies retain the original closure environment of
+#' the user's function; only the body is swapped.
+#'
+#' @param expr A quoted (unevaluated) language object.
+#' @param envir The parent environment for evaluation. Defaults to
+#'   the caller's frame (the targets execution env).
+#' @returns The result of evaluating the corrected expression.
+#' @keywords Internal
+#' @export
+nlmixr_object_zero_initial_eval <- function(expr, envir = parent.frame()) {
+  expr <- nlmixr_object_simplify_zero_initial_helper(expr)
+  override <- new.env(parent = envir)
+  for (sym in nlmixr_object_zero_initial_eval_collect_symbols(expr)) {
+    fn <- tryCatch(
+      get(sym, envir = envir, inherits = TRUE),
+      error = function(e) NULL
+    )
+    # Mirror the construction-time filter: skip package functions and
+    # anything whose closure env is missing.
+    fn_env <- if (is.function(fn)) environment(fn) else NULL
+    if (is.function(fn) &&
+        !is.null(base::body(fn)) &&
+        !is.null(fn_env) &&
+        !isNamespace(fn_env)) {
+      new_body <- nlmixr_object_simplify_zero_initial_helper(base::body(fn))
+      if (!identical(new_body, base::body(fn))) {
+        fn_corrected <- fn
+        base::body(fn_corrected) <- new_body
+        assign(sym, fn_corrected, envir = override)
+      }
+    }
+  }
+  eval(expr, envir = override)
+}
+
+# Walk an expression for symbol names. Used by the runtime wrapper to
+# find candidates whose function bodies may need a corrected copy.
+# Skips the head of every call (`f(x)` -> we do not add `f`), since
+# heads are the function being called, not candidate model functions;
+# rewriting the body of `<-` or `{` would break the language itself.
+nlmixr_object_zero_initial_eval_collect_symbols <- function(expr) {
+  out <- character()
+  visit <- function(e, is_head = FALSE) {
+    if (is.symbol(e) && !is_head) {
+      out[[length(out) + 1L]] <<- as.character(e)
+    } else if (is.call(e)) {
+      visit(e[[1L]], is_head = TRUE)
+      for (idx in seq_along(e)[-1L]) visit(e[[idx]])
+    }
+  }
+  visit(expr)
+  unique(out)
 }
 
 #' Standardize and simplify data for nlmixr2 estimation
