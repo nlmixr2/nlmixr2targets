@@ -18,14 +18,24 @@ knitr::opts_chunk$set(
 library(nlmixr2targets)
 ```
 
-# Two equivalent forms
+# Two forms accepted inside `nlmixr2targets`
 
-nlmixr2's DSL accepts two notations for setting a compartment's initial
-value inside a `model({...})` block. Both work in `tar_nlmixr()` and
-`tar_nlmixr_multimodel()`, and both produce the same fit:
+The native nlmixr2 DSL syntax for a compartment initial value is
+`cmt(0) <- value` inside a `model({...})` block. Inside
+`tar_nlmixr()` and `tar_nlmixr_multimodel()` you may also write
+`cmt(initial) <- value`, which **`nlmixr2targets` translates back to
+`cmt(0) <- value` before nlmixr2 ever sees the model**. The
+`cmt(initial)` form is a workaround that exists only for use through
+`nlmixr2targets`; it is **not** a form that nlmixr2 itself understands,
+so it will fail if you call `nlmixr2est::nlmixr()` directly on a model
+that still contains `cmt(initial)`.
+
+Both forms below produce the same fit when routed through
+`tar_nlmixr()`:
 
 ```{r both-forms, eval = FALSE}
-# Form 1: natural DSL syntax
+# Form 1: native nlmixr2 DSL syntax (works in nlmixr2 directly and
+# inside nlmixr2targets)
 model({
   d/dt(central) <- -kel*central
   central(0) <- 0          # initial value at time 0
@@ -33,10 +43,15 @@ model({
   cp ~ add(cpaddSd)
 })
 
-# Form 2: the older `cmt(initial) <- value` workaround
+# Form 2: `cmt(initial) <- value` -- a `nlmixr2targets`-only
+# workaround. Use this only when something prevents the natural
+# `central(0) <- 0` form from being walked by `targets` (see the
+# "Known limitation" section below). `nlmixr2targets` rewrites this
+# back to `central(0) <- 0` before passing the model to nlmixr2.
 model({
   d/dt(central) <- -kel*central
-  central(initial) <- 0    # same meaning as central(0) <- 0
+  central(initial) <- 0    # nlmixr2targets-only; not understood by
+                           # bare nlmixr2
   cp <- central/vc
   cp ~ add(cpaddSd)
 })
@@ -105,17 +120,29 @@ report a `codetools::findGlobals()` error. The workaround is either:
 
 - pass the function through `tar_nlmixr()` (the construction-time
   rewriter cleans it up), or
-- write the manual `central(initial) <- 0` form by hand.
+- write the manual `central(initial) <- 0` form by hand. Because
+  `cmt(initial)` is only meaningful when `nlmixr2targets` is the
+  one parsing the model, a function written this way is **not
+  usable in a bare nlmixr2 workflow** -- it only fits if it is
+  routed through `tar_nlmixr()` / `tar_nlmixr_multimodel()`.
 
 This case is pinned by a test in `tests/testthat/test-tar_nlmixr.R`.
 
 # Summary
 
-- Both `cmt(0) <- value` and `cmt(initial) <- value` are accepted.
-- `tar_nlmixr()` quietly rewrites the former to the latter in env, and
-  back again at evaluation time.
-- After `tar_nlmixr()`, `body(my_model)` will show the rewritten form;
-  this is cosmetic only.
+- `cmt(0) <- value` is the native nlmixr2 DSL syntax. Prefer it.
+- `cmt(initial) <- value` is a `nlmixr2targets`-only workaround:
+  `nlmixr2targets` rewrites it back to `cmt(0) <- value` before
+  nlmixr2 sees the model. Bare nlmixr2 does **not** understand
+  `cmt(initial)`; a model written that way only fits when routed
+  through `tar_nlmixr()` / `tar_nlmixr_multimodel()`.
+- Inside `tar_nlmixr()`, the package quietly rewrites `cmt(0)`
+  forms in env to `cmt(initial)` (to survive `targets`' static
+  analysis) and back again at evaluation time.
+- After `tar_nlmixr()`, `body(my_model)` will show the rewritten
+  form; this is cosmetic and reversed at runtime.
 - Pipe forms work too via a runtime wrapper.
-- Functions in env that contain `cmt(0)` but are never routed through
-  `tar_nlmixr()` still need the manual `cmt(initial)` form.
+- Functions in env that contain `cmt(0)` but are never routed
+  through `tar_nlmixr()` need the manual `cmt(initial)` workaround
+  -- with the caveat that they then only fit through
+  `nlmixr2targets`.

@@ -19,8 +19,13 @@
 #' evaluation time, so fitting and downstream behaviour are unchanged. The
 #' user-visible consequence is that printing `body(my_model)` at the REPL
 #' after a call to `tar_nlmixr()` will show `cmt(initial)` rather than the
-#' originally-written `cmt(0)`. Manual `cmt(initial) <- value` is also still
-#' accepted and is not affected.
+#' originally-written `cmt(0)`.
+#'
+#' Manual `cmt(initial) <- value` written by the user is also accepted, but
+#' it is a `nlmixr2targets`-only workaround: bare nlmixr2 does not
+#' understand the `cmt(initial)` form, so a model function written that way
+#' only fits when routed through `tar_nlmixr()` (or
+#' `tar_nlmixr_multimodel()`).
 #'
 #' @inheritParams nlmixr2est::nlmixr
 #' @inheritParams targets::tar_target

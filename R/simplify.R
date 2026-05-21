@@ -22,10 +22,16 @@
 #' inside `model({...})` blocks at construction time (mutating the
 #' user's model function in env), and converts back to `cmt(0) <- value`
 #' before nlmixr2 sees the model. The user can therefore write
-#' `cmt(0) <- value` directly. Manual `cmt(initial) <- value` is also
-#' still accepted. Note: because the rewrite mutates the function in
-#' env, calling the model function directly (outside `tar_make()`)
-#' after `tar_nlmixr()` will see `cmt(initial)` in its body.
+#' `cmt(0) <- value` directly.
+#'
+#' Manual `cmt(initial) <- value` is also accepted, but it is a
+#' `nlmixr2targets`-only workaround: bare nlmixr2 does not understand
+#' the `cmt(initial)` form, so a model function written this way only
+#' fits when routed through `tar_nlmixr()` /
+#' `tar_nlmixr_multimodel()`. Note: because the rewrite mutates the
+#' function in env, calling the model function directly (outside
+#' `tar_make()`) after `tar_nlmixr()` will see `cmt(initial)` in its
+#' body.
 #'
 #' The simplified model's `model.name` is always set to `"object"`. This keeps
 #' the simplified output stable so that the MD5 hash used by the `targets`

@@ -26,8 +26,12 @@
   env but never routed through `tar_nlmixr()` still trigger
   `codetools::findGlobals()` errors during `targets` analysis --
   this is a known limitation, pinned by a test.
-* Setting initial conditions can also still be done with
-  `cmt(initial)` directly, which is automatically recoded to `cmt(0)`.
+* Setting initial conditions can also still be done with the
+  `cmt(initial)` workaround directly. This is a
+  `nlmixr2targets`-only form: it is automatically recoded to
+  `cmt(0)` before nlmixr2 sees the model, and a model written that
+  way is not understood by bare nlmixr2 outside of `tar_nlmixr()` /
+  `tar_nlmixr_multimodel()`.
 * Added "cens" and "limit" columns as nlmixr2 columns.
 * Keep columns from the `table` argument's `keep` element.
 * Indirect cache (`save_nlmixr2obj_indirect()` / `read_nlmixr2obj_indirect()`)

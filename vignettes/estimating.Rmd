@@ -35,13 +35,16 @@ about the `targets` package, see
 
 # Initial conditions
 
-Compartment initial conditions can be set with either the natural nlmixr2 DSL
-form `cmt(0) <- value` directly inside a `model({...})` block, or the
-manual workaround `cmt(initial) <- value`. Both are accepted; both produce
-the same fit. `tar_nlmixr()` and `tar_nlmixr_multimodel()` quietly rewrite
-`cmt(0)` to `cmt(initial)` in the function binding so that `targets`' static
-analysis can walk the model body, and restore `cmt(0)` before nlmixr2 sees
-the model at runtime.
+The native nlmixr2 DSL form for a compartment initial value is
+`cmt(0) <- value` inside a `model({...})` block. Inside `tar_nlmixr()`
+and `tar_nlmixr_multimodel()` you may also write the
+`nlmixr2targets`-only workaround `cmt(initial) <- value`, which is
+rewritten back to `cmt(0) <- value` before nlmixr2 ever sees the model.
+The `cmt(initial)` form is **not** understood by bare nlmixr2 and only
+fits when routed through `nlmixr2targets`. Internally, `tar_nlmixr()`
+also rewrites `cmt(0)` to `cmt(initial)` in env so that `targets`'
+static analysis can walk the model body, then restores `cmt(0)` at
+runtime.
 
 See `vignette("initial-conditions", package = "nlmixr2targets")` for the
 full cheatsheet, including the pipe forms `pheno |> model({...})` and

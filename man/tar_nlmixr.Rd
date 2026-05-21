@@ -110,8 +110,13 @@ When the user's model function body contains \code{cmt(0) <- value} inside a
 evaluation time, so fitting and downstream behaviour are unchanged. The
 user-visible consequence is that printing \code{body(my_model)} at the REPL
 after a call to \code{tar_nlmixr()} will show \code{cmt(initial)} rather than the
-originally-written \code{cmt(0)}. Manual \code{cmt(initial) <- value} is also still
-accepted and is not affected.
+originally-written \code{cmt(0)}.
+
+Manual \code{cmt(initial) <- value} written by the user is also accepted, but
+it is a \code{nlmixr2targets}-only workaround: bare nlmixr2 does not
+understand the \code{cmt(initial)} form, so a model function written that way
+only fits when routed through \code{tar_nlmixr()} (or
+\code{tar_nlmixr_multimodel()}).
 }
 
 \examples{

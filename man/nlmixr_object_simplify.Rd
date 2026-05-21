@@ -37,10 +37,16 @@ a replacement-function assignment with a non-symbol target.
 inside \code{model({...})} blocks at construction time (mutating the
 user's model function in env), and converts back to \code{cmt(0) <- value}
 before nlmixr2 sees the model. The user can therefore write
-\code{cmt(0) <- value} directly. Manual \code{cmt(initial) <- value} is also
-still accepted. Note: because the rewrite mutates the function in
-env, calling the model function directly (outside \code{tar_make()})
-after \code{tar_nlmixr()} will see \code{cmt(initial)} in its body.
+\code{cmt(0) <- value} directly.
+
+Manual \code{cmt(initial) <- value} is also accepted, but it is a
+\code{nlmixr2targets}-only workaround: bare nlmixr2 does not understand
+the \code{cmt(initial)} form, so a model function written this way only
+fits when routed through \code{tar_nlmixr()} /
+\code{tar_nlmixr_multimodel()}. Note: because the rewrite mutates the
+function in env, calling the model function directly (outside
+\code{tar_make()}) after \code{tar_nlmixr()} will see \code{cmt(initial)} in its
+body.
 
 The simplified model's \code{model.name} is always set to \code{"object"}. This keeps
 the simplified output stable so that the MD5 hash used by the \code{targets}
