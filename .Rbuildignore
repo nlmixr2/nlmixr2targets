@@ -12,3 +12,4 @@
 ^\.lintr$
 _targets.R
 _targets
+^CRAN-SUBMISSION$
