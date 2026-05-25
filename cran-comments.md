@@ -1,3 +1,9 @@
+## Responses to prior submission
+
+* I updated testing so that it should run serially rather than with multiple
+  threads. This should fix the 3.2-fold number of cores issue found with the
+  prior submission.
+
 ## Test environments
 
 * Local: Linux (Ubuntu) with the current R release
