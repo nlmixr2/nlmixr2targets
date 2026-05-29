@@ -17,11 +17,22 @@
 #' caching) do not invalidate the cached fit.
 #'
 #' @inheritParams nlmixr2est::nlmixr
+#' @param directory Cache directory to load the simplified `nlmixrui` from.
+#'   Defaults to `file.path(targets::tar_config_get("store"), "user/nlmixr2")`,
+#'   mirroring the convention used by `targets`' own `store =
+#'   targets::tar_config_get("store")` defaults — the path resolves at
+#'   call time against whatever store the user has configured for the
+#'   running `tar_make()` (e.g. a `tempdir()` location set via
+#'   `targets::tar_config_set()`).
 #' @returns An nlmixr2 fit object, as returned by [nlmixr2est::nlmixr()].
 #' @seealso [tar_nlmixr()], [nlmixr_object_simplify()].
 #' @export
-nlmixr2_indirect <- function(object, data, est, control) {
-  nlmixr2est::nlmixr(object = read_nlmixr2obj_indirect(hash = object), data = data, est = est, control = control)
+nlmixr2_indirect <- function(object, data, est, control,
+                             directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) {
+  nlmixr2est::nlmixr(
+    object = read_nlmixr2obj_indirect(hash = object, directory = directory),
+    data = data, est = est, control = control
+  )
 }
 
 # Indirect cache layout

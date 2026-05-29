@@ -16,15 +16,27 @@ pheno <- function() {
   })
 }
 
+# `nlmixr_object_simplify()` writes the simplified rxUi to disk. The
+# function's default `directory` resolves to
+# `file.path(targets::tar_config_get("store"), "user/nlmixr2")` which —
+# outside a `tar_test()` / `tar_dir()` sandbox — points under
+# tests/testthat/. CRAN policy disallows writing there, so this file
+# routes all writes/reads through a per-session tempfile dir.
+.simplify_cache_dir <- tempfile("nlmixr2targets-test-cache-")
+dir.create(.simplify_cache_dir, recursive = TRUE)
+
 model_simple <-
   suppressMessages(suppressWarnings(
-    nlmixr_object_simplify(pheno)
+    nlmixr_object_simplify(pheno, directory = .simplify_cache_dir)
   ))
 
 test_that("nlmixr_data_simplify", {
   # Columns are kept in the correct order
   expect_equal(
-    names(nlmixr_data_simplify(data = nlmixr2data::pheno_sd, object = model_simple)),
+    names(nlmixr_data_simplify(
+      data = nlmixr2data::pheno_sd, object = model_simple,
+      directory = .simplify_cache_dir
+    )),
     c("id", "time", "amt", "dv", "mdv", "evid", "WT")
   )
   # table's 'keep' argument is respected
@@ -32,7 +44,8 @@ test_that("nlmixr_data_simplify", {
     names(nlmixr_data_simplify(
       data = nlmixr2data::pheno_sd,
       object = model_simple,
-      table = nlmixr2est::tableControl(keep = "APGR")
+      table = nlmixr2est::tableControl(keep = "APGR"),
+      directory = .simplify_cache_dir
     )),
     c("id", "time", "amt", "dv", "mdv", "evid", "APGR", "WT")
   )
@@ -42,7 +55,8 @@ test_that("nlmixr_data_simplify", {
     names(nlmixr_data_simplify(
       data = nlmixr2data::pheno_sd,
       object = model_simple,
-      table = nlmixr2est::tableControl(keep = "WT")
+      table = nlmixr2est::tableControl(keep = "WT"),
+      directory = .simplify_cache_dir
     )),
     c("id", "time", "amt", "dv", "mdv", "evid", "WT")
   )
@@ -52,7 +66,8 @@ test_that("nlmixr_data_simplify", {
     names(nlmixr_data_simplify(
       data = nlmixr2data::pheno_sd,
       object = model_simple,
-      table = nlmixr2est::tableControl(keep = "MDV")
+      table = nlmixr2est::tableControl(keep = "MDV"),
+      directory = .simplify_cache_dir
     )),
     c("id", "time", "amt", "dv", "mdv", "evid", "WT")
   )
@@ -62,14 +77,20 @@ test_that("nlmixr_data_simplify expected errors", {
   bad_data_lower_case <- nlmixr2data::pheno_sd
   bad_data_lower_case$id <- bad_data_lower_case$ID
   expect_error(
-    nlmixr_data_simplify(data = bad_data_lower_case, object = model_simple),
+    nlmixr_data_simplify(
+      data = bad_data_lower_case, object = model_simple,
+      directory = .simplify_cache_dir
+    ),
     regexp = "The following column(s) are duplicated when lower case: 'id'",
     fixed = TRUE
   )
   bad_data_no_cov <- nlmixr2data::pheno_sd
   bad_data_no_cov$WT <- NULL
   expect_error(
-    nlmixr_data_simplify(data = bad_data_no_cov, object = model_simple),
+    nlmixr_data_simplify(
+      data = bad_data_no_cov, object = model_simple,
+      directory = .simplify_cache_dir
+    ),
     regexp = "The following covariate column(s) are missing from the data: 'WT'",
     fixed = TRUE
   )
@@ -289,7 +310,10 @@ test_that("nlmixr_data_simplify rejects non-data-frame data", {
 
 test_that("nlmixr_data_simplify rejects non-list table", {
   expect_error(
-    nlmixr_data_simplify(data = nlmixr2data::pheno_sd, object = model_simple, table = "bad"),
+    nlmixr_data_simplify(
+      data = nlmixr2data::pheno_sd, object = model_simple, table = "bad",
+      directory = .simplify_cache_dir
+    ),
     regexp = "Must be of type 'list'"
   )
 })
@@ -300,7 +324,7 @@ test_that("re-estimating a model works with covariates (#9)", {
   fit_estimated <-
     suppressMessages(
       nlmixr2est::nlmixr(
-        object = read_nlmixr2obj_indirect(model_simple),
+        object = read_nlmixr2obj_indirect(model_simple, directory = .simplify_cache_dir),
         data = nlmixr2data::pheno_sd,
         est = "focei",
         control = list(eval.max = 1)
@@ -314,7 +338,7 @@ test_that("re-estimating a model works with covariates (#9)", {
 # Tests for the strip-and-restore round trip introduced for #28.
 
 test_that("nlmixr_object_simplify writes the simplified rxUi with labels and meta stripped", {
-  cached <- read_nlmixr2obj_indirect(model_simple)
+  cached <- read_nlmixr2obj_indirect(model_simple, directory = .simplify_cache_dir)
   expect_true(all(is.na(cached$iniDf$label)))
   expect_equal(ls(envir = cached$meta, all.names = TRUE), character(0))
 })
@@ -344,8 +368,12 @@ test_that("nlmixr_object_simplify yields the same hash for models that differ on
       cp ~ add(cpaddSd)
     })
   }
-  hash_with <- suppressMessages(suppressWarnings(nlmixr_object_simplify(model_with)))
-  hash_relabeled <- suppressMessages(suppressWarnings(nlmixr_object_simplify(model_relabeled)))
+  hash_with <- suppressMessages(suppressWarnings(
+    nlmixr_object_simplify(model_with, directory = .simplify_cache_dir)
+  ))
+  hash_relabeled <- suppressMessages(suppressWarnings(
+    nlmixr_object_simplify(model_relabeled, directory = .simplify_cache_dir)
+  ))
   expect_identical(hash_with, hash_relabeled)
 })
 

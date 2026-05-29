@@ -4,7 +4,13 @@
 \alias{nlmixr2_indirect}
 \title{Estimate an nlmixr2 model loading the model from a targets indirect hash storage}
 \usage{
-nlmixr2_indirect(object, data, est, control)
+nlmixr2_indirect(
+  object,
+  data,
+  est,
+  control,
+  directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")
+)
 }
 \arguments{
 \item{object}{Fitted object or function specifying the model.}
@@ -16,6 +22,13 @@ nlmixr2_indirect(object, data, est, control)
 
 \item{control}{The estimation control object.  These are expected
 to be different for each type of estimation method}
+
+\item{directory}{Cache directory to load the simplified \code{nlmixrui} from.
+Defaults to \code{file.path(targets::tar_config_get("store"), "user/nlmixr2")},
+mirroring the convention used by \code{targets}' own \code{store = targets::tar_config_get("store")} defaults — the path resolves at
+call time against whatever store the user has configured for the
+running \code{tar_make()} (e.g. a \code{tempdir()} location set via
+\code{targets::tar_config_set()}).}
 }
 \value{
 An nlmixr2 fit object, as returned by \code{\link[nlmixr2est:nlmixr]{nlmixr2est::nlmixr()}}.

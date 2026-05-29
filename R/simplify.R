@@ -39,13 +39,15 @@
 #' function to.
 #'
 #' @inheritParams nlmixr2est::nlmixr
+#' @inheritParams nlmixr2_indirect
 #' @returns The MD5 hash used to load the simplified `nlmixrui` object back
 #'   from the `nlmixr2targets` indirect cache.
 #' @family Simplifiers
 #' @seealso [nlmixr_object_complicate()] for the inverse operation that
 #'   re-attaches labels, metadata, and the original data on the final fit.
 #' @export
-nlmixr_object_simplify <- function(object) {
+nlmixr_object_simplify <- function(object,
+                                   directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) {
   # drop comments since they won't affect most outputs and typically change
   # between interactive (when srcref is available) to batch (when srcref is not
   # available) mode.
@@ -58,7 +60,7 @@ nlmixr_object_simplify <- function(object) {
   # save_nlmixr2obj_indirect() keys the cache file by).
   ret$iniDf$label <- NA_character_
   rm(list = ls(envir = ret$meta, all.names = TRUE), envir = ret$meta)
-  save_nlmixr2obj_indirect(ret)
+  save_nlmixr2obj_indirect(ret, directory = directory)
 }
 
 #' Re-attach labels, metadata, and original data to a simplified fit
@@ -319,6 +321,7 @@ nlmixr_object_zero_initial_eval <- function(expr, envir = parent.frame()) {
 #' converted to lower case.
 #'
 #' @inheritParams nlmixr2est::nlmixr
+#' @inheritParams nlmixr2_indirect
 #' @param object Either an `nlmixr` ui object (e.g. the output of running
 #'   \code{nlmixr(object = model)}) or a character md5 hash identifying a
 #'   simplified ui in the `nlmixr2targets` indirect cache (the form used in
@@ -327,7 +330,8 @@ nlmixr_object_zero_initial_eval <- function(expr, envir = parent.frame()) {
 #'   covariate columns on the right and alphabetically sorted.
 #' @family Simplifiers
 #' @export
-nlmixr_data_simplify <- function(data, object, table = list()) {
+nlmixr_data_simplify <- function(data, object, table = list(),
+                                 directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) {
   checkmate::assert_data_frame(data)
   checkmate::assert_list(table)
   # `object` is either a character md5 hash (the form used by generated
@@ -338,7 +342,7 @@ nlmixr_data_simplify <- function(data, object, table = list()) {
   if (is.character(object)) {
     checkmate::assert_string(object, min.chars = 1)
     # load from the hash
-    object <- read_nlmixr2obj_indirect(hash = object)
+    object <- read_nlmixr2obj_indirect(hash = object, directory = directory)
   } else if (!is.list(object) && !is.environment(object)) {
     stop(
       "`object` must be a character md5 hash, an nlmixr ui object, ",

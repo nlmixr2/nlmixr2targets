@@ -4,10 +4,20 @@
 \alias{nlmixr_object_simplify}
 \title{Simplify an nlmixr object}
 \usage{
-nlmixr_object_simplify(object)
+nlmixr_object_simplify(
+  object,
+  directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")
+)
 }
 \arguments{
 \item{object}{Fitted object or function specifying the model.}
+
+\item{directory}{Cache directory to load the simplified \code{nlmixrui} from.
+Defaults to \code{file.path(targets::tar_config_get("store"), "user/nlmixr2")},
+mirroring the convention used by \code{targets}' own \code{store = targets::tar_config_get("store")} defaults — the path resolves at
+call time against whatever store the user has configured for the
+running \code{tar_make()} (e.g. a \code{tempdir()} location set via
+\code{targets::tar_config_set()}).}
 }
 \value{
 The MD5 hash used to load the simplified \code{nlmixrui} object back
