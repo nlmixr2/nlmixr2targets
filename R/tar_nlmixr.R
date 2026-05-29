@@ -68,7 +68,8 @@
 #' targets::tar_make()
 #' }
 #' @export
-tar_nlmixr <- function(name, object, data, est = NULL, control = list(), table = nlmixr2est::tableControl(), env = parent.frame()) {
+tar_nlmixr <- function(name, object, data, est = NULL, control = list(),
+                       table = nlmixr2est::tableControl(), env = parent.frame()) {
   if (is.null(est)) {
     stop("'est' must not be null")
   }
@@ -94,7 +95,8 @@ tar_nlmixr <- function(name, object, data, est = NULL, control = list(), table =
 #'   object with the simplified data, and fit with the original data
 #'   re-inserted.
 #' @export
-tar_nlmixr_raw <- function(name, object, data, est, control, table, object_simple_name, data_simple_name, fit_simple_name, env) {
+tar_nlmixr_raw <- function(name, object, data, est, control, table,
+                           object_simple_name, data_simple_name, fit_simple_name, env) {
   checkmate::assert_character(name, len = 1, min.chars = 1, any.missing = FALSE)
   checkmate::assert_character(object_simple_name, len = 1, min.chars = 1, any.missing = FALSE)
   checkmate::assert_character(data_simple_name, len = 1, min.chars = 1, any.missing = FALSE)
@@ -105,60 +107,56 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table, object_simpl
     object_simple =
       targets::tar_target_raw(
         name = object_simple_name,
-        command =
-          substitute(
-            nlmixr_object_simplify(object = object),
-            list(object = object)
-          ),
+        command = substitute(
+          nlmixr_object_simplify(object = object),
+          list(object = object)
+        ),
         packages = c("nlmixr2targets", "nlmixr2est")
       ),
     data_simple =
       targets::tar_target_raw(
         name = data_simple_name,
-        command =
-          substitute(
-            nlmixr_data_simplify(object = object_simple, data = data, table = table),
-            list(
-              object_simple = as.name(object_simple_name),
-              data = data,
-              table = table
-            )
-          ),
+        command = substitute(
+          nlmixr_data_simplify(object = object_simple, data = data, table = table),
+          list(
+            object_simple = as.name(object_simple_name),
+            data = data,
+            table = table
+          )
+        ),
         packages = "nlmixr2targets"
       ),
     fit_simple =
       targets::tar_target_raw(
         name = fit_simple_name,
-        command =
-          substitute(
-            nlmixr2_indirect(
-              object = object_simple_name,
-              data = data_simple_name,
-              est = est,
-              control = control
-            ),
-            list(
-              object_simple_name = as.name(object_simple_name),
-              data_simple_name = as.name(data_simple_name),
-              est = est,
-              control = control,
-              table = table
-            )
+        command = substitute(
+          nlmixr2_indirect(
+            object = object_simple_name,
+            data = data_simple_name,
+            est = est,
+            control = control
           ),
+          list(
+            object_simple_name = as.name(object_simple_name),
+            data_simple_name = as.name(data_simple_name),
+            est = est,
+            control = control,
+            table = table
+          )
+        ),
         packages = "nlmixr2est"
       ),
     fit =
       targets::tar_target_raw(
         name = name,
-        command =
-          substitute(
-            nlmixr_object_complicate(fit = fit, object = object, data = data),
-            list(
-              fit = as.name(fit_simple_name),
-              object = object,
-              data = data
-            )
-          ),
+        command = substitute(
+          nlmixr_object_complicate(fit = fit, object = object, data = data),
+          list(
+            fit = as.name(fit_simple_name),
+            object = object,
+            data = data
+          )
+        ),
         packages = "nlmixr2targets"
       )
   )
@@ -230,10 +228,7 @@ tar_nlmixr_protect_zero_initial <- function(object, env) {
     if (exists(sym, envir = env, inherits = TRUE)) {
       fn <- get(sym, envir = env, inherits = TRUE)
       fn_env <- if (is.function(fn)) environment(fn) else NULL
-      if (is.function(fn) &&
-          !is.null(base::body(fn)) &&
-          !is.null(fn_env) &&
-          !isNamespace(fn_env)) {
+      if (is.function(fn) && !is.null(base::body(fn)) && !is.null(fn_env) && !isNamespace(fn_env)) {
         res <- nlmixr_object_protect_zero_initial(base::body(fn))
         if (res$n_rewrites > 0L) {
           base::body(fn) <- res$expr
@@ -259,4 +254,3 @@ tar_nlmixr_protect_zero_initial <- function(object, env) {
     list(x = object)
   )
 }
-

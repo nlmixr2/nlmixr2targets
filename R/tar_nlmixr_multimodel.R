@@ -59,7 +59,8 @@
 #' targets::tar_make()
 #' }
 #' @export
-tar_nlmixr_multimodel <- function(name, ..., data, est, control = list(), table = nlmixr2est::tableControl(), env = parent.frame()) {
+tar_nlmixr_multimodel <- function(name, ..., data, est, control = list(),
+                                  table = nlmixr2est::tableControl(), env = parent.frame()) {
   tar_nlmixr_multimodel_parse(
     name = targets::tar_deparse_language(substitute(name)),
     data = substitute(data),

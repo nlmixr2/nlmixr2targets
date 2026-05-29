@@ -224,8 +224,7 @@ nlmixr_object_protect_zero_initial <- function(expr) {
 }
 
 nlmixr_object_protect_zero_initial_helper <- function(expr, in_model, state) {
-  if (in_model &&
-      rxode2::.matchesLangTemplate(expr, str2lang(".name(0) <- ."))) {
+  if (in_model && rxode2::.matchesLangTemplate(expr, str2lang(".name(0) <- ."))) {
     arg <- expr[[2]][[2]]
     if (identical(arg, 0) || identical(arg, 0L)) {
       expr[[2]][[2]] <- as.name("initial")
@@ -298,10 +297,7 @@ nlmixr_object_zero_initial_eval <- function(expr, envir = parent.frame()) {
     # Mirror the construction-time filter: skip package functions and
     # anything whose closure env is missing.
     fn_env <- if (is.function(fn)) environment(fn) else NULL
-    if (is.function(fn) &&
-        !is.null(base::body(fn)) &&
-        !is.null(fn_env) &&
-        !isNamespace(fn_env)) {
+    if (is.function(fn) && !is.null(base::body(fn)) && !is.null(fn_env) && !isNamespace(fn_env)) {
       new_body <- nlmixr_object_simplify_zero_initial_helper(base::body(fn))
       if (!identical(new_body, base::body(fn))) {
         fn_corrected <- fn
