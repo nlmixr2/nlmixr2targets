@@ -5,6 +5,7 @@ linters: linters_with_defaults(
     # Match the project style: long DSL lines are OK in models and tests.
     line_length_linter = line_length_linter(length = 120L),
     object_name_linter = NULL,         # mixed naming intentional (rxUi APIs)
+    object_length_linter = NULL,       # long descriptive internal helpers intentional
     commented_code_linter = NULL,      # vignette-style commentary in some R files
     object_usage_linter = NULL         # NSE / metaprogramming heavy
   )
