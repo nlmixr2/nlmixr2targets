@@ -26,4 +26,16 @@
   configured (e.g. via `targets::tar_config_set()` pointing at a directory
   under `tempdir()`). Comprehensive run-through examples live in the
   vignettes.
+* The cache-directory arguments (`directory =`) on
+  `nlmixr_object_simplify()`, `nlmixr_data_simplify()`,
+  `nlmixr2_indirect()`, `nlmixr2targets_cache_status()`, and
+  `nlmixr2targets_cache_prune()` mirror the directory-defaulting
+  convention used throughout the `targets` package: each defaults to
+  `file.path(targets::tar_config_get("store"), "user/nlmixr2")`, the
+  direct analogue of how `targets::tar_make()`, `targets::tar_destroy()`,
+  etc. accept `store = targets::tar_config_get("store")`. The default is
+  resolved at call time, so writes go only to whatever targets store the
+  user has configured for their running pipeline (which, in tests and
+  examples, is a `tempdir()` location). We deliberately did not deviate
+  from the `targets` convention here.
 * This is a new release.

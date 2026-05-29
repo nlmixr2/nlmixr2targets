@@ -1,6 +1,8 @@
 ^nlmixr2targets\.Rproj$
 ^\.Rproj\.user$
 ^\.claude$
+^\.git$
+^\.gitignore$
 ^LICENSE\.md$
 ^README\.Rmd$
 ^cran-comments\.md$
