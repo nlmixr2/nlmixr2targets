@@ -9,13 +9,10 @@
 #'   and model estimation.
 #' @seealso [tar_nlmixr()] for fitting a single model.
 #' @examples
-#' \dontrun{
-#' library(targets)
-#' targets::tar_script({
 #' pheno <- function() {
 #'   ini({
 #'     lcl <- log(0.008); label("Typical value of clearance")
-#'     lvc <-  log(0.6); label("Typical value of volume of distribution")
+#'     lvc <- log(0.6); label("Typical value of volume of distribution")
 #'     etalcl + etalvc ~ c(1,
 #'                         0.01, 1)
 #'     cpaddSd <- 0.1; label("residual variability")
@@ -23,16 +20,16 @@
 #'   model({
 #'     cl <- exp(lcl + etalcl)
 #'     vc <- exp(lvc + etalvc)
-#'     kel <- cl/vc
-#'     d/dt(central) <- -kel*central
-#'     cp <- central/vc
+#'     kel <- cl / vc
+#'     d / dt(central) <- -kel * central
+#'     cp <- central / vc
 #'     cp ~ add(cpaddSd)
 #'   })
 #' }
 #' pheno2 <- function() {
 #'   ini({
 #'     lcl <- log(0.008); label("Typical value of clearance")
-#'     lvc <-  log(0.6); label("Typical value of volume of distribution")
+#'     lvc <- log(0.6); label("Typical value of volume of distribution")
 #'     etalcl + etalvc ~ c(2,
 #'                         0.01, 2)
 #'     cpaddSd <- 3.0; label("residual variability")
@@ -40,24 +37,24 @@
 #'   model({
 #'     cl <- exp(lcl + etalcl)
 #'     vc <- exp(lvc + etalvc)
-#'     kel <- cl/vc
-#'     d/dt(central) <- -kel*central
-#'     cp <- central/vc
+#'     kel <- cl / vc
+#'     d / dt(central) <- -kel * central
+#'     cp <- central / vc
 #'     cp ~ add(cpaddSd)
 #'   })
 #' }
-#' list(
-#'   tar_nlmixr_multimodel(
-#'     name = all_models,
-#'     data = nlmixr2data::pheno_sd,
-#'     est = "saem",
-#'     "Base model" = pheno,
-#'     "Alternative residual error" = pheno2
-#'   )
+#'
+#' # Build the per-model target chains plus the combined list target.
+#' # Estimation runs only when `targets::tar_make()` is invoked from a
+#' # project whose store you have configured (see `?tar_nlmixr` for one
+#' # tempdir-based setup).
+#' tar_nlmixr_multimodel(
+#'   name = all_models,
+#'   data = nlmixr2data::pheno_sd,
+#'   est = "saem",
+#'   "Base model" = pheno,
+#'   "Alternative residual error" = pheno2
 #' )
-#' })
-#' targets::tar_make()
-#' }
 #' @export
 tar_nlmixr_multimodel <- function(name, ..., data, est, control = list(),
                                   table = nlmixr2est::tableControl(), env = parent.frame()) {

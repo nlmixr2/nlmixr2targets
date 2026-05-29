@@ -18,8 +18,12 @@
 
 0 errors | 0 warnings | 0 notes
 
-* Even simple workflows for the `nlmixr2targets` library take significant
-  runtime, more than the few seconds allowed for examples. The user-facing
-  function examples are therefore wrapped in `\dontrun{}` and the
-  comprehensive examples live in the vignettes.
+* The user-facing examples (`tar_nlmixr()`, `tar_nlmixr_multimodel()`) only
+  exercise the target construction step; they capture the `data` and `est`
+  arguments as expressions and return a list of targets without running
+  estimation. Estimation only happens when the user calls
+  `targets::tar_make()` from a project whose targets store they have
+  configured (e.g. via `targets::tar_config_set()` pointing at a directory
+  under `tempdir()`). Comprehensive run-through examples live in the
+  vignettes.
 * This is a new release.

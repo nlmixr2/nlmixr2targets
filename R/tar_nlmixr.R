@@ -36,13 +36,10 @@
 #' @seealso [tar_nlmixr_multimodel()] for fitting many models against one
 #'   dataset.
 #' @examples
-#' \dontrun{
-#' library(targets)
-#' targets::tar_script({
 #' pheno <- function() {
 #'   ini({
 #'     lcl <- log(0.008); label("Typical value of clearance")
-#'     lvc <-  log(0.6); label("Typical value of volume of distribution")
+#'     lvc <- log(0.6); label("Typical value of volume of distribution")
 #'     etalcl + etalvc ~ c(1,
 #'                         0.01, 1)
 #'     cpaddSd <- 0.1; label("residual variability")
@@ -50,23 +47,25 @@
 #'   model({
 #'     cl <- exp(lcl + etalcl)
 #'     vc <- exp(lvc + etalvc)
-#'     kel <- cl/vc
-#'     d/dt(central) <- -kel*central
-#'     cp <- central/vc
+#'     kel <- cl / vc
+#'     d / dt(central) <- -kel * central
+#'     cp <- central / vc
 #'     cp ~ add(cpaddSd)
 #'   })
 #' }
-#' list(
-#'   tar_nlmixr(
-#'     name = pheno_model,
-#'     object = pheno,
-#'     data = nlmixr2data::pheno_sd,
-#'     est = "saem"
-#'   )
+#'
+#' # Build the four targets that estimate `pheno`. `data` and `est` are
+#' # captured as expressions, so this just returns the target list; the
+#' # estimation step runs only when you call `targets::tar_make()` from a
+#' # project whose targets store you have configured (for example, with
+#' # `targets::tar_config_set(store = file.path(tempdir(), "_targets"))`
+#' # or by running inside a project directory you own).
+#' tar_nlmixr(
+#'   name = pheno_model,
+#'   object = pheno,
+#'   data = nlmixr2data::pheno_sd,
+#'   est = "saem"
 #' )
-#' })
-#' targets::tar_make()
-#' }
 #' @export
 tar_nlmixr <- function(name, object, data, est = NULL, control = list(),
                        table = nlmixr2est::tableControl(), env = parent.frame()) {
