@@ -7,7 +7,11 @@ linters: linters_with_defaults(
     object_name_linter = NULL,         # mixed naming intentional (rxUi APIs)
     object_length_linter = NULL,       # long descriptive internal helpers intentional
     commented_code_linter = NULL,      # vignette-style commentary in some R files
-    object_usage_linter = NULL         # NSE / metaprogramming heavy
+    object_usage_linter = NULL,        # NSE / metaprogramming heavy
+    # `param <- value; label("...")` is the prototypical nlmixr2 style
+    # inside ini({...}) blocks. Disable rather than rewrite to a form
+    # nlmixr2 users do not recognize.
+    semicolon_linter = NULL
   )
 exclusions: list(
     "tests/testthat" = list(line_length_linter = Inf)

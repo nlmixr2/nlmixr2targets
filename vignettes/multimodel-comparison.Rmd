@@ -41,16 +41,16 @@ library(nlmixr2targets)
 pheno_base <- function() {
   ini({
     lcl <- log(0.008); label("Typical clearance")
-    lvc <-  log(0.6); label("Typical volume of distribution")
+    lvc <- log(0.6); label("Typical volume of distribution")
     etalcl + etalvc ~ c(1, 0.01, 1)
     cpaddSd <- 0.1; label("Additive residual SD")
   })
   model({
     cl <- exp(lcl + etalcl)
     vc <- exp(lvc + etalvc)
-    kel <- cl/vc
-    d/dt(central) <- -kel*central
-    cp <- central/vc
+    kel <- cl / vc
+    d / dt(central) <- -kel * central
+    cp <- central / vc
     cp ~ add(cpaddSd)
   })
 }

@@ -37,9 +37,9 @@ Both forms below produce the same fit when routed through
 # Form 1: native nlmixr2 DSL syntax (works in nlmixr2 directly and
 # inside nlmixr2targets)
 model({
-  d/dt(central) <- -kel*central
+  d / dt(central) <- -kel * central
   central(0) <- 0          # initial value at time 0
-  cp <- central/vc
+  cp <- central / vc
   cp ~ add(cpaddSd)
 })
 
@@ -49,10 +49,10 @@ model({
 # "Known limitation" section below). `nlmixr2targets` rewrites this
 # back to `central(0) <- 0` before passing the model to nlmixr2.
 model({
-  d/dt(central) <- -kel*central
-  central(initial) <- 0    # nlmixr2targets-only; not understood by
-                           # bare nlmixr2
-  cp <- central/vc
+  d / dt(central) <- -kel * central
+  # nlmixr2targets-only; not understood by bare nlmixr2
+  central(initial) <- 0
+  cp <- central / vc
   cp ~ add(cpaddSd)
 })
 ```
@@ -86,7 +86,9 @@ Both pipe forms below also work, including with `cmt(0)`:
 ```{r pipe-forms, eval = FALSE}
 tar_nlmixr(
   name = m1,
-  object = pheno |> model({ central(0) <- 0 }, append = TRUE),
+  object = pheno |> model({
+    central(0) <- 0
+  }, append = TRUE),
   data  = nlmixr2data::pheno_sd,
   est   = "saem"
 )
@@ -109,8 +111,12 @@ the ones referenced by a target. If you define
 
 ```{r unused-function, eval = FALSE}
 sketch <- function() {
-  ini({ a <- 1 })
-  model({ central(0) <- 0 })
+  ini({
+    a <- 1
+  })
+  model({
+    central(0) <- 0
+  })
 }
 ```
 

@@ -71,7 +71,7 @@ library(nlmixr2targets)
 pheno <- function() {
   ini({
     lcl <- log(0.008); label("Typical value of clearance")
-    lvc <-  log(0.6); label("Typical value of volume of distribution")
+    lvc <- log(0.6); label("Typical value of volume of distribution")
     etalcl + etalvc ~ c(1,
                         0.01, 1)
     cpaddSd <- 0.1; label("residual variability")
@@ -79,9 +79,9 @@ pheno <- function() {
   model({
     cl <- exp(lcl + etalcl)
     vc <- exp(lvc + etalvc)
-    kel <- cl/vc
-    d/dt(central) <- -kel*central
-    cp <- central/vc
+    kel <- cl / vc
+    d / dt(central) <- -kel * central
+    cp <- central / vc
     cp ~ add(cpaddSd)
   })
 }
@@ -120,7 +120,7 @@ library(nlmixr2targets)
 pheno <- function() {
   ini({
     lcl <- log(0.008); label("Typical value of clearance")
-    lvc <-  log(0.6); label("Typical value of volume of distribution")
+    lvc <- log(0.6); label("Typical value of volume of distribution")
     etalcl + etalvc ~ c(1,
                         0.01, 1)
     cpaddSd <- 0.1; label("residual variability")
@@ -128,9 +128,9 @@ pheno <- function() {
   model({
     cl <- exp(lcl + etalcl)
     vc <- exp(lvc + etalvc)
-    kel <- cl/vc
-    d/dt(central) <- -kel*central
-    cp <- central/vc
+    kel <- cl / vc
+    d / dt(central) <- -kel * central
+    cp <- central / vc
     cp ~ add(cpaddSd)
   })
 }
@@ -138,7 +138,7 @@ pheno <- function() {
 pheno2 <- function() {
   ini({
     lcl <- log(0.008); label("Typical value of clearance")
-    lvc <-  log(0.6); label("Typical value of volume of distribution")
+    lvc <- log(0.6); label("Typical value of volume of distribution")
     etalcl + etalvc ~ c(2,
                         0.01, 2)
     cpaddSd <- 3.0; label("residual variability")
@@ -146,9 +146,9 @@ pheno2 <- function() {
   model({
     cl <- exp(lcl + etalcl)
     vc <- exp(lvc + etalvc)
-    kel <- cl/vc
-    d/dt(central) <- -kel*central
-    cp <- central/vc
+    kel <- cl / vc
+    d / dt(central) <- -kel * central
+    cp <- central / vc
     cp ~ add(cpaddSd)
   })
 }
@@ -195,7 +195,7 @@ library(nlmixr2)
 pheno <- function() {
   ini({
     lcl <- log(0.008); label("Typical value of clearance")
-    lvc <-  log(0.6); label("Typical value of volume of distribution")
+    lvc <- log(0.6); label("Typical value of volume of distribution")
     etalcl + etalvc ~ c(1,
                         0.01, 1)
     cpaddSd <- 0.1; label("residual variability")
@@ -203,9 +203,9 @@ pheno <- function() {
   model({
     cl <- exp(lcl + etalcl)
     vc <- exp(lvc + etalvc)
-    kel <- cl/vc
-    d/dt(central) <- -kel*central
-    cp <- central/vc
+    kel <- cl / vc
+    d / dt(central) <- -kel * central
+    cp <- central / vc
     cp ~ add(cpaddSd)
   })
 }
@@ -217,8 +217,7 @@ plan_model <-
     est = "saem",
     "Base model; additive residual error = 1" = pheno,
     "Base model; additive residual error = 3" =
-      all_models[["Base model; additive residual error = 1"]] |>
-      ini(cpaddSd = 3)
+    all_models[["Base model; additive residual error = 1"]] |> ini(cpaddSd = 3)
   )
 
 list(
