@@ -8,7 +8,7 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/nlmixr2/nlmixr2targets/blob/main/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/nlmixr2/nlmixr2targets/blob/v0.1.0/DESCRIPTION)
 
 Denney B (2026). *nlmixr2targets: Targets for 'nlmixr2' Pipelines*. R
 package version 0.1.0, <https://nlmixr2.github.io/nlmixr2targets/>.
