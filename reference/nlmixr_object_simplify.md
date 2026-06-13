@@ -5,7 +5,10 @@ This function is typically not needed by end users.
 ## Usage
 
 ``` r
-nlmixr_object_simplify(object)
+nlmixr_object_simplify(
+  object,
+  directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")
+)
 ```
 
 ## Arguments
@@ -13,6 +16,19 @@ nlmixr_object_simplify(object)
 - object:
 
   Fitted object or function specifying the model.
+
+- directory:
+
+  Cache directory to load the simplified `nlmixrui` from. Defaults to
+  `file.path(targets::tar_config_get("store"), "user/nlmixr2")`,
+  mirroring the convention used by `targets`' own
+  `store = targets::tar_config_get("store")` defaults — the path
+  resolves at call time against whatever store the user has configured
+  for the running
+  [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+  (e.g. a [`tempdir()`](https://rdrr.io/r/base/tempfile.html) location
+  set via
+  [`targets::tar_config_set()`](https://docs.ropensci.org/targets/reference/tar_config_set.html)).
 
 ## Value
 
@@ -45,9 +61,16 @@ auto-rewrites `cmt(0) <- value` to `cmt(initial) <- value` inside
 `model({...})` blocks at construction time (mutating the user's model
 function in env), and converts back to `cmt(0) <- value` before nlmixr2
 sees the model. The user can therefore write `cmt(0) <- value` directly.
-Manual `cmt(initial) <- value` is also still accepted. Note: because the
-rewrite mutates the function in env, calling the model function directly
-(outside
+
+Manual `cmt(initial) <- value` is also accepted, but it is a
+`nlmixr2targets`-only workaround: bare nlmixr2 does not understand the
+`cmt(initial)` form, so a model function written this way only fits when
+routed through
+[`tar_nlmixr()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
+/
+[`tar_nlmixr_multimodel()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel.md).
+Note: because the rewrite mutates the function in env, calling the model
+function directly (outside
 [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html))
 after
 [`tar_nlmixr()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)

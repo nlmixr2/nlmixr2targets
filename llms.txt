@@ -71,6 +71,16 @@ targets::tar_make()
   : Estimate an nlmixr2 model loading the model from a targets indirect
   hash storage
 
+- [`nlmixr2targets_cache_prune()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr2targets_cache_prune.md)
+  :
+
+  Drop orphaned entries from the `nlmixr2targets` indirect cache
+
+- [`nlmixr2targets_cache_status()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr2targets_cache_status.md)
+  :
+
+  Inspect the `nlmixr2targets` indirect cache
+
 - [`nlmixr_data_simplify()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_data_simplify.md)
   : Standardize and simplify data for nlmixr2 estimation
 
@@ -109,7 +119,13 @@ targets::tar_make()
 
 # Articles
 
-### All vignettes
+### Guides
 
 - [Estimating nlmixr2 models with
   'nlmixr2targets'](https://nlmixr2.github.io/nlmixr2targets/articles/estimating.md):
+- [Initial conditions
+  cheatsheet](https://nlmixr2.github.io/nlmixr2targets/articles/initial-conditions.md):
+- [Caching strategy and
+  reruns](https://nlmixr2.github.io/nlmixr2targets/articles/caching.md):
+- [Multimodel comparison
+  workflows](https://nlmixr2.github.io/nlmixr2targets/articles/multimodel-comparison.md):

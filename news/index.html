@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">nlmixr2targets</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -19,6 +19,9 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/estimating.html">Estimating nlmixr2 models with 'nlmixr2targets'</a></li>
+    <li><a class="dropdown-item" href="../articles/initial-conditions.html">Initial conditions cheatsheet</a></li>
+    <li><a class="dropdown-item" href="../articles/caching.html">Caching strategy and reruns</a></li>
+    <li><a class="dropdown-item" href="../articles/multimodel-comparison.html">Multimodel comparison workflows</a></li>
   </ul></li>
 <li class="active nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -37,17 +40,15 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.0.0.9000" id="nlmixr2targets-0009000">nlmixr2targets 0.0.0.9000<a class="anchor" aria-label="anchor" href="#nlmixr2targets-0009000"></a></h2>
-<ul><li>Setting initial conditions can now be done with the natural <code>cmt(0) &lt;- value</code> form directly inside <code>model({...})</code> blocks. <code><a href="../reference/tar_nlmixr.html">tar_nlmixr()</a></code> rewrites the user’s model function body in env to use <code>cmt(initial) &lt;- value</code> (codetools-safe) at construction time and restores <code>cmt(0) &lt;- value</code> before nlmixr2 sees the model. The pipe forms <code>pheno |&gt; model({...})</code> and <code>pheno |&gt; ini(...)</code> are also supported via a runtime delayed-eval wrapper. Note: the in-env rewrite mutates the user’s binding, so calling the model function directly (outside <code><a href="https://docs.ropensci.org/targets/reference/tar_make.html" class="external-link">tar_make()</a></code>) after <code><a href="../reference/tar_nlmixr.html">tar_nlmixr()</a></code> will see the rewritten body. Functions with <code>cmt(0)</code> declared in env but never routed through <code><a href="../reference/tar_nlmixr.html">tar_nlmixr()</a></code> still trigger <code><a href="https://rdrr.io/pkg/codetools/man/findGlobals.html" class="external-link">codetools::findGlobals()</a></code> errors during <code>targets</code> analysis – this is a known limitation, pinned by a test.</li>
-<li>Setting initial conditions can also still be done with <code>cmt(initial)</code> directly, which is automatically recoded to <code>cmt(0)</code>.</li>
-<li>Added “cens” and “limit” columns as nlmixr2 columns.</li>
-<li>Keep columns from the <code>table</code> argument’s <code>keep</code> element.</li>
-<li>Indirect cache (<code>save_nlmixr2obj_indirect()</code> / <code>read_nlmixr2obj_indirect()</code>) now reports a clear error mentioning the missing hash and cache directory on cache misses, instead of bubbling up a <code><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS()</a></code> failure.</li>
-<li>
-<code><a href="../reference/tar_nlmixr.html">tar_nlmixr()</a></code>, <code><a href="../reference/tar_nlmixr_multimodel.html">tar_nlmixr_multimodel()</a></code>, <code><a href="../reference/assign_origData.html">assign_origData()</a></code>, and <code><a href="../reference/nlmixr_data_simplify.html">nlmixr_data_simplify()</a></code> now validate their key arguments at function entry so misuse fails loudly at the call site.</li>
-<li>Object metadata (<code>ui$meta</code>) and parameter labels (<code>ui$iniDf$label</code>) are now stripped from the simplified model before fitting and re-attached to the final fit by the new <code><a href="../reference/nlmixr_object_complicate.html">nlmixr_object_complicate()</a></code> helper, which also re-attaches the original data. Editing only labels or metadata in the source model no longer invalidates the cached <code>_fit_simple</code> target. (<a href="https://github.com/nlmixr2/nlmixr2targets/issues/28" class="external-link">#28</a>)</li>
+<h2 class="pkg-version" data-toc-text="0.1.0" id="nlmixr2targets-010">nlmixr2targets 0.1.0<a class="anchor" aria-label="anchor" href="#nlmixr2targets-010"></a></h2><p class="text-muted">CRAN release: 2026-06-05</p>
+<div class="section level3">
+<h3 id="breaking-changes-from-unreleased-development-version-0-1-0">Breaking changes from unreleased development version<a class="anchor" aria-label="anchor" href="#breaking-changes-from-unreleased-development-version-0-1-0"></a></h3>
+<ul><li>
+<code><a href="../reference/tar_nlmixr.html">tar_nlmixr()</a></code> now produces intermediate targets named <code>&lt;name&gt;_object_simple</code>, <code>&lt;name&gt;_data_simple</code>, and <code>&lt;name&gt;_fit_simple</code> (single-underscore separator). Prior versions used the longer <code>&lt;name&gt;_tar_object_simple</code>/<code>_tar_data_simple</code>/<code>_tar_fit_simple</code> pattern. The new names align with the convention already used by <code><a href="../reference/tar_nlmixr_multimodel.html">tar_nlmixr_multimodel()</a></code>. Users with cached pipelines from earlier versions will see one rebuild (the old targets become orphans); <code><a href="https://docs.ropensci.org/targets/reference/tar_destroy.html" class="external-link">targets::tar_destroy()</a></code> will remove them if desired.</li>
 </ul></div>
-  </main></div>
+</div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">

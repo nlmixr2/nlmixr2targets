@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">nlmixr2targets</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -19,6 +19,9 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/estimating.html">Estimating nlmixr2 models with 'nlmixr2targets'</a></li>
+    <li><a class="dropdown-item" href="../articles/initial-conditions.html">Initial conditions cheatsheet</a></li>
+    <li><a class="dropdown-item" href="../articles/caching.html">Caching strategy and reruns</a></li>
+    <li><a class="dropdown-item" href="../articles/multimodel-comparison.html">Multimodel comparison workflows</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
@@ -119,7 +122,356 @@ use)</p></dd>
     <p>A list of targets for the model simplification, data simplification,
 and model estimation.</p>
     </div>
+    <div class="section level2">
+    <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
+    <div class="dont-index"><p><code><a href="tar_nlmixr.html">tar_nlmixr()</a></code> for fitting a single model.</p></div>
+    </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">pheno</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>  <span class="fu">ini</span><span class="op">(</span><span class="op">{</span></span></span>
+<span class="r-in"><span>    <span class="va">lcl</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">0.008</span><span class="op">)</span>; <span class="fu">label</span><span class="op">(</span><span class="st">"Typical value of clearance"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="va">lvc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">0.6</span><span class="op">)</span>; <span class="fu">label</span><span class="op">(</span><span class="st">"Typical value of volume of distribution"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="va">etalcl</span> <span class="op">+</span> <span class="va">etalvc</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>,</span></span>
+<span class="r-in"><span>                        <span class="fl">0.01</span>, <span class="fl">1</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="va">cpaddSd</span> <span class="op">&lt;-</span> <span class="fl">0.1</span>; <span class="fu">label</span><span class="op">(</span><span class="st">"residual variability"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">}</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu">model</span><span class="op">(</span><span class="op">{</span></span></span>
+<span class="r-in"><span>    <span class="va">cl</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">lcl</span> <span class="op">+</span> <span class="va">etalcl</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="va">vc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">lvc</span> <span class="op">+</span> <span class="va">etalvc</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="va">kel</span> <span class="op">&lt;-</span> <span class="va">cl</span> <span class="op">/</span> <span class="va">vc</span></span></span>
+<span class="r-in"><span>    <span class="va">d</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/stats/TDist.html" class="external-link">dt</a></span><span class="op">(</span><span class="va">central</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="op">-</span><span class="va">kel</span> <span class="op">*</span> <span class="va">central</span></span></span>
+<span class="r-in"><span>    <span class="va">cp</span> <span class="op">&lt;-</span> <span class="va">central</span> <span class="op">/</span> <span class="va">vc</span></span></span>
+<span class="r-in"><span>    <span class="va">cp</span> <span class="op">~</span> <span class="fu">add</span><span class="op">(</span><span class="va">cpaddSd</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">}</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-in"><span><span class="va">pheno2</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>  <span class="fu">ini</span><span class="op">(</span><span class="op">{</span></span></span>
+<span class="r-in"><span>    <span class="va">lcl</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">0.008</span><span class="op">)</span>; <span class="fu">label</span><span class="op">(</span><span class="st">"Typical value of clearance"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="va">lvc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">0.6</span><span class="op">)</span>; <span class="fu">label</span><span class="op">(</span><span class="st">"Typical value of volume of distribution"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="va">etalcl</span> <span class="op">+</span> <span class="va">etalvc</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>,</span></span>
+<span class="r-in"><span>                        <span class="fl">0.01</span>, <span class="fl">2</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="va">cpaddSd</span> <span class="op">&lt;-</span> <span class="fl">3.0</span>; <span class="fu">label</span><span class="op">(</span><span class="st">"residual variability"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">}</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu">model</span><span class="op">(</span><span class="op">{</span></span></span>
+<span class="r-in"><span>    <span class="va">cl</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">lcl</span> <span class="op">+</span> <span class="va">etalcl</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="va">vc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">lvc</span> <span class="op">+</span> <span class="va">etalvc</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="va">kel</span> <span class="op">&lt;-</span> <span class="va">cl</span> <span class="op">/</span> <span class="va">vc</span></span></span>
+<span class="r-in"><span>    <span class="va">d</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/stats/TDist.html" class="external-link">dt</a></span><span class="op">(</span><span class="va">central</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="op">-</span><span class="va">kel</span> <span class="op">*</span> <span class="va">central</span></span></span>
+<span class="r-in"><span>    <span class="va">cp</span> <span class="op">&lt;-</span> <span class="va">central</span> <span class="op">/</span> <span class="va">vc</span></span></span>
+<span class="r-in"><span>    <span class="va">cp</span> <span class="op">~</span> <span class="fu">add</span><span class="op">(</span><span class="va">cpaddSd</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">}</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Build the per-model target chains plus the combined list target.</span></span></span>
+<span class="r-in"><span><span class="co"># Estimation runs only when `targets::tar_make()` is invoked from a</span></span></span>
+<span class="r-in"><span><span class="co"># project whose store you have configured (see `?tar_nlmixr` for one</span></span></span>
+<span class="r-in"><span><span class="co"># tempdir-based setup).</span></span></span>
+<span class="r-in"><span><span class="fu">tar_nlmixr_multimodel</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  name <span class="op">=</span> <span class="va">all_models</span>,</span></span>
+<span class="r-in"><span>  data <span class="op">=</span> <span class="fu">nlmixr2data</span><span class="fu">::</span><span class="va"><a href="https://nlmixr2.github.io/nlmixr2data/reference/pheno_sd.html" class="external-link">pheno_sd</a></span>,</span></span>
+<span class="r-in"><span>  est <span class="op">=</span> <span class="st">"saem"</span>,</span></span>
+<span class="r-in"><span>  <span class="st">"Base model"</span> <span class="op">=</span> <span class="va">pheno</span>,</span></span>
+<span class="r-in"><span>  <span class="st">"Alternative residual error"</span> <span class="op">=</span> <span class="va">pheno2</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [[1]]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [[1]]$object_simple</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tar_stem&gt; </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   name: all_models_8ae20c5c_object_simple </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   description:  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   command:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr_object_simplify(object = pheno, directory = file.path(targets::tar_config_get("store"), </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         "user/nlmixr2")) </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   format: rds </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   repository: local </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   iteration method: vector </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   error mode: stop </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   memory mode: auto </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   storage mode: worker </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   retrieval mode: auto </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   deployment mode: worker </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   priority: 0 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   resources:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     list() </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   cue:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     seed: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     file: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     iteration: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     repository: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     format: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     depend: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     command: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     mode: thorough </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   packages:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr2targets</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr2est </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   library:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     NULL</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [[1]]$data_simple</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tar_stem&gt; </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   name: all_models_8ae20c5c_data_simple </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   description:  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   command:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr_data_simplify(object = all_models_8ae20c5c_object_simple, </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         data = nlmixr2data::pheno_sd, table = nlmixr2est::tableControl(), </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   format: rds </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   repository: local </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   iteration method: vector </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   error mode: stop </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   memory mode: auto </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   storage mode: worker </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   retrieval mode: auto </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   deployment mode: worker </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   priority: 0 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   resources:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     list() </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   cue:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     seed: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     file: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     iteration: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     repository: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     format: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     depend: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     command: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     mode: thorough </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   packages:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr2targets </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   library:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     NULL</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [[1]]$fit_simple</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tar_stem&gt; </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   name: all_models_8ae20c5c_fit_simple </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   description:  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   command:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr2_indirect(object = all_models_8ae20c5c_object_simple, </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         data = all_models_8ae20c5c_data_simple, est = "saem", control = list(), </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   format: rds </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   repository: local </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   iteration method: vector </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   error mode: stop </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   memory mode: auto </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   storage mode: worker </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   retrieval mode: auto </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   deployment mode: worker </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   priority: 0 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   resources:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     list() </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   cue:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     seed: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     file: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     iteration: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     repository: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     format: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     depend: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     command: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     mode: thorough </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   packages:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr2est </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   library:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     NULL</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [[1]]$fit</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tar_stem&gt; </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   name: all_models_8ae20c5c </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   description:  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   command:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr_object_complicate(fit = all_models_8ae20c5c_fit_simple, </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         object = pheno, data = nlmixr2data::pheno_sd) </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   format: rds </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   repository: local </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   iteration method: vector </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   error mode: stop </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   memory mode: auto </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   storage mode: worker </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   retrieval mode: auto </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   deployment mode: worker </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   priority: 0 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   resources:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     list() </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   cue:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     seed: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     file: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     iteration: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     repository: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     format: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     depend: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     command: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     mode: thorough </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   packages:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr2targets </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   library:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     NULL</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [[2]]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [[2]]$object_simple</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tar_stem&gt; </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   name: all_models_b0a374c4_object_simple </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   description:  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   command:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr_object_simplify(object = pheno2, directory = file.path(targets::tar_config_get("store"), </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         "user/nlmixr2")) </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   format: rds </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   repository: local </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   iteration method: vector </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   error mode: stop </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   memory mode: auto </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   storage mode: worker </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   retrieval mode: auto </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   deployment mode: worker </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   priority: 0 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   resources:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     list() </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   cue:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     seed: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     file: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     iteration: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     repository: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     format: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     depend: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     command: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     mode: thorough </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   packages:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr2targets</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr2est </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   library:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     NULL</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [[2]]$data_simple</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tar_stem&gt; </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   name: all_models_b0a374c4_data_simple </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   description:  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   command:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr_data_simplify(object = all_models_b0a374c4_object_simple, </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         data = nlmixr2data::pheno_sd, table = nlmixr2est::tableControl(), </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   format: rds </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   repository: local </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   iteration method: vector </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   error mode: stop </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   memory mode: auto </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   storage mode: worker </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   retrieval mode: auto </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   deployment mode: worker </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   priority: 0 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   resources:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     list() </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   cue:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     seed: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     file: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     iteration: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     repository: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     format: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     depend: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     command: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     mode: thorough </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   packages:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr2targets </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   library:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     NULL</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [[2]]$fit_simple</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tar_stem&gt; </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   name: all_models_b0a374c4_fit_simple </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   description:  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   command:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr2_indirect(object = all_models_b0a374c4_object_simple, </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         data = all_models_b0a374c4_data_simple, est = "saem", control = list(), </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   format: rds </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   repository: local </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   iteration method: vector </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   error mode: stop </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   memory mode: auto </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   storage mode: worker </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   retrieval mode: auto </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   deployment mode: worker </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   priority: 0 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   resources:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     list() </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   cue:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     seed: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     file: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     iteration: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     repository: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     format: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     depend: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     command: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     mode: thorough </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   packages:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr2est </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   library:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     NULL</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [[2]]$fit</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tar_stem&gt; </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   name: all_models_b0a374c4 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   description:  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   command:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr_object_complicate(fit = all_models_b0a374c4_fit_simple, </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         object = pheno2, data = nlmixr2data::pheno_sd) </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   format: rds </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   repository: local </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   iteration method: vector </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   error mode: stop </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   memory mode: auto </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   storage mode: worker </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   retrieval mode: auto </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   deployment mode: worker </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   priority: 0 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   resources:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     list() </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   cue:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     seed: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     file: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     iteration: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     repository: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     format: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     depend: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     command: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     mode: thorough </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   packages:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr2targets </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   library:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     NULL</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [[3]]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;tar_stem&gt; </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   name: all_models </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   description:  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   command:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     list(`Base model` = all_models_8ae20c5c, `Alternative residual error` = all_models_b0a374c4) </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   format: rds </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   repository: local </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   iteration method: vector </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   error mode: stop </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   memory mode: auto </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   storage mode: worker </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   retrieval mode: auto </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   deployment mode: worker </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   priority: 0 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   resources:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     list() </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   cue:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     seed: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     file: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     iteration: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     repository: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     format: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     depend: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     command: TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     mode: thorough </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   packages:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr2targets</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     stats</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     graphics</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     grDevices</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     utils</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     datasets</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     methods</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     base </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   library:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     NULL</span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

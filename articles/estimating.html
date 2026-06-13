@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">nlmixr2targets</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -34,6 +34,9 @@
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
 <li><a class="dropdown-item" href="../articles/estimating.html">Estimating nlmixr2 models with 'nlmixr2targets'</a></li>
+    <li><a class="dropdown-item" href="../articles/initial-conditions.html">Initial conditions cheatsheet</a></li>
+    <li><a class="dropdown-item" href="../articles/caching.html">Caching strategy and reruns</a></li>
+    <li><a class="dropdown-item" href="../articles/multimodel-comparison.html">Multimodel comparison workflows</a></li>
   </ul>
 </li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -70,10 +73,10 @@
 <div class="section level2">
 <h2 id="introduction-to-nlmixr2targets">Introduction to <code>nlmixr2targets</code><a class="anchor" aria-label="anchor" href="#introduction-to-nlmixr2targets"></a>
 </h2>
-<p>The <code>nlmixr2targets</code> improves reproducibility by ensuring
-that your model is up-to-date with your data, and it speeds your
-workflow using the <code>targets</code> package to only run models when
-the model or data have changed.</p>
+<p>The <code>nlmixr2targets</code> package improves reproducibility by
+ensuring that your model is up-to-date with your data, and it speeds
+your workflow using the <code>targets</code> package to only run models
+when the model or data have changed.</p>
 <p>There are two main functions that are used within the package:</p>
 <ul>
 <li>
@@ -84,8 +87,32 @@ a single dataset.</li>
 </ul>
 <p>Using <code>nlmixr2targets</code> requires the use of the
 <code>targets</code> package. To learn about the <code>targets</code>
-package, see (<a href="https://docs.ropensci.org/targets/" class="external-link uri">https://docs.ropensci.org/targets/</a>)[the targets
-website].</p>
+package, see <a href="https://docs.ropensci.org/targets/" class="external-link">the targets
+website</a>.</p>
+</div>
+<div class="section level2">
+<h2 id="initial-conditions">Initial conditions<a class="anchor" aria-label="anchor" href="#initial-conditions"></a>
+</h2>
+<p>The native nlmixr2 DSL form for a compartment initial value is
+<code>cmt(0) &lt;- value</code> inside a <code>model({...})</code>
+block. Inside <code><a href="../reference/tar_nlmixr.html">tar_nlmixr()</a></code> and
+<code><a href="../reference/tar_nlmixr_multimodel.html">tar_nlmixr_multimodel()</a></code> you may also write the
+<code>nlmixr2targets</code>-only workaround
+<code>cmt(initial) &lt;- value</code>, which is rewritten back to
+<code>cmt(0) &lt;- value</code> before nlmixr2 ever sees the model. The
+<code>cmt(initial)</code> form is <strong>not</strong> understood by
+bare nlmixr2 and only fits when routed through
+<code>nlmixr2targets</code>. Internally, <code><a href="../reference/tar_nlmixr.html">tar_nlmixr()</a></code> also
+rewrites <code>cmt(0)</code> to <code>cmt(initial)</code> in env so that
+<code>targets</code>’ static analysis can walk the model body, then
+restores <code>cmt(0)</code> at runtime.</p>
+<p>See
+<code><a href="../articles/initial-conditions.html">vignette("initial-conditions", package = "nlmixr2targets")</a></code>
+for the full cheatsheet, including the pipe forms
+<code>pheno |&gt; model({...})</code> and
+<code>pheno |&gt; ini(...)</code>, and the known
+<code><a href="https://rdrr.io/pkg/codetools/man/findGlobals.html" class="external-link">codetools::findGlobals()</a></code> edge case for functions in env
+that are never routed through <code><a href="../reference/tar_nlmixr.html">tar_nlmixr()</a></code>.</p>
 </div>
 <div class="section level2">
 <h2 id="running-one-model-with-one-dataset-tar_nlmixr">Running one model with one dataset (<code>tar_nlmixr()</code>)<a class="anchor" aria-label="anchor" href="#running-one-model-with-one-dataset-tar_nlmixr"></a>
@@ -108,7 +135,7 @@ vignette.)</p>
 <span><span class="va">pheno</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu">ini</span><span class="op">(</span><span class="op">{</span></span>
 <span>    <span class="va">lcl</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">0.008</span><span class="op">)</span>; <span class="fu">label</span><span class="op">(</span><span class="st">"Typical value of clearance"</span><span class="op">)</span></span>
-<span>    <span class="va">lvc</span> <span class="op">&lt;-</span>  <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">0.6</span><span class="op">)</span>; <span class="fu">label</span><span class="op">(</span><span class="st">"Typical value of volume of distribution"</span><span class="op">)</span></span>
+<span>    <span class="va">lvc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">0.6</span><span class="op">)</span>; <span class="fu">label</span><span class="op">(</span><span class="st">"Typical value of volume of distribution"</span><span class="op">)</span></span>
 <span>    <span class="va">etalcl</span> <span class="op">+</span> <span class="va">etalvc</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>,</span>
 <span>                        <span class="fl">0.01</span>, <span class="fl">1</span><span class="op">)</span></span>
 <span>    <span class="va">cpaddSd</span> <span class="op">&lt;-</span> <span class="fl">0.1</span>; <span class="fu">label</span><span class="op">(</span><span class="st">"residual variability"</span><span class="op">)</span></span>
@@ -116,15 +143,15 @@ vignette.)</p>
 <span>  <span class="fu">model</span><span class="op">(</span><span class="op">{</span></span>
 <span>    <span class="va">cl</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">lcl</span> <span class="op">+</span> <span class="va">etalcl</span><span class="op">)</span></span>
 <span>    <span class="va">vc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">lvc</span> <span class="op">+</span> <span class="va">etalvc</span><span class="op">)</span></span>
-<span>    <span class="va">kel</span> <span class="op">&lt;-</span> <span class="va">cl</span><span class="op">/</span><span class="va">vc</span></span>
-<span>    <span class="va">d</span><span class="op">/</span><span class="fu"><a href="https://rdrr.io/r/stats/TDist.html" class="external-link">dt</a></span><span class="op">(</span><span class="va">central</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="op">-</span><span class="va">kel</span><span class="op">*</span><span class="va">central</span></span>
-<span>    <span class="va">cp</span> <span class="op">&lt;-</span> <span class="va">central</span><span class="op">/</span><span class="va">vc</span></span>
+<span>    <span class="va">kel</span> <span class="op">&lt;-</span> <span class="va">cl</span> <span class="op">/</span> <span class="va">vc</span></span>
+<span>    <span class="va">d</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/stats/TDist.html" class="external-link">dt</a></span><span class="op">(</span><span class="va">central</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="op">-</span><span class="va">kel</span> <span class="op">*</span> <span class="va">central</span></span>
+<span>    <span class="va">cp</span> <span class="op">&lt;-</span> <span class="va">central</span> <span class="op">/</span> <span class="va">vc</span></span>
 <span>    <span class="va">cp</span> <span class="op">~</span> <span class="fu">add</span><span class="op">(</span><span class="va">cpaddSd</span><span class="op">)</span></span>
 <span>  <span class="op">}</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="va">plan_model</span> <span class="op">&lt;-</span></span>
-<span>  <span class="fu">tar_plan</span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://docs.ropensci.org/tarchetypes/reference/tar_plan.html" class="external-link">tar_plan</a></span><span class="op">(</span></span>
 <span>    myData <span class="op">=</span> <span class="fu">nlmixr2data</span><span class="fu">::</span><span class="va"><a href="https://nlmixr2.github.io/nlmixr2data/reference/pheno_sd.html" class="external-link">pheno_sd</a></span>,</span>
 <span>    <span class="fu"><a href="../reference/tar_nlmixr.html">tar_nlmixr</a></span><span class="op">(</span></span>
 <span>      <span class="va">model_pheno</span>,</span>
@@ -148,7 +175,7 @@ allows the generation of a named list of models to allow subsequent
 analysis of all models.</p>
 <p>Internally, <code><a href="../reference/tar_nlmixr_multimodel.html">tar_nlmixr_multimodel()</a></code> passes all the
 models to <code><a href="../reference/tar_nlmixr.html">tar_nlmixr()</a></code> so that the data set simplification
-and equivalent steps run once per model, and not model is run more often
+and equivalent steps run once per model, and no model is run more often
 than required for dataset or model changes.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://docs.ropensci.org/targets/" class="external-link">targets</a></span><span class="op">)</span></span>
@@ -158,7 +185,7 @@ than required for dataset or model changes.</p>
 <span><span class="va">pheno</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu">ini</span><span class="op">(</span><span class="op">{</span></span>
 <span>    <span class="va">lcl</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">0.008</span><span class="op">)</span>; <span class="fu">label</span><span class="op">(</span><span class="st">"Typical value of clearance"</span><span class="op">)</span></span>
-<span>    <span class="va">lvc</span> <span class="op">&lt;-</span>  <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">0.6</span><span class="op">)</span>; <span class="fu">label</span><span class="op">(</span><span class="st">"Typical value of volume of distribution"</span><span class="op">)</span></span>
+<span>    <span class="va">lvc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">0.6</span><span class="op">)</span>; <span class="fu">label</span><span class="op">(</span><span class="st">"Typical value of volume of distribution"</span><span class="op">)</span></span>
 <span>    <span class="va">etalcl</span> <span class="op">+</span> <span class="va">etalvc</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>,</span>
 <span>                        <span class="fl">0.01</span>, <span class="fl">1</span><span class="op">)</span></span>
 <span>    <span class="va">cpaddSd</span> <span class="op">&lt;-</span> <span class="fl">0.1</span>; <span class="fu">label</span><span class="op">(</span><span class="st">"residual variability"</span><span class="op">)</span></span>
@@ -166,9 +193,9 @@ than required for dataset or model changes.</p>
 <span>  <span class="fu">model</span><span class="op">(</span><span class="op">{</span></span>
 <span>    <span class="va">cl</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">lcl</span> <span class="op">+</span> <span class="va">etalcl</span><span class="op">)</span></span>
 <span>    <span class="va">vc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">lvc</span> <span class="op">+</span> <span class="va">etalvc</span><span class="op">)</span></span>
-<span>    <span class="va">kel</span> <span class="op">&lt;-</span> <span class="va">cl</span><span class="op">/</span><span class="va">vc</span></span>
-<span>    <span class="va">d</span><span class="op">/</span><span class="fu"><a href="https://rdrr.io/r/stats/TDist.html" class="external-link">dt</a></span><span class="op">(</span><span class="va">central</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="op">-</span><span class="va">kel</span><span class="op">*</span><span class="va">central</span></span>
-<span>    <span class="va">cp</span> <span class="op">&lt;-</span> <span class="va">central</span><span class="op">/</span><span class="va">vc</span></span>
+<span>    <span class="va">kel</span> <span class="op">&lt;-</span> <span class="va">cl</span> <span class="op">/</span> <span class="va">vc</span></span>
+<span>    <span class="va">d</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/stats/TDist.html" class="external-link">dt</a></span><span class="op">(</span><span class="va">central</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="op">-</span><span class="va">kel</span> <span class="op">*</span> <span class="va">central</span></span>
+<span>    <span class="va">cp</span> <span class="op">&lt;-</span> <span class="va">central</span> <span class="op">/</span> <span class="va">vc</span></span>
 <span>    <span class="va">cp</span> <span class="op">~</span> <span class="fu">add</span><span class="op">(</span><span class="va">cpaddSd</span><span class="op">)</span></span>
 <span>  <span class="op">}</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
@@ -176,7 +203,7 @@ than required for dataset or model changes.</p>
 <span><span class="va">pheno2</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu">ini</span><span class="op">(</span><span class="op">{</span></span>
 <span>    <span class="va">lcl</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">0.008</span><span class="op">)</span>; <span class="fu">label</span><span class="op">(</span><span class="st">"Typical value of clearance"</span><span class="op">)</span></span>
-<span>    <span class="va">lvc</span> <span class="op">&lt;-</span>  <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">0.6</span><span class="op">)</span>; <span class="fu">label</span><span class="op">(</span><span class="st">"Typical value of volume of distribution"</span><span class="op">)</span></span>
+<span>    <span class="va">lvc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">0.6</span><span class="op">)</span>; <span class="fu">label</span><span class="op">(</span><span class="st">"Typical value of volume of distribution"</span><span class="op">)</span></span>
 <span>    <span class="va">etalcl</span> <span class="op">+</span> <span class="va">etalvc</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>,</span>
 <span>                        <span class="fl">0.01</span>, <span class="fl">2</span><span class="op">)</span></span>
 <span>    <span class="va">cpaddSd</span> <span class="op">&lt;-</span> <span class="fl">3.0</span>; <span class="fu">label</span><span class="op">(</span><span class="st">"residual variability"</span><span class="op">)</span></span>
@@ -184,9 +211,9 @@ than required for dataset or model changes.</p>
 <span>  <span class="fu">model</span><span class="op">(</span><span class="op">{</span></span>
 <span>    <span class="va">cl</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">lcl</span> <span class="op">+</span> <span class="va">etalcl</span><span class="op">)</span></span>
 <span>    <span class="va">vc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">lvc</span> <span class="op">+</span> <span class="va">etalvc</span><span class="op">)</span></span>
-<span>    <span class="va">kel</span> <span class="op">&lt;-</span> <span class="va">cl</span><span class="op">/</span><span class="va">vc</span></span>
-<span>    <span class="va">d</span><span class="op">/</span><span class="fu"><a href="https://rdrr.io/r/stats/TDist.html" class="external-link">dt</a></span><span class="op">(</span><span class="va">central</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="op">-</span><span class="va">kel</span><span class="op">*</span><span class="va">central</span></span>
-<span>    <span class="va">cp</span> <span class="op">&lt;-</span> <span class="va">central</span><span class="op">/</span><span class="va">vc</span></span>
+<span>    <span class="va">kel</span> <span class="op">&lt;-</span> <span class="va">cl</span> <span class="op">/</span> <span class="va">vc</span></span>
+<span>    <span class="va">d</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/stats/TDist.html" class="external-link">dt</a></span><span class="op">(</span><span class="va">central</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="op">-</span><span class="va">kel</span> <span class="op">*</span> <span class="va">central</span></span>
+<span>    <span class="va">cp</span> <span class="op">&lt;-</span> <span class="va">central</span> <span class="op">/</span> <span class="va">vc</span></span>
 <span>    <span class="va">cp</span> <span class="op">~</span> <span class="fu">add</span><span class="op">(</span><span class="va">cpaddSd</span><span class="op">)</span></span>
 <span>  <span class="op">}</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
@@ -201,7 +228,7 @@ than required for dataset or model changes.</p>
 <span>  <span class="op">)</span></span>
 <span></span>
 <span><span class="va">plan_report</span> <span class="op">&lt;-</span></span>
-<span>  <span class="fu">tar_plan</span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://docs.ropensci.org/tarchetypes/reference/tar_plan.html" class="external-link">tar_plan</a></span><span class="op">(</span></span>
 <span>    <span class="co"># Determine the AIC for all tested models</span></span>
 <span>    aic_list <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span>X <span class="op">=</span> <span class="va">all_models</span>, FUN <span class="op">=</span> <span class="va">AIC</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
@@ -232,7 +259,7 @@ if it or the dependent model changes.</p>
 <span><span class="va">pheno</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="fu">ini</span><span class="op">(</span><span class="op">{</span></span>
 <span>    <span class="va">lcl</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">0.008</span><span class="op">)</span>; <span class="fu">label</span><span class="op">(</span><span class="st">"Typical value of clearance"</span><span class="op">)</span></span>
-<span>    <span class="va">lvc</span> <span class="op">&lt;-</span>  <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">0.6</span><span class="op">)</span>; <span class="fu">label</span><span class="op">(</span><span class="st">"Typical value of volume of distribution"</span><span class="op">)</span></span>
+<span>    <span class="va">lvc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">0.6</span><span class="op">)</span>; <span class="fu">label</span><span class="op">(</span><span class="st">"Typical value of volume of distribution"</span><span class="op">)</span></span>
 <span>    <span class="va">etalcl</span> <span class="op">+</span> <span class="va">etalvc</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>,</span>
 <span>                        <span class="fl">0.01</span>, <span class="fl">1</span><span class="op">)</span></span>
 <span>    <span class="va">cpaddSd</span> <span class="op">&lt;-</span> <span class="fl">0.1</span>; <span class="fu">label</span><span class="op">(</span><span class="st">"residual variability"</span><span class="op">)</span></span>
@@ -240,9 +267,9 @@ if it or the dependent model changes.</p>
 <span>  <span class="fu">model</span><span class="op">(</span><span class="op">{</span></span>
 <span>    <span class="va">cl</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">lcl</span> <span class="op">+</span> <span class="va">etalcl</span><span class="op">)</span></span>
 <span>    <span class="va">vc</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">lvc</span> <span class="op">+</span> <span class="va">etalvc</span><span class="op">)</span></span>
-<span>    <span class="va">kel</span> <span class="op">&lt;-</span> <span class="va">cl</span><span class="op">/</span><span class="va">vc</span></span>
-<span>    <span class="va">d</span><span class="op">/</span><span class="fu"><a href="https://rdrr.io/r/stats/TDist.html" class="external-link">dt</a></span><span class="op">(</span><span class="va">central</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="op">-</span><span class="va">kel</span><span class="op">*</span><span class="va">central</span></span>
-<span>    <span class="va">cp</span> <span class="op">&lt;-</span> <span class="va">central</span><span class="op">/</span><span class="va">vc</span></span>
+<span>    <span class="va">kel</span> <span class="op">&lt;-</span> <span class="va">cl</span> <span class="op">/</span> <span class="va">vc</span></span>
+<span>    <span class="va">d</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/stats/TDist.html" class="external-link">dt</a></span><span class="op">(</span><span class="va">central</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="op">-</span><span class="va">kel</span> <span class="op">*</span> <span class="va">central</span></span>
+<span>    <span class="va">cp</span> <span class="op">&lt;-</span> <span class="va">central</span> <span class="op">/</span> <span class="va">vc</span></span>
 <span>    <span class="va">cp</span> <span class="op">~</span> <span class="fu">add</span><span class="op">(</span><span class="va">cpaddSd</span><span class="op">)</span></span>
 <span>  <span class="op">}</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
@@ -254,8 +281,7 @@ if it or the dependent model changes.</p>
 <span>    est <span class="op">=</span> <span class="st">"saem"</span>,</span>
 <span>    <span class="st">"Base model; additive residual error = 1"</span> <span class="op">=</span> <span class="va">pheno</span>,</span>
 <span>    <span class="st">"Base model; additive residual error = 3"</span> <span class="op">=</span></span>
-<span>      <span class="va">all_models</span><span class="op">[[</span><span class="st">"Base model; additive residual error = 1"</span><span class="op">]</span><span class="op">]</span> <span class="op">|&gt;</span></span>
-<span>      <span class="fu">ini</span><span class="op">(</span>cpaddSd <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
+<span>    <span class="va">all_models</span><span class="op">[[</span><span class="st">"Base model; additive residual error = 1"</span><span class="op">]</span><span class="op">]</span> <span class="op">|&gt;</span> <span class="fu">ini</span><span class="op">(</span>cpaddSd <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
 <span>  <span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>

@@ -7,10 +7,10 @@ library(nlmixr2targets)
 
 ## Introduction to `nlmixr2targets`
 
-The `nlmixr2targets` improves reproducibility by ensuring that your
-model is up-to-date with your data, and it speeds your workflow using
-the `targets` package to only run models when the model or data have
-changed.
+The `nlmixr2targets` package improves reproducibility by ensuring that
+your model is up-to-date with your data, and it speeds your workflow
+using the `targets` package to only run models when the model or data
+have changed.
 
 There are two main functions that are used within the package:
 
@@ -20,8 +20,33 @@ There are two main functions that are used within the package:
   which runs multiple models for a single dataset.
 
 Using `nlmixr2targets` requires the use of the `targets` package. To
-learn about the `targets` package, see
-(<https://docs.ropensci.org/targets/>)\[the targets website\].
+learn about the `targets` package, see [the targets
+website](https://docs.ropensci.org/targets/).
+
+## Initial conditions
+
+The native nlmixr2 DSL form for a compartment initial value is
+`cmt(0) <- value` inside a `model({...})` block. Inside
+[`tar_nlmixr()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
+and
+[`tar_nlmixr_multimodel()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel.md)
+you may also write the `nlmixr2targets`-only workaround
+`cmt(initial) <- value`, which is rewritten back to `cmt(0) <- value`
+before nlmixr2 ever sees the model. The `cmt(initial)` form is **not**
+understood by bare nlmixr2 and only fits when routed through
+`nlmixr2targets`. Internally,
+[`tar_nlmixr()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
+also rewrites `cmt(0)` to `cmt(initial)` in env so that `targets`’
+static analysis can walk the model body, then restores `cmt(0)` at
+runtime.
+
+See
+[`vignette("initial-conditions", package = "nlmixr2targets")`](https://nlmixr2.github.io/nlmixr2targets/articles/initial-conditions.md)
+for the full cheatsheet, including the pipe forms
+`pheno |> model({...})` and `pheno |> ini(...)`, and the known
+[`codetools::findGlobals()`](https://rdrr.io/pkg/codetools/man/findGlobals.html)
+edge case for functions in env that are never routed through
+[`tar_nlmixr()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md).
 
 ## Running one model with one dataset (`tar_nlmixr()`)
 
@@ -46,7 +71,7 @@ library(nlmixr2targets)
 pheno <- function() {
   ini({
     lcl <- log(0.008); label("Typical value of clearance")
-    lvc <-  log(0.6); label("Typical value of volume of distribution")
+    lvc <- log(0.6); label("Typical value of volume of distribution")
     etalcl + etalvc ~ c(1,
                         0.01, 1)
     cpaddSd <- 0.1; label("residual variability")
@@ -54,9 +79,9 @@ pheno <- function() {
   model({
     cl <- exp(lcl + etalcl)
     vc <- exp(lvc + etalvc)
-    kel <- cl/vc
-    d/dt(central) <- -kel*central
-    cp <- central/vc
+    kel <- cl / vc
+    d / dt(central) <- -kel * central
+    cp <- central / vc
     cp ~ add(cpaddSd)
   })
 }
@@ -90,8 +115,8 @@ Internally,
 passes all the models to
 [`tar_nlmixr()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
 so that the data set simplification and equivalent steps run once per
-model, and not model is run more often than required for dataset or
-model changes.
+model, and no model is run more often than required for dataset or model
+changes.
 
 ``` r
 
@@ -102,7 +127,7 @@ library(nlmixr2targets)
 pheno <- function() {
   ini({
     lcl <- log(0.008); label("Typical value of clearance")
-    lvc <-  log(0.6); label("Typical value of volume of distribution")
+    lvc <- log(0.6); label("Typical value of volume of distribution")
     etalcl + etalvc ~ c(1,
                         0.01, 1)
     cpaddSd <- 0.1; label("residual variability")
@@ -110,9 +135,9 @@ pheno <- function() {
   model({
     cl <- exp(lcl + etalcl)
     vc <- exp(lvc + etalvc)
-    kel <- cl/vc
-    d/dt(central) <- -kel*central
-    cp <- central/vc
+    kel <- cl / vc
+    d / dt(central) <- -kel * central
+    cp <- central / vc
     cp ~ add(cpaddSd)
   })
 }
@@ -120,7 +145,7 @@ pheno <- function() {
 pheno2 <- function() {
   ini({
     lcl <- log(0.008); label("Typical value of clearance")
-    lvc <-  log(0.6); label("Typical value of volume of distribution")
+    lvc <- log(0.6); label("Typical value of volume of distribution")
     etalcl + etalvc ~ c(2,
                         0.01, 2)
     cpaddSd <- 3.0; label("residual variability")
@@ -128,9 +153,9 @@ pheno2 <- function() {
   model({
     cl <- exp(lcl + etalcl)
     vc <- exp(lvc + etalvc)
-    kel <- cl/vc
-    d/dt(central) <- -kel*central
-    cp <- central/vc
+    kel <- cl / vc
+    d / dt(central) <- -kel * central
+    cp <- central / vc
     cp ~ add(cpaddSd)
   })
 }
@@ -181,7 +206,7 @@ library(nlmixr2)
 pheno <- function() {
   ini({
     lcl <- log(0.008); label("Typical value of clearance")
-    lvc <-  log(0.6); label("Typical value of volume of distribution")
+    lvc <- log(0.6); label("Typical value of volume of distribution")
     etalcl + etalvc ~ c(1,
                         0.01, 1)
     cpaddSd <- 0.1; label("residual variability")
@@ -189,9 +214,9 @@ pheno <- function() {
   model({
     cl <- exp(lcl + etalcl)
     vc <- exp(lvc + etalvc)
-    kel <- cl/vc
-    d/dt(central) <- -kel*central
-    cp <- central/vc
+    kel <- cl / vc
+    d / dt(central) <- -kel * central
+    cp <- central / vc
     cp ~ add(cpaddSd)
   })
 }
@@ -203,8 +228,7 @@ plan_model <-
     est = "saem",
     "Base model; additive residual error = 1" = pheno,
     "Base model; additive residual error = 3" =
-      all_models[["Base model; additive residual error = 1"]] |>
-      ini(cpaddSd = 3)
+    all_models[["Base model; additive residual error = 1"]] |> ini(cpaddSd = 3)
   )
 
 list(

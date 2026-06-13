@@ -10,6 +10,16 @@
   : Estimate an nlmixr2 model loading the model from a targets indirect
   hash storage
 
+- [`nlmixr2targets_cache_prune()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr2targets_cache_prune.md)
+  :
+
+  Drop orphaned entries from the `nlmixr2targets` indirect cache
+
+- [`nlmixr2targets_cache_status()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr2targets_cache_status.md)
+  :
+
+  Inspect the `nlmixr2targets` indirect cache
+
 - [`nlmixr_data_simplify()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_data_simplify.md)
   : Standardize and simplify data for nlmixr2 estimation
 

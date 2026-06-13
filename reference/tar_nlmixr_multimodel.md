@@ -80,3 +80,354 @@ tar_nlmixr_multimodel(
 
 A list of targets for the model simplification, data simplification, and
 model estimation.
+
+## See also
+
+[`tar_nlmixr()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
+for fitting a single model.
+
+## Examples
+
+``` r
+pheno <- function() {
+  ini({
+    lcl <- log(0.008); label("Typical value of clearance")
+    lvc <- log(0.6); label("Typical value of volume of distribution")
+    etalcl + etalvc ~ c(1,
+                        0.01, 1)
+    cpaddSd <- 0.1; label("residual variability")
+  })
+  model({
+    cl <- exp(lcl + etalcl)
+    vc <- exp(lvc + etalvc)
+    kel <- cl / vc
+    d / dt(central) <- -kel * central
+    cp <- central / vc
+    cp ~ add(cpaddSd)
+  })
+}
+pheno2 <- function() {
+  ini({
+    lcl <- log(0.008); label("Typical value of clearance")
+    lvc <- log(0.6); label("Typical value of volume of distribution")
+    etalcl + etalvc ~ c(2,
+                        0.01, 2)
+    cpaddSd <- 3.0; label("residual variability")
+  })
+  model({
+    cl <- exp(lcl + etalcl)
+    vc <- exp(lvc + etalvc)
+    kel <- cl / vc
+    d / dt(central) <- -kel * central
+    cp <- central / vc
+    cp ~ add(cpaddSd)
+  })
+}
+
+# Build the per-model target chains plus the combined list target.
+# Estimation runs only when `targets::tar_make()` is invoked from a
+# project whose store you have configured (see `?tar_nlmixr` for one
+# tempdir-based setup).
+tar_nlmixr_multimodel(
+  name = all_models,
+  data = nlmixr2data::pheno_sd,
+  est = "saem",
+  "Base model" = pheno,
+  "Alternative residual error" = pheno2
+)
+#> [[1]]
+#> [[1]]$object_simple
+#> <tar_stem> 
+#>   name: all_models_8ae20c5c_object_simple 
+#>   description:  
+#>   command:
+#>     nlmixr_object_simplify(object = pheno, directory = file.path(targets::tar_config_get("store"), 
+#>         "user/nlmixr2")) 
+#>   format: rds 
+#>   repository: local 
+#>   iteration method: vector 
+#>   error mode: stop 
+#>   memory mode: auto 
+#>   storage mode: worker 
+#>   retrieval mode: auto 
+#>   deployment mode: worker 
+#>   priority: 0 
+#>   resources:
+#>     list() 
+#>   cue:
+#>     seed: TRUE
+#>     file: TRUE
+#>     iteration: TRUE
+#>     repository: TRUE
+#>     format: TRUE
+#>     depend: TRUE
+#>     command: TRUE
+#>     mode: thorough 
+#>   packages:
+#>     nlmixr2targets
+#>     nlmixr2est 
+#>   library:
+#>     NULL
+#> [[1]]$data_simple
+#> <tar_stem> 
+#>   name: all_models_8ae20c5c_data_simple 
+#>   description:  
+#>   command:
+#>     nlmixr_data_simplify(object = all_models_8ae20c5c_object_simple, 
+#>         data = nlmixr2data::pheno_sd, table = nlmixr2est::tableControl(), 
+#>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) 
+#>   format: rds 
+#>   repository: local 
+#>   iteration method: vector 
+#>   error mode: stop 
+#>   memory mode: auto 
+#>   storage mode: worker 
+#>   retrieval mode: auto 
+#>   deployment mode: worker 
+#>   priority: 0 
+#>   resources:
+#>     list() 
+#>   cue:
+#>     seed: TRUE
+#>     file: TRUE
+#>     iteration: TRUE
+#>     repository: TRUE
+#>     format: TRUE
+#>     depend: TRUE
+#>     command: TRUE
+#>     mode: thorough 
+#>   packages:
+#>     nlmixr2targets 
+#>   library:
+#>     NULL
+#> [[1]]$fit_simple
+#> <tar_stem> 
+#>   name: all_models_8ae20c5c_fit_simple 
+#>   description:  
+#>   command:
+#>     nlmixr2_indirect(object = all_models_8ae20c5c_object_simple, 
+#>         data = all_models_8ae20c5c_data_simple, est = "saem", control = list(), 
+#>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) 
+#>   format: rds 
+#>   repository: local 
+#>   iteration method: vector 
+#>   error mode: stop 
+#>   memory mode: auto 
+#>   storage mode: worker 
+#>   retrieval mode: auto 
+#>   deployment mode: worker 
+#>   priority: 0 
+#>   resources:
+#>     list() 
+#>   cue:
+#>     seed: TRUE
+#>     file: TRUE
+#>     iteration: TRUE
+#>     repository: TRUE
+#>     format: TRUE
+#>     depend: TRUE
+#>     command: TRUE
+#>     mode: thorough 
+#>   packages:
+#>     nlmixr2est 
+#>   library:
+#>     NULL
+#> [[1]]$fit
+#> <tar_stem> 
+#>   name: all_models_8ae20c5c 
+#>   description:  
+#>   command:
+#>     nlmixr_object_complicate(fit = all_models_8ae20c5c_fit_simple, 
+#>         object = pheno, data = nlmixr2data::pheno_sd) 
+#>   format: rds 
+#>   repository: local 
+#>   iteration method: vector 
+#>   error mode: stop 
+#>   memory mode: auto 
+#>   storage mode: worker 
+#>   retrieval mode: auto 
+#>   deployment mode: worker 
+#>   priority: 0 
+#>   resources:
+#>     list() 
+#>   cue:
+#>     seed: TRUE
+#>     file: TRUE
+#>     iteration: TRUE
+#>     repository: TRUE
+#>     format: TRUE
+#>     depend: TRUE
+#>     command: TRUE
+#>     mode: thorough 
+#>   packages:
+#>     nlmixr2targets 
+#>   library:
+#>     NULL
+#> 
+#> [[2]]
+#> [[2]]$object_simple
+#> <tar_stem> 
+#>   name: all_models_b0a374c4_object_simple 
+#>   description:  
+#>   command:
+#>     nlmixr_object_simplify(object = pheno2, directory = file.path(targets::tar_config_get("store"), 
+#>         "user/nlmixr2")) 
+#>   format: rds 
+#>   repository: local 
+#>   iteration method: vector 
+#>   error mode: stop 
+#>   memory mode: auto 
+#>   storage mode: worker 
+#>   retrieval mode: auto 
+#>   deployment mode: worker 
+#>   priority: 0 
+#>   resources:
+#>     list() 
+#>   cue:
+#>     seed: TRUE
+#>     file: TRUE
+#>     iteration: TRUE
+#>     repository: TRUE
+#>     format: TRUE
+#>     depend: TRUE
+#>     command: TRUE
+#>     mode: thorough 
+#>   packages:
+#>     nlmixr2targets
+#>     nlmixr2est 
+#>   library:
+#>     NULL
+#> [[2]]$data_simple
+#> <tar_stem> 
+#>   name: all_models_b0a374c4_data_simple 
+#>   description:  
+#>   command:
+#>     nlmixr_data_simplify(object = all_models_b0a374c4_object_simple, 
+#>         data = nlmixr2data::pheno_sd, table = nlmixr2est::tableControl(), 
+#>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) 
+#>   format: rds 
+#>   repository: local 
+#>   iteration method: vector 
+#>   error mode: stop 
+#>   memory mode: auto 
+#>   storage mode: worker 
+#>   retrieval mode: auto 
+#>   deployment mode: worker 
+#>   priority: 0 
+#>   resources:
+#>     list() 
+#>   cue:
+#>     seed: TRUE
+#>     file: TRUE
+#>     iteration: TRUE
+#>     repository: TRUE
+#>     format: TRUE
+#>     depend: TRUE
+#>     command: TRUE
+#>     mode: thorough 
+#>   packages:
+#>     nlmixr2targets 
+#>   library:
+#>     NULL
+#> [[2]]$fit_simple
+#> <tar_stem> 
+#>   name: all_models_b0a374c4_fit_simple 
+#>   description:  
+#>   command:
+#>     nlmixr2_indirect(object = all_models_b0a374c4_object_simple, 
+#>         data = all_models_b0a374c4_data_simple, est = "saem", control = list(), 
+#>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) 
+#>   format: rds 
+#>   repository: local 
+#>   iteration method: vector 
+#>   error mode: stop 
+#>   memory mode: auto 
+#>   storage mode: worker 
+#>   retrieval mode: auto 
+#>   deployment mode: worker 
+#>   priority: 0 
+#>   resources:
+#>     list() 
+#>   cue:
+#>     seed: TRUE
+#>     file: TRUE
+#>     iteration: TRUE
+#>     repository: TRUE
+#>     format: TRUE
+#>     depend: TRUE
+#>     command: TRUE
+#>     mode: thorough 
+#>   packages:
+#>     nlmixr2est 
+#>   library:
+#>     NULL
+#> [[2]]$fit
+#> <tar_stem> 
+#>   name: all_models_b0a374c4 
+#>   description:  
+#>   command:
+#>     nlmixr_object_complicate(fit = all_models_b0a374c4_fit_simple, 
+#>         object = pheno2, data = nlmixr2data::pheno_sd) 
+#>   format: rds 
+#>   repository: local 
+#>   iteration method: vector 
+#>   error mode: stop 
+#>   memory mode: auto 
+#>   storage mode: worker 
+#>   retrieval mode: auto 
+#>   deployment mode: worker 
+#>   priority: 0 
+#>   resources:
+#>     list() 
+#>   cue:
+#>     seed: TRUE
+#>     file: TRUE
+#>     iteration: TRUE
+#>     repository: TRUE
+#>     format: TRUE
+#>     depend: TRUE
+#>     command: TRUE
+#>     mode: thorough 
+#>   packages:
+#>     nlmixr2targets 
+#>   library:
+#>     NULL
+#> 
+#> [[3]]
+#> <tar_stem> 
+#>   name: all_models 
+#>   description:  
+#>   command:
+#>     list(`Base model` = all_models_8ae20c5c, `Alternative residual error` = all_models_b0a374c4) 
+#>   format: rds 
+#>   repository: local 
+#>   iteration method: vector 
+#>   error mode: stop 
+#>   memory mode: auto 
+#>   storage mode: worker 
+#>   retrieval mode: auto 
+#>   deployment mode: worker 
+#>   priority: 0 
+#>   resources:
+#>     list() 
+#>   cue:
+#>     seed: TRUE
+#>     file: TRUE
+#>     iteration: TRUE
+#>     repository: TRUE
+#>     format: TRUE
+#>     depend: TRUE
+#>     command: TRUE
+#>     mode: thorough 
+#>   packages:
+#>     nlmixr2targets
+#>     stats
+#>     graphics
+#>     grDevices
+#>     utils
+#>     datasets
+#>     methods
+#>     base 
+#>   library:
+#>     NULL
+```
