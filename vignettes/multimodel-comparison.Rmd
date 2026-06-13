@@ -1,0 +1,144 @@
+---
+title: "Multimodel comparison workflows"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Multimodel comparison workflows}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(nlmixr2targets)
+```
+
+# Why a dedicated multimodel factory?
+
+`tar_nlmixr_multimodel()` lets you declare several candidate models for
+the **same** dataset in one call. Each model gets its own
+simplify/fit/relabel chain, but the data-simplification step is shared
+when possible, and within-list piping
+(`models[["A"]] |> ini(...)` referenced from another entry) is resolved
+into a dependency on the prior fit so the data does not have to be
+re-prepared.
+
+The output is a list of targets you can drop into your `_targets.R`
+plan.
+
+# Minimal comparison plan
+
+```{r multimodel-plan, eval = FALSE}
+library(targets)
+library(tarchetypes)
+library(nlmixr2targets)
+
+pheno_base <- function() {
+  ini({
+    lcl <- log(0.008); label("Typical clearance")
+    lvc <- log(0.6); label("Typical volume of distribution")
+    etalcl + etalvc ~ c(1, 0.01, 1)
+    cpaddSd <- 0.1; label("Additive residual SD")
+  })
+  model({
+    cl <- exp(lcl + etalcl)
+    vc <- exp(lvc + etalvc)
+    kel <- cl / vc
+    d / dt(central) <- -kel * central
+    cp <- central / vc
+    cp ~ add(cpaddSd)
+  })
+}
+
+list(
+  tar_nlmixr_multimodel(
+    name = candidate_fits,
+    data = nlmixr2data::pheno_sd,
+    est  = "saem",
+    "Base"                              = pheno_base,
+    "Base + tighter residual prior"     = pheno_base |> ini(cpaddSd = 0.05),
+    "Base + alternate residual"         = pheno_base |> model({
+      cp ~ prop(cpaddSd)
+    }, append = TRUE)
+  ),
+  tar_target(
+    aic_table,
+    data.frame(
+      model = names(candidate_fits),
+      aic   = vapply(candidate_fits, AIC, numeric(1)),
+      bic   = vapply(candidate_fits, BIC, numeric(1)),
+      ofv   = vapply(candidate_fits, function(f) f$objDf$OBJF[1], numeric(1))
+    )
+  )
+)
+```
+
+After `tar_make()`, the `aic_table` target gives you a compact summary
+of the candidates. Add `dAIC` or weight columns to taste.
+
+# Extracting parameter estimates across models
+
+A common pattern is to pull a particular fixed effect out of every
+candidate fit to compare:
+
+```{r param-extract, eval = FALSE}
+tar_target(
+  clearance_estimates,
+  data.frame(
+    model = names(candidate_fits),
+    lcl   = vapply(
+      candidate_fits,
+      function(f) f$ui$iniDf$est[f$ui$iniDf$name == "lcl"],
+      numeric(1)
+    )
+  )
+)
+```
+
+This works because `tar_nlmixr_multimodel()` returns a target whose
+value is a named list of fits.
+
+# Within-list piping for nested edits
+
+If the second model is an edit of the first, refer to the first by its
+key inside the same `tar_nlmixr_multimodel()` call:
+
+```{r within-list-piping, eval = FALSE}
+tar_nlmixr_multimodel(
+  name = candidate_fits,
+  data = nlmixr2data::pheno_sd,
+  est  = "saem",
+  "Base"            = pheno_base,
+  "Tighter residual" =
+    candidate_fits[["Base"]] |> ini(cpaddSd = 0.05)
+)
+```
+
+Behind the scenes, `nlmixr2targets` rewrites
+`candidate_fits[["Base"]]` to a dependency on the base model's
+`_fit_simple` target. Iteratively resolving these references is what
+makes within-list piping work without forcing the entire pipeline to
+re-run when one model changes.
+
+If you write a circular reference
+(A piping from B and B piping from A) the function errors out at
+construction time with a clear message.
+
+# Tips for large model libraries
+
+- **Group models by data flavor.** Each call to
+  `tar_nlmixr_multimodel()` is scoped to one dataset. If you have
+  several datasets, use one call per dataset (with distinct `name`s)
+  and combine the resulting lists at the plan level.
+- **Use `tar_outdated()` aggressively** when iterating. Cosmetic edits
+  (labels, metadata) do not invalidate `_fit_simple` thanks to the
+  strip-restore behaviour. See
+  `vignette("caching", package = "nlmixr2targets")`.
+- **Watch the indirect cache.** Iterative model edits leave orphaned
+  cache entries. Use `nlmixr2targets_cache_status()` and
+  `nlmixr2targets_cache_prune()` periodically.

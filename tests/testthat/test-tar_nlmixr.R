@@ -93,22 +93,22 @@ test_that("tar_nlmixr_raw constructs four targets with expected names", {
     est = "saem",
     control = quote(list()),
     table = quote(list()),
-    object_simple_name = "fit_x_osimple",
-    data_simple_name = "fit_x_dsimple",
-    fit_simple_name = "fit_x_fitsimple",
+    object_simple_name = "fit_x_object_simple",
+    data_simple_name = "fit_x_data_simple",
+    fit_simple_name = "fit_x_fit_simple",
     env = environment()
   )
   expect_named(out, c("object_simple", "data_simple", "fit_simple", "fit"))
-  expect_equal(out$object_simple$settings$name, "fit_x_osimple")
-  expect_equal(out$data_simple$settings$name, "fit_x_dsimple")
-  expect_equal(out$fit_simple$settings$name, "fit_x_fitsimple")
+  expect_equal(out$object_simple$settings$name, "fit_x_object_simple")
+  expect_equal(out$data_simple$settings$name, "fit_x_data_simple")
+  expect_equal(out$fit_simple$settings$name, "fit_x_fit_simple")
   expect_equal(out$fit$settings$name, "fit_x")
   # Verify dependency wiring: data_simple consumes object_simple,
   # fit_simple consumes both, fit consumes fit_simple.
-  expect_true("fit_x_osimple" %in% targets::tar_deps_raw(out$data_simple$command$expr))
-  expect_true("fit_x_osimple" %in% targets::tar_deps_raw(out$fit_simple$command$expr))
-  expect_true("fit_x_dsimple" %in% targets::tar_deps_raw(out$fit_simple$command$expr))
-  expect_true("fit_x_fitsimple" %in% targets::tar_deps_raw(out$fit$command$expr))
+  expect_true("fit_x_object_simple" %in% targets::tar_deps_raw(out$data_simple$command$expr))
+  expect_true("fit_x_object_simple" %in% targets::tar_deps_raw(out$fit_simple$command$expr))
+  expect_true("fit_x_data_simple" %in% targets::tar_deps_raw(out$fit_simple$command$expr))
+  expect_true("fit_x_fit_simple" %in% targets::tar_deps_raw(out$fit$command$expr))
 })
 
 test_that("tar_nlmixr_raw rejects malformed name arguments", {
@@ -118,9 +118,9 @@ test_that("tar_nlmixr_raw rejects malformed name arguments", {
     est = "saem",
     control = quote(list()),
     table = quote(list()),
-    object_simple_name = "fit_x_osimple",
-    data_simple_name = "fit_x_dsimple",
-    fit_simple_name = "fit_x_fitsimple",
+    object_simple_name = "fit_x_object_simple",
+    data_simple_name = "fit_x_data_simple",
+    fit_simple_name = "fit_x_fit_simple",
     env = environment()
   )
   expect_error(do.call(tar_nlmixr_raw, c(list(name = ""),       args)), regexp = "name")
@@ -136,9 +136,9 @@ test_that("tar_nlmixr_raw rejects malformed simple_name arguments", {
     est = "saem",
     control = quote(list()),
     table = quote(list()),
-    object_simple_name = "fit_x_osimple",
-    data_simple_name = "fit_x_dsimple",
-    fit_simple_name = "fit_x_fitsimple",
+    object_simple_name = "fit_x_object_simple",
+    data_simple_name = "fit_x_data_simple",
+    fit_simple_name = "fit_x_fit_simple",
     env = environment()
   )
   bad_object <- base_args; bad_object$object_simple_name <- ""
@@ -181,21 +181,21 @@ targets::tar_test("tar_nlmixr execution", {
   })
   expect_equal(
     targets::tar_manifest()$name,
-    c("pheno_model_tar_object_simple", "pheno_model_tar_data_simple", "pheno_model_tar_fit_simple", "pheno_model")
+    c("pheno_model_object_simple", "pheno_model_data_simple", "pheno_model_fit_simple", "pheno_model")
   )
   suppressMessages(suppressWarnings(
     targets::tar_make(callr_function = NULL)
   ))
   # A successful model estimation step should return an nlmixr2FitCore object
   # (testing of model results is outside the scope of nlmixr2targets)
-  expect_type(targets::tar_read(pheno_model_tar_object_simple), "character")
-  expect_s3_class(targets::tar_read(pheno_model_tar_data_simple), class = "data.frame")
-  expect_s3_class(targets::tar_read(pheno_model_tar_fit_simple), "nlmixr2FitCore")
+  expect_type(targets::tar_read(pheno_model_object_simple), "character")
+  expect_s3_class(targets::tar_read(pheno_model_data_simple), class = "data.frame")
+  expect_s3_class(targets::tar_read(pheno_model_fit_simple), "nlmixr2FitCore")
   expect_s3_class(targets::tar_read(pheno_model), "nlmixr2FitCore")
   # tar_nlmixr sets the original data back into the object (#17)
   expect_false(
     identical(
-      tar_read(pheno_model_tar_fit_simple)$env$origData,
+      tar_read(pheno_model_fit_simple)$env$origData,
       tar_read(pheno_model)$env$origData
     )
   )
@@ -206,7 +206,7 @@ targets::tar_test("tar_nlmixr execution", {
   # tar_nlmixr restores parameter labels on the final fit (#28). The
   # simplified-and-stripped fit has all-NA labels; the final fit reads
   # them back from the original model.
-  fit_simple <- targets::tar_read(pheno_model_tar_fit_simple)
+  fit_simple <- targets::tar_read(pheno_model_fit_simple)
   expect_true(all(is.na(fit_simple$ui$iniDf$label)))
   iniDf_final <- targets::tar_read(pheno_model)$ui$iniDf
   expect_equal(
@@ -326,7 +326,7 @@ targets::tar_test("tar_nlmixr handles user-written central(0) end-to-end", {
   })
   expect_equal(
     targets::tar_manifest()$name,
-    c("pheno_model_tar_object_simple", "pheno_model_tar_data_simple", "pheno_model_tar_fit_simple", "pheno_model")
+    c("pheno_model_object_simple", "pheno_model_data_simple", "pheno_model_fit_simple", "pheno_model")
   )
   expect_no_error(targets::tar_outdated(callr_function = NULL))
   suppressWarnings(targets::tar_make(callr_function = NULL))

@@ -1,0 +1,19 @@
+linters: linters_with_defaults(
+    # The multimodel parse loop and the cmt(0) rewriter are intentionally
+    # complex; the default cyclocomp threshold (15) is too tight for them.
+    cyclocomp_linter = cyclocomp_linter(complexity_limit = 25L),
+    # Match the project style: long DSL lines are OK in models and tests.
+    line_length_linter = line_length_linter(length = 120L),
+    object_name_linter = NULL,         # mixed naming intentional (rxUi APIs)
+    object_length_linter = NULL,       # long descriptive internal helpers intentional
+    commented_code_linter = NULL,      # vignette-style commentary in some R files
+    object_usage_linter = NULL,        # NSE / metaprogramming heavy
+    # `param <- value; label("...")` is the prototypical nlmixr2 style
+    # inside ini({...}) blocks. Disable rather than rewrite to a form
+    # nlmixr2 users do not recognize.
+    semicolon_linter = NULL
+  )
+exclusions: list(
+    "tests/testthat" = list(line_length_linter = Inf)
+  )
+encoding: "UTF-8"

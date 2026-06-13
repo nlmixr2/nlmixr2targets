@@ -1,10 +1,41 @@
+## Responses to prior submission
+
+* I updated testing so that it should run serially rather than with multiple
+  threads. This should fix the 3.2-fold number of cores issue found with the
+  prior submission.
+
+## Test environments
+
+* Local: Linux (Ubuntu) with the current R release
+* GitHub Actions (https://github.com/nlmixr2/nlmixr2targets/actions):
+  - ubuntu-latest, R-release
+  - ubuntu-latest, R-devel
+  - ubuntu-latest, R-oldrel-1
+  - macos-latest, R-release
+  - windows-latest, R-release
+
 ## R CMD check results
 
-0 errors | 0 warnings | 1 note
+0 errors | 0 warnings | 0 notes
 
-* Even simple workflows for the `nlmixr2targets` library take significant
-  runtime, more than the few seconds allowed for examples.  And, typical
-  workflows also have a significant amount of code associated with them (tens to
-  hundreds of lines).  For these reasons, the individual functions do not have
-  running examples and user-focused examples are put into the vignette.
+* The user-facing examples (`tar_nlmixr()`, `tar_nlmixr_multimodel()`) only
+  exercise the target construction step; they capture the `data` and `est`
+  arguments as expressions and return a list of targets without running
+  estimation. Estimation only happens when the user calls
+  `targets::tar_make()` from a project whose targets store they have
+  configured (e.g. via `targets::tar_config_set()` pointing at a directory
+  under `tempdir()`). Comprehensive run-through examples live in the
+  vignettes.
+* The cache-directory arguments (`directory =`) on
+  `nlmixr_object_simplify()`, `nlmixr_data_simplify()`,
+  `nlmixr2_indirect()`, `nlmixr2targets_cache_status()`, and
+  `nlmixr2targets_cache_prune()` mirror the directory-defaulting
+  convention used throughout the `targets` package: each defaults to
+  `file.path(targets::tar_config_get("store"), "user/nlmixr2")`, the
+  direct analogue of how `targets::tar_make()`, `targets::tar_destroy()`,
+  etc. accept `store = targets::tar_config_get("store")`. The default is
+  resolved at call time, so writes go only to whatever targets store the
+  user has configured for their running pipeline (which, in tests and
+  examples, is a `tempdir()` location). We deliberately did not deviate
+  from the `targets` convention here.
 * This is a new release.

@@ -2,6 +2,8 @@
 
 export(assign_origData)
 export(nlmixr2_indirect)
+export(nlmixr2targets_cache_prune)
+export(nlmixr2targets_cache_status)
 export(nlmixr_data_simplify)
 export(nlmixr_object_complicate)
 export(nlmixr_object_simplify)

@@ -85,9 +85,9 @@ and model estimation.
 }
 \description{
 The targets generated will include the \code{name} as the final estimation step,
-\code{paste(name, "object_simple", sep = "_tar_")} (e.g.
-"pheno_tar_object_simple") as the simplified model object, and
-\code{paste(name, "data_simple", sep = "_tar_")} (e.g. "pheno_tar_data_simple") as
+\code{paste(name, "object_simple", sep = "_")} (e.g.
+\code{"pheno_object_simple"}) as the simplified model object, and
+\code{paste(name, "data_simple", sep = "_")} (e.g. \code{"pheno_data_simple"}) as
 the simplified data object.
 }
 \details{
@@ -100,14 +100,30 @@ with targets, see \code{nlmixr_object_simplify()}.
 \item \code{tar_nlmixr_raw()}: An internal function to generate the targets
 
 }}
+\section{Side effects}{
+
+When the user's model function body contains \code{cmt(0) <- value} inside a
+\code{model({...})} block, \code{tar_nlmixr()} rewrites those lines to
+\code{cmt(initial) <- value} directly in the function's binding in \code{env} so that
+\code{targets}' static analysis (which walks every function in env via
+\code{codetools::findGlobals()}) accepts the model. The rewrite is reversed at
+evaluation time, so fitting and downstream behaviour are unchanged. The
+user-visible consequence is that printing \code{body(my_model)} at the REPL
+after a call to \code{tar_nlmixr()} will show \code{cmt(initial)} rather than the
+originally-written \code{cmt(0)}.
+
+Manual \code{cmt(initial) <- value} written by the user is also accepted, but
+it is a \code{nlmixr2targets}-only workaround: bare nlmixr2 does not
+understand the \code{cmt(initial)} form, so a model function written that way
+only fits when routed through \code{tar_nlmixr()} (or
+\code{tar_nlmixr_multimodel()}).
+}
+
 \examples{
-\dontrun{
-library(targets)
-targets::tar_script({
 pheno <- function() {
   ini({
     lcl <- log(0.008); label("Typical value of clearance")
-    lvc <-  log(0.6); label("Typical value of volume of distribution")
+    lvc <- log(0.6); label("Typical value of volume of distribution")
     etalcl + etalvc ~ c(1,
                         0.01, 1)
     cpaddSd <- 0.1; label("residual variability")
@@ -115,21 +131,27 @@ pheno <- function() {
   model({
     cl <- exp(lcl + etalcl)
     vc <- exp(lvc + etalvc)
-    kel <- cl/vc
-    d/dt(central) <- -kel*central
-    cp <- central/vc
+    kel <- cl / vc
+    d / dt(central) <- -kel * central
+    cp <- central / vc
     cp ~ add(cpaddSd)
   })
 }
-list(
-  tar_nlmixr(
-    name = pheno_model,
-    object = pheno,
-    data = nlmixr2data::pheno_sd,
-    est = "saem"
-  )
+
+# Build the four targets that estimate `pheno`. `data` and `est` are
+# captured as expressions, so this just returns the target list; the
+# estimation step runs only when you call `targets::tar_make()` from a
+# project whose targets store you have configured (for example, with
+# `targets::tar_config_set(store = file.path(tempdir(), "_targets"))`
+# or by running inside a project directory you own).
+tar_nlmixr(
+  name = pheno_model,
+  object = pheno,
+  data = nlmixr2data::pheno_sd,
+  est = "saem"
 )
-})
-targets::tar_make()
 }
+\seealso{
+\code{\link[=tar_nlmixr_multimodel]{tar_nlmixr_multimodel()}} for fitting many models against one
+dataset.
 }

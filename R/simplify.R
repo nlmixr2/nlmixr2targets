@@ -22,10 +22,16 @@
 #' inside `model({...})` blocks at construction time (mutating the
 #' user's model function in env), and converts back to `cmt(0) <- value`
 #' before nlmixr2 sees the model. The user can therefore write
-#' `cmt(0) <- value` directly. Manual `cmt(initial) <- value` is also
-#' still accepted. Note: because the rewrite mutates the function in
-#' env, calling the model function directly (outside `tar_make()`)
-#' after `tar_nlmixr()` will see `cmt(initial)` in its body.
+#' `cmt(0) <- value` directly.
+#'
+#' Manual `cmt(initial) <- value` is also accepted, but it is a
+#' `nlmixr2targets`-only workaround: bare nlmixr2 does not understand
+#' the `cmt(initial)` form, so a model function written this way only
+#' fits when routed through `tar_nlmixr()` /
+#' `tar_nlmixr_multimodel()`. Note: because the rewrite mutates the
+#' function in env, calling the model function directly (outside
+#' `tar_make()`) after `tar_nlmixr()` will see `cmt(initial)` in its
+#' body.
 #'
 #' The simplified model's `model.name` is always set to `"object"`. This keeps
 #' the simplified output stable so that the MD5 hash used by the `targets`
@@ -33,13 +39,15 @@
 #' function to.
 #'
 #' @inheritParams nlmixr2est::nlmixr
+#' @inheritParams nlmixr2_indirect
 #' @returns The MD5 hash used to load the simplified `nlmixrui` object back
 #'   from the `nlmixr2targets` indirect cache.
 #' @family Simplifiers
 #' @seealso [nlmixr_object_complicate()] for the inverse operation that
 #'   re-attaches labels, metadata, and the original data on the final fit.
 #' @export
-nlmixr_object_simplify <- function(object) {
+nlmixr_object_simplify <- function(object,
+                                   directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) {
   # drop comments since they won't affect most outputs and typically change
   # between interactive (when srcref is available) to batch (when srcref is not
   # available) mode.
@@ -52,7 +60,7 @@ nlmixr_object_simplify <- function(object) {
   # save_nlmixr2obj_indirect() keys the cache file by).
   ret$iniDf$label <- NA_character_
   rm(list = ls(envir = ret$meta, all.names = TRUE), envir = ret$meta)
-  save_nlmixr2obj_indirect(ret)
+  save_nlmixr2obj_indirect(ret, directory = directory)
 }
 
 #' Re-attach labels, metadata, and original data to a simplified fit
@@ -218,8 +226,7 @@ nlmixr_object_protect_zero_initial <- function(expr) {
 }
 
 nlmixr_object_protect_zero_initial_helper <- function(expr, in_model, state) {
-  if (in_model &&
-      rxode2::.matchesLangTemplate(expr, str2lang(".name(0) <- ."))) {
+  if (in_model && rxode2::.matchesLangTemplate(expr, str2lang(".name(0) <- ."))) {
     arg <- expr[[2]][[2]]
     if (identical(arg, 0) || identical(arg, 0L)) {
       expr[[2]][[2]] <- as.name("initial")
@@ -284,7 +291,7 @@ nlmixr_object_protect_zero_initial_helper <- function(expr, in_model, state) {
 nlmixr_object_zero_initial_eval <- function(expr, envir = parent.frame()) {
   expr <- nlmixr_object_simplify_zero_initial_helper(expr)
   override <- new.env(parent = envir)
-  for (sym in nlmixr_object_zero_initial_eval_collect_symbols(expr)) {
+  for (sym in .collect_top_symbols(expr)) {
     fn <- tryCatch(
       get(sym, envir = envir, inherits = TRUE),
       error = function(e) NULL
@@ -292,10 +299,7 @@ nlmixr_object_zero_initial_eval <- function(expr, envir = parent.frame()) {
     # Mirror the construction-time filter: skip package functions and
     # anything whose closure env is missing.
     fn_env <- if (is.function(fn)) environment(fn) else NULL
-    if (is.function(fn) &&
-        !is.null(base::body(fn)) &&
-        !is.null(fn_env) &&
-        !isNamespace(fn_env)) {
+    if (is.function(fn) && !is.null(base::body(fn)) && !is.null(fn_env) && !isNamespace(fn_env)) {
       new_body <- nlmixr_object_simplify_zero_initial_helper(base::body(fn))
       if (!identical(new_body, base::body(fn))) {
         fn_corrected <- fn
@@ -305,25 +309,6 @@ nlmixr_object_zero_initial_eval <- function(expr, envir = parent.frame()) {
     }
   }
   eval(expr, envir = override)
-}
-
-# Walk an expression for symbol names. Used by the runtime wrapper to
-# find candidates whose function bodies may need a corrected copy.
-# Skips the head of every call (`f(x)` -> we do not add `f`), since
-# heads are the function being called, not candidate model functions;
-# rewriting the body of `<-` or `{` would break the language itself.
-nlmixr_object_zero_initial_eval_collect_symbols <- function(expr) {
-  out <- character()
-  visit <- function(e, is_head = FALSE) {
-    if (is.symbol(e) && !is_head) {
-      out[[length(out) + 1L]] <<- as.character(e)
-    } else if (is.call(e)) {
-      visit(e[[1L]], is_head = TRUE)
-      for (idx in seq_along(e)[-1L]) visit(e[[idx]])
-    }
-  }
-  visit(expr)
-  unique(out)
 }
 
 #' Standardize and simplify data for nlmixr2 estimation
@@ -336,18 +321,34 @@ nlmixr_object_zero_initial_eval_collect_symbols <- function(expr) {
 #' converted to lower case.
 #'
 #' @inheritParams nlmixr2est::nlmixr
-#' @param object an nlmixr_ui object (e.g. the output of running
-#'   \code{nlmixr(object = model)}
+#' @inheritParams nlmixr2_indirect
+#' @param object Either an `nlmixr` ui object (e.g. the output of running
+#'   \code{nlmixr(object = model)}) or a character md5 hash identifying a
+#'   simplified ui in the `nlmixr2targets` indirect cache (the form used in
+#'   targets generated by [tar_nlmixr()]).
 #' @returns The data with the nlmixr2 column lower case and on the left and the
 #'   covariate columns on the right and alphabetically sorted.
 #' @family Simplifiers
 #' @export
-nlmixr_data_simplify <- function(data, object, table = list()) {
+nlmixr_data_simplify <- function(data, object, table = list(),
+                                 directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) {
   checkmate::assert_data_frame(data)
   checkmate::assert_list(table)
+  # `object` is either a character md5 hash (the form used by generated
+  # targets) or an nlmixr-style ui / fit object. Tibbles are valid because
+  # nlmixr2 fits subclass tbl_df with active bindings for `$ui` etc., so a
+  # checkmate::check_list assert (class-strict) would reject them. Use
+  # base R `is.list()` (which IS TRUE for data.frames) instead.
   if (is.character(object)) {
+    checkmate::assert_string(object, min.chars = 1)
     # load from the hash
-    object <- read_nlmixr2obj_indirect(hash = object)
+    object <- read_nlmixr2obj_indirect(hash = object, directory = directory)
+  } else if (!is.list(object) && !is.environment(object)) {
+    stop(
+      "`object` must be a character md5 hash, an nlmixr ui object, ",
+      "or a list/environment that supports `$ui` / `$all.covs`; got ",
+      "object of class '", paste(class(object), collapse = "/"), "'."
+    )
   }
   nlmixr_cols <-
     c(

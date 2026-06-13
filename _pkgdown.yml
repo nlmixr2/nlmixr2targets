@@ -2,3 +2,12 @@ url: https://nlmixr2.github.io/nlmixr2targets/
 template:
   bootstrap: 5
 
+articles:
+- title: Guides
+  navbar: ~
+  contents:
+  - estimating
+  - initial-conditions
+  - caching
+  - multimodel-comparison
+

@@ -1,14 +1,31 @@
 #' Generate a set of targets for nlmixr estimation
 #'
 #' The targets generated will include the `name` as the final estimation step,
-#' `paste(name, "object_simple", sep = "_tar_")` (e.g.
-#' "pheno_tar_object_simple") as the simplified model object, and
-#' `paste(name, "data_simple", sep = "_tar_")` (e.g. "pheno_tar_data_simple") as
+#' `paste(name, "object_simple", sep = "_")` (e.g.
+#' `"pheno_object_simple"`) as the simplified model object, and
+#' `paste(name, "data_simple", sep = "_")` (e.g. `"pheno_data_simple"`) as
 #' the simplified data object.
 #'
 #' For the way that the objects are simplified, see `nlmixr_object_simplify()`
 #' and `nlmixr_data_simplify()`.  To see how to write initial conditions to work
 #' with targets, see `nlmixr_object_simplify()`.
+#'
+#' @section Side effects:
+#' When the user's model function body contains `cmt(0) <- value` inside a
+#' `model({...})` block, `tar_nlmixr()` rewrites those lines to
+#' `cmt(initial) <- value` directly in the function's binding in `env` so that
+#' `targets`' static analysis (which walks every function in env via
+#' `codetools::findGlobals()`) accepts the model. The rewrite is reversed at
+#' evaluation time, so fitting and downstream behaviour are unchanged. The
+#' user-visible consequence is that printing `body(my_model)` at the REPL
+#' after a call to `tar_nlmixr()` will show `cmt(initial)` rather than the
+#' originally-written `cmt(0)`.
+#'
+#' Manual `cmt(initial) <- value` written by the user is also accepted, but
+#' it is a `nlmixr2targets`-only workaround: bare nlmixr2 does not
+#' understand the `cmt(initial)` form, so a model function written that way
+#' only fits when routed through `tar_nlmixr()` (or
+#' `tar_nlmixr_multimodel()`).
 #'
 #' @inheritParams nlmixr2est::nlmixr
 #' @inheritParams targets::tar_target
@@ -16,14 +33,13 @@
 #'   use)
 #' @returns A list of targets for the model simplification, data simplification,
 #'   and model estimation.
+#' @seealso [tar_nlmixr_multimodel()] for fitting many models against one
+#'   dataset.
 #' @examples
-#' \dontrun{
-#' library(targets)
-#' targets::tar_script({
 #' pheno <- function() {
 #'   ini({
 #'     lcl <- log(0.008); label("Typical value of clearance")
-#'     lvc <-  log(0.6); label("Typical value of volume of distribution")
+#'     lvc <- log(0.6); label("Typical value of volume of distribution")
 #'     etalcl + etalvc ~ c(1,
 #'                         0.01, 1)
 #'     cpaddSd <- 0.1; label("residual variability")
@@ -31,25 +47,28 @@
 #'   model({
 #'     cl <- exp(lcl + etalcl)
 #'     vc <- exp(lvc + etalvc)
-#'     kel <- cl/vc
-#'     d/dt(central) <- -kel*central
-#'     cp <- central/vc
+#'     kel <- cl / vc
+#'     d / dt(central) <- -kel * central
+#'     cp <- central / vc
 #'     cp ~ add(cpaddSd)
 #'   })
 #' }
-#' list(
-#'   tar_nlmixr(
-#'     name = pheno_model,
-#'     object = pheno,
-#'     data = nlmixr2data::pheno_sd,
-#'     est = "saem"
-#'   )
+#'
+#' # Build the four targets that estimate `pheno`. `data` and `est` are
+#' # captured as expressions, so this just returns the target list; the
+#' # estimation step runs only when you call `targets::tar_make()` from a
+#' # project whose targets store you have configured (for example, with
+#' # `targets::tar_config_set(store = file.path(tempdir(), "_targets"))`
+#' # or by running inside a project directory you own).
+#' tar_nlmixr(
+#'   name = pheno_model,
+#'   object = pheno,
+#'   data = nlmixr2data::pheno_sd,
+#'   est = "saem"
 #' )
-#' })
-#' targets::tar_make()
-#' }
 #' @export
-tar_nlmixr <- function(name, object, data, est = NULL, control = list(), table = nlmixr2est::tableControl(), env = parent.frame()) {
+tar_nlmixr <- function(name, object, data, est = NULL, control = list(),
+                       table = nlmixr2est::tableControl(), env = parent.frame()) {
   if (is.null(est)) {
     stop("'est' must not be null")
   }
@@ -62,9 +81,9 @@ tar_nlmixr <- function(name, object, data, est = NULL, control = list(), table =
     est = substitute(est),
     control = substitute(control),
     table = substitute(table),
-    object_simple_name = paste(name_parsed, "object_simple", sep = "_tar_"),
-    data_simple_name = paste(name_parsed, "data_simple", sep = "_tar_"),
-    fit_simple_name = paste(name_parsed, "fit_simple", sep = "_tar_"),
+    object_simple_name = paste(name_parsed, "object_simple", sep = "_"),
+    data_simple_name = paste(name_parsed, "data_simple", sep = "_"),
+    fit_simple_name = paste(name_parsed, "fit_simple", sep = "_"),
     env = env
   )
 }
@@ -75,71 +94,78 @@ tar_nlmixr <- function(name, object, data, est = NULL, control = list(), table =
 #'   object with the simplified data, and fit with the original data
 #'   re-inserted.
 #' @export
-tar_nlmixr_raw <- function(name, object, data, est, control, table, object_simple_name, data_simple_name, fit_simple_name, env) {
+tar_nlmixr_raw <- function(name, object, data, est, control, table,
+                           object_simple_name, data_simple_name, fit_simple_name, env) {
   checkmate::assert_character(name, len = 1, min.chars = 1, any.missing = FALSE)
   checkmate::assert_character(object_simple_name, len = 1, min.chars = 1, any.missing = FALSE)
   checkmate::assert_character(data_simple_name, len = 1, min.chars = 1, any.missing = FALSE)
 
   object <- tar_nlmixr_protect_zero_initial(object, env = env)
 
+  # Build the cache-directory expression once and splice it into each
+  # generated target command, mirroring how `targets::tar_make()` and
+  # friends default `store = targets::tar_config_get("store")`. The path
+  # resolves at target-execution time, so the cache always sits inside
+  # whatever store the user has configured for their `tar_make()` call.
+  directory_expr <- quote(file.path(targets::tar_config_get("store"), "user/nlmixr2"))
+
   list(
     object_simple =
       targets::tar_target_raw(
         name = object_simple_name,
-        command =
-          substitute(
-            nlmixr_object_simplify(object = object),
-            list(object = object)
-          ),
+        command = substitute(
+          nlmixr_object_simplify(object = object, directory = directory),
+          list(object = object, directory = directory_expr)
+        ),
         packages = c("nlmixr2targets", "nlmixr2est")
       ),
     data_simple =
       targets::tar_target_raw(
         name = data_simple_name,
-        command =
-          substitute(
-            nlmixr_data_simplify(object = object_simple, data = data, table = table),
-            list(
-              object_simple = as.name(object_simple_name),
-              data = data,
-              table = table
-            )
-          ),
+        command = substitute(
+          nlmixr_data_simplify(object = object_simple, data = data, table = table, directory = directory),
+          list(
+            object_simple = as.name(object_simple_name),
+            data = data,
+            table = table,
+            directory = directory_expr
+          )
+        ),
         packages = "nlmixr2targets"
       ),
     fit_simple =
       targets::tar_target_raw(
         name = fit_simple_name,
-        command =
-          substitute(
-            nlmixr2_indirect(
-              object = object_simple_name,
-              data = data_simple_name,
-              est = est,
-              control = control
-            ),
-            list(
-              object_simple_name = as.name(object_simple_name),
-              data_simple_name = as.name(data_simple_name),
-              est = est,
-              control = control,
-              table = table
-            )
+        command = substitute(
+          nlmixr2_indirect(
+            object = object_simple_name,
+            data = data_simple_name,
+            est = est,
+            control = control,
+            directory = directory
           ),
+          list(
+            object_simple_name = as.name(object_simple_name),
+            data_simple_name = as.name(data_simple_name),
+            est = est,
+            control = control,
+            table = table,
+            directory = directory_expr
+          )
+        ),
         packages = "nlmixr2est"
       ),
     fit =
       targets::tar_target_raw(
         name = name,
-        command =
-          substitute(
-            nlmixr_object_complicate(fit = fit, object = object, data = data),
-            list(
-              fit = as.name(fit_simple_name),
-              object = object,
-              data = data
-            )
-          ),
+        command = substitute(
+          nlmixr_object_complicate(fit = fit, object = object, data = data),
+          list(
+            fit = as.name(fit_simple_name),
+            object = object,
+            data = data
+          )
+        ),
         packages = "nlmixr2targets"
       )
   )
@@ -207,14 +233,11 @@ tar_nlmixr_protect_zero_initial <- function(object, env) {
   # `rxode2::ini` or `base::model`. We also do not need to walk their
   # bodies for cmt(0) patterns since codetools accepts them as-is
   # (they have no DSL constructs).
-  for (sym in tar_nlmixr_collect_top_symbols(object)) {
+  for (sym in .collect_top_symbols(object)) {
     if (exists(sym, envir = env, inherits = TRUE)) {
       fn <- get(sym, envir = env, inherits = TRUE)
       fn_env <- if (is.function(fn)) environment(fn) else NULL
-      if (is.function(fn) &&
-          !is.null(base::body(fn)) &&
-          !is.null(fn_env) &&
-          !isNamespace(fn_env)) {
+      if (is.function(fn) && !is.null(base::body(fn)) && !is.null(fn_env) && !isNamespace(fn_env)) {
         res <- nlmixr_object_protect_zero_initial(base::body(fn))
         if (res$n_rewrites > 0L) {
           base::body(fn) <- res$expr
@@ -239,25 +262,4 @@ tar_nlmixr_protect_zero_initial <- function(object, env) {
     nlmixr2targets::nlmixr_object_zero_initial_eval(quote(.(x))),
     list(x = object)
   )
-}
-
-# Walk a captured expression and collect symbol names that could refer
-# to user-defined functions. Skips the head of every call (`f(x)` -> we
-# do not add `f`), since the head is the function being called and
-# not a candidate model function. The model function appears either
-# as the whole expression (`object = pheno`), as a `|>` desugared
-# first arg (`object = pheno |> model({...})` -> `model(pheno, ...)`,
-# first arg is `pheno`), or as a nested non-head symbol.
-tar_nlmixr_collect_top_symbols <- function(expr) {
-  out <- character()
-  visit <- function(e, is_head = FALSE) {
-    if (is.symbol(e) && !is_head) {
-      out[[length(out) + 1L]] <<- as.character(e)
-    } else if (is.call(e)) {
-      visit(e[[1L]], is_head = TRUE)
-      for (idx in seq_along(e)[-1L]) visit(e[[idx]])
-    }
-  }
-  visit(expr)
-  unique(out)
 }

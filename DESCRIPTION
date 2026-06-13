@@ -1,6 +1,6 @@
 Package: nlmixr2targets
 Title: Targets for 'nlmixr2' Pipelines
-Version: 0.0.0.9000
+Version: 0.1.0
 Authors@R: 
     person("Bill", "Denney", , "wdenney@humanpredictions.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-5759-428X"))
@@ -26,6 +26,7 @@ Suggests:
     nlmixr2data,
     rmarkdown,
     spelling,
+    tarchetypes,
     testthat (>= 3.0.0),
     withr
 VignetteBuilder: 

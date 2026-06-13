@@ -212,12 +212,17 @@ test_that("tar_nlmixr_multimodel works for within-list model piping (#19), direc
   expect_true(grepl(x = as.character(collating_call[[3]]), pattern = "^foo_[0-9a-f]{8}$"))
   expect_equal(names(collating_call), c("", "my first model", "my second model"))
 
-  # Verify the dependent target is created correctly
+  # Verify the dependent target is created correctly. The substituted
+  # command now also threads `directory` through every call so the cache
+  # path resolves against the user-chosen targets store at execution time.
   expect_true(rxode2::.matchesLangTemplate(
     x = target_list[[2]]$object_simple$command$expr[[1]],
     template =
       str2lang(sprintf(
-        "nlmixr_object_simplify(object = rxode2::ini(%s, lcl = log(0.01)))",
+        paste0(
+          "nlmixr_object_simplify(object = rxode2::ini(%s, lcl = log(0.01)), ",
+          "directory = file.path(targets::tar_config_get(\"store\"), \"user/nlmixr2\"))"
+        ),
         target_list[[1]]$fit_simple$settings$name
       ))
   ))
@@ -285,12 +290,12 @@ targets::tar_test("tar_nlmixr_multimodel works for within-list model piping (#19
       )
   })
   dependencies <- targets::tar_network()$edges
-  # There is one fitsimple object (estimated model result) that generates an
-  # osimple (prepared model) object
+  # There is one fit_simple object (estimated model result) that generates an
+  # object_simple (prepared model) object
   expect_equal(
     sum(
-      grepl(x = dependencies$from, pattern = "foo_.{8}_fitsimple") &
-        grepl(x = dependencies$to, pattern = "foo_.{8}_osimple")
+      grepl(x = dependencies$from, pattern = "foo_.{8}_fit_simple") &
+        grepl(x = dependencies$to, pattern = "foo_.{8}_object_simple")
     ),
     1
   )
@@ -326,14 +331,14 @@ test_that("tar_nlmixr_multimodel_remove_self_reference_single rewrites reference
   out <- tar_nlmixr_multimodel_remove_self_reference_single(
     model = quote(foo[["A"]]), name_map = name_map
   )
-  expect_equal(out, quote(foo_aaaaaaaa_fitsimple))
+  expect_equal(out, quote(foo_aaaaaaaa_fit_simple))
   # nested rewrite (inside a pipe)
   out2 <- tar_nlmixr_multimodel_remove_self_reference_single(
     model = quote(foo[["A"]] |> rxode2::ini(x = 1)), name_map = name_map
   )
   expect_true(rxode2::.matchesLangTemplate(
     x = out2,
-    template = str2lang("foo_aaaaaaaa_fitsimple |> rxode2::ini(x = 1)")
+    template = str2lang("foo_aaaaaaaa_fit_simple |> rxode2::ini(x = 1)")
   ))
   # symbol input is returned unchanged (length <= 1 short-circuit)
   expect_equal(

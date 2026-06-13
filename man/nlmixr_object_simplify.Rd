@@ -4,10 +4,20 @@
 \alias{nlmixr_object_simplify}
 \title{Simplify an nlmixr object}
 \usage{
-nlmixr_object_simplify(object)
+nlmixr_object_simplify(
+  object,
+  directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")
+)
 }
 \arguments{
 \item{object}{Fitted object or function specifying the model.}
+
+\item{directory}{Cache directory to load the simplified \code{nlmixrui} from.
+Defaults to \code{file.path(targets::tar_config_get("store"), "user/nlmixr2")},
+mirroring the convention used by \code{targets}' own \code{store = targets::tar_config_get("store")} defaults — the path resolves at
+call time against whatever store the user has configured for the
+running \code{tar_make()} (e.g. a \code{tempdir()} location set via
+\code{targets::tar_config_set()}).}
 }
 \value{
 The MD5 hash used to load the simplified \code{nlmixrui} object back
@@ -37,10 +47,16 @@ a replacement-function assignment with a non-symbol target.
 inside \code{model({...})} blocks at construction time (mutating the
 user's model function in env), and converts back to \code{cmt(0) <- value}
 before nlmixr2 sees the model. The user can therefore write
-\code{cmt(0) <- value} directly. Manual \code{cmt(initial) <- value} is also
-still accepted. Note: because the rewrite mutates the function in
-env, calling the model function directly (outside \code{tar_make()})
-after \code{tar_nlmixr()} will see \code{cmt(initial)} in its body.
+\code{cmt(0) <- value} directly.
+
+Manual \code{cmt(initial) <- value} is also accepted, but it is a
+\code{nlmixr2targets}-only workaround: bare nlmixr2 does not understand
+the \code{cmt(initial)} form, so a model function written this way only
+fits when routed through \code{tar_nlmixr()} /
+\code{tar_nlmixr_multimodel()}. Note: because the rewrite mutates the
+function in env, calling the model function directly (outside
+\code{tar_make()}) after \code{tar_nlmixr()} will see \code{cmt(initial)} in its
+body.
 
 The simplified model's \code{model.name} is always set to \code{"object"}. This keeps
 the simplified output stable so that the MD5 hash used by the \code{targets}

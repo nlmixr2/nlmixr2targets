@@ -1,0 +1,41 @@
+# Weekly scheduled R-CMD-check against R-devel on Ubuntu.
+# Catches CRAN devel drift before submission day. Mirrors the per-PR
+# R-CMD-check.yaml job, but only against devel and only on a cron.
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # Mondays, 06:00 UTC
+  workflow_dispatch:
+
+name: R-CMD-check-weekly.yaml
+
+permissions: read-all
+
+jobs:
+  R-CMD-check-weekly:
+    runs-on: ubuntu-latest
+    name: ubuntu-latest (devel, weekly)
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: devel
+          http-user-agent: release
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::rcmdcheck
+          needs: check
+
+      - uses: r-lib/actions/check-r-package@v2
+        with:
+          upload-snapshots: true
+          build_args: 'c("--no-manual","--compact-vignettes=gs+qpdf")'
