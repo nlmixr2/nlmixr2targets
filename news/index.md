@@ -1,5 +1,22 @@
 # Changelog
 
+## nlmixr2targets 0.1.0.9000
+
+### New features
+
+- [`tar_nlmixr()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
+  and
+  [`tar_nlmixr_multimodel()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel.md)
+  gain an `error` argument. With the default `error = "stop"`, a model
+  that fails during estimation halts
+  [`targets::tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+  exactly as before. With `error = "continue"`, the failure is caught
+  and the target stores a failure sentinel (an object of class
+  `nlmixr2targetsError`, which also inherits from `"try-error"`)
+  carrying the error message, so one failed model does not stop the rest
+  of the pipeline
+  ([\#35](https://github.com/nlmixr2/nlmixr2targets/issues/35)).
+
 ## nlmixr2targets 0.1.0
 
 CRAN release: 2026-06-05

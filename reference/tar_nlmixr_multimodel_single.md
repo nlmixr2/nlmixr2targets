@@ -5,7 +5,16 @@ Generate a single nlmixr multimodel target set for one model
 ## Usage
 
 ``` r
-tar_nlmixr_multimodel_single(object, name, data, est, control, table, env)
+tar_nlmixr_multimodel_single(
+  object,
+  name,
+  data,
+  est,
+  control,
+  table,
+  env,
+  error = "stop"
+)
 ```
 
 ## Arguments
@@ -66,3 +75,15 @@ tar_nlmixr_multimodel_single(object, name, data, est, control, table, env)
 - env:
 
   The environment where the model is setup (not needed for typical use)
+
+- error:
+
+  What should happen if the estimation step throws an error? `"stop"`
+  (the default) lets the error propagate, halting
+  [`targets::tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+  as usual. `"continue"` catches the error and stores a failure sentinel
+  (an object of class `nlmixr2targetsError`, which also inherits from
+  `"try-error"`) carrying the error message, so a single failed model
+  does not stop the rest of the pipeline. Detect a failed fit with
+  `inherits(fit, "nlmixr2targetsError")` or the broader
+  `inherits(fit, "try-error")`.

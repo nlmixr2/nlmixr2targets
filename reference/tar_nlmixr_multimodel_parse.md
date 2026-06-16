@@ -6,7 +6,16 @@ Generate nlmixr multimodel target set for all models in one call to
 ## Usage
 
 ``` r
-tar_nlmixr_multimodel_parse(name, data, est, control, table, model_list, env)
+tar_nlmixr_multimodel_parse(
+  name,
+  data,
+  est,
+  control,
+  table,
+  model_list,
+  env,
+  error = "stop"
+)
 ```
 
 ## Arguments
@@ -67,3 +76,15 @@ tar_nlmixr_multimodel_parse(name, data, est, control, table, model_list, env)
 - env:
 
   The environment where the model is setup (not needed for typical use)
+
+- error:
+
+  What should happen if the estimation step throws an error? `"stop"`
+  (the default) lets the error propagate, halting
+  [`targets::tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+  as usual. `"continue"` catches the error and stores a failure sentinel
+  (an object of class `nlmixr2targetsError`, which also inherits from
+  `"try-error"`) carrying the error message, so a single failed model
+  does not stop the rest of the pipeline. Detect a failed fit with
+  `inherits(fit, "nlmixr2targetsError")` or the broader
+  `inherits(fit, "try-error")`.

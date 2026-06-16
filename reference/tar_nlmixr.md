@@ -16,7 +16,8 @@ tar_nlmixr(
   est = NULL,
   control = list(),
   table = nlmixr2est::tableControl(),
-  env = parent.frame()
+  env = parent.frame(),
+  error = c("stop", "continue")
 )
 
 tar_nlmixr_raw(
@@ -29,7 +30,8 @@ tar_nlmixr_raw(
   object_simple_name,
   data_simple_name,
   fit_simple_name,
-  env
+  env,
+  error = "stop"
 )
 ```
 
@@ -91,6 +93,18 @@ tar_nlmixr_raw(
 - env:
 
   The environment where the model is setup (not needed for typical use)
+
+- error:
+
+  What should happen if the estimation step throws an error? `"stop"`
+  (the default) lets the error propagate, halting
+  [`targets::tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+  as usual. `"continue"` catches the error and stores a failure sentinel
+  (an object of class `nlmixr2targetsError`, which also inherits from
+  `"try-error"`) carrying the error message, so a single failed model
+  does not stop the rest of the pipeline. Detect a failed fit with
+  `inherits(fit, "nlmixr2targetsError")` or the broader
+  `inherits(fit, "try-error")`.
 
 - object_simple_name, data_simple_name, fit_simple_name:
 
@@ -244,7 +258,8 @@ tar_nlmixr(
 #>   command:
 #>     nlmixr2_indirect(object = pheno_model_object_simple, 
 #>         data = pheno_model_data_simple, est = "saem", control = list(), 
-#>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) 
+#>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"), 
+#>         error = "stop") 
 #>   format: rds 
 #>   repository: local 
 #>   iteration method: vector 

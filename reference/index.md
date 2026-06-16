@@ -35,6 +35,11 @@
   Runtime helper: undo the `cmt(0) -> cmt(initial)` rewrite before
   evaluating the captured `object` expression.
 
+- [`print(`*`<nlmixr2targetsError>`*`)`](https://nlmixr2.github.io/nlmixr2targets/reference/print.nlmixr2targetsError.md)
+  :
+
+  Print a failed `nlmixr2targets` estimation result
+
 - [`tar_nlmixr()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
   [`tar_nlmixr_raw()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
   : Generate a set of targets for nlmixr estimation

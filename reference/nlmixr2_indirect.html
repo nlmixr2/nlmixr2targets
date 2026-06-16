@@ -9,7 +9,7 @@ tar_nlmixr(); it is not typically invoked by end users."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">nlmixr2targets</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -38,7 +38,7 @@ tar_nlmixr(); it is not typically invoked by end users."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Estimate an nlmixr2 model loading the model from a targets indirect hash storage</h1>
-      <small class="dont-index">Source: <a href="https://github.com/nlmixr2/nlmixr2targets/blob/v0.1.0/R/indirection.R" class="external-link"><code>R/indirection.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/nlmixr2/nlmixr2targets/blob/main/R/indirection.R" class="external-link"><code>R/indirection.R</code></a></small>
       <div class="d-none name"><code>nlmixr2_indirect.Rd</code></div>
     </div>
 
@@ -54,7 +54,8 @@ tar_nlmixr(); it is not typically invoked by end users."></head><body>
 <span>  <span class="va">data</span>,</span>
 <span>  <span class="va">est</span>,</span>
 <span>  <span class="va">control</span>,</span>
-<span>  directory <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu">targets</span><span class="fu">::</span><span class="fu"><a href="https://docs.ropensci.org/targets/reference/tar_config_get.html" class="external-link">tar_config_get</a></span><span class="op">(</span><span class="st">"store"</span><span class="op">)</span>, <span class="st">"user/nlmixr2"</span><span class="op">)</span></span>
+<span>  directory <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu">targets</span><span class="fu">::</span><span class="fu"><a href="https://docs.ropensci.org/targets/reference/tar_config_get.html" class="external-link">tar_config_get</a></span><span class="op">(</span><span class="st">"store"</span><span class="op">)</span>, <span class="st">"user/nlmixr2"</span><span class="op">)</span>,</span>
+<span>  error <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"stop"</span>, <span class="st">"continue"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -88,10 +89,24 @@ call time against whatever store the user has configured for the
 running <code><a href="https://docs.ropensci.org/targets/reference/tar_make.html" class="external-link">tar_make()</a></code> (e.g. a <code><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir()</a></code> location set via
 <code><a href="https://docs.ropensci.org/targets/reference/tar_config_set.html" class="external-link">targets::tar_config_set()</a></code>).</p></dd>
 
+
+<dt id="arg-error">error<a class="anchor" aria-label="anchor" href="#arg-error"></a></dt>
+<dd><p>What should happen if the estimation step throws an error?
+<code>"stop"</code> (the default) lets the error propagate, halting
+<code><a href="https://docs.ropensci.org/targets/reference/tar_make.html" class="external-link">targets::tar_make()</a></code> as usual. <code>"continue"</code> catches the error and stores
+a failure sentinel (an object of class <code>nlmixr2targetsError</code>, which also
+inherits from <code>"try-error"</code>) carrying the error message, so a single
+failed model does not stop the rest of the pipeline. Detect a failed fit
+with <code>inherits(fit, "nlmixr2targetsError")</code> or the broader
+<code>inherits(fit, "try-error")</code>.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>An nlmixr2 fit object, as returned by <code><a href="https://nlmixr2.github.io/nlmixr2est/reference/nlmixr2.html" class="external-link">nlmixr2est::nlmixr()</a></code>.</p>
+    <p>An nlmixr2 fit object, as returned by <code><a href="https://nlmixr2.github.io/nlmixr2est/reference/nlmixr2.html" class="external-link">nlmixr2est::nlmixr()</a></code>. When
+<code>error = "continue"</code> and the estimation step fails, a failure sentinel of
+class <code>nlmixr2targetsError</code> (which also inherits from <code>"try-error"</code>) is
+returned instead; see <code><a href="tar_nlmixr.html">tar_nlmixr()</a></code>.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>

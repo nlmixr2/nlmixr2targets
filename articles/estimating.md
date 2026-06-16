@@ -235,3 +235,76 @@ list(
   plan_model
 )
 ```
+
+## Continuing the pipeline when a model fails
+
+By default, if a model fails during estimation the error propagates and
+[`targets::tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+stops, just as any other target error would. This is usually what you
+want for a single model, but when you are fitting many models at once
+(for example with
+[`tar_nlmixr_multimodel()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel.md))
+one failing model would otherwise halt the whole pipeline and prevent
+you from seeing the models that did succeed.
+
+Both
+[`tar_nlmixr()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
+and
+[`tar_nlmixr_multimodel()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel.md)
+accept an `error` argument to control this:
+
+- `error = "stop"` (the default) lets the estimation error propagate and
+  halt the pipeline.
+- `error = "continue"` catches the estimation error and stores a failure
+  sentinel on the target instead, so the rest of the pipeline still
+  runs.
+
+The sentinel is an object of class `nlmixr2targetsError` that also
+inherits from `"try-error"`, and it carries the original error message.
+Because it is clearly **not** an `nlmixr2` fit object, you can detect a
+failed model with a simple
+[`inherits()`](https://rdrr.io/r/base/class.html) check.
+
+``` r
+
+library(targets)
+library(tarchetypes)
+library(nlmixr2targets)
+
+plan_model <-
+  tar_nlmixr_multimodel(
+    all_models,
+    data = nlmixr2data::pheno_sd,
+    est = "saem",
+    error = "continue",
+    "Base model; additive residual error = 1" = pheno,
+    "Base model; additive residual error = 3" = pheno2
+  )
+
+plan_report <-
+  tar_plan(
+    # Keep only the models that estimated successfully
+    successful_models = Filter(
+      f = function(fit) !inherits(fit, "try-error"),
+      x = all_models
+    ),
+    # Compute AIC for the successful models only
+    aic_list = sapply(X = successful_models, FUN = AIC)
+  )
+
+list(
+  plan_model,
+  plan_report
+)
+```
+
+After
+[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html),
+a target that failed to estimate can be inspected directly:
+
+``` r
+
+fit <- tar_read(all_models)[["Base model; additive residual error = 3"]]
+inherits(fit, "try-error")  # TRUE if this model failed
+print(fit)                  # shows the captured error message
+```

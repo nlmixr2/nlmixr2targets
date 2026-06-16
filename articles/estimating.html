@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">nlmixr2targets</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -62,7 +62,7 @@
       <h1>Estimating nlmixr2 models with 'nlmixr2targets'</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/nlmixr2/nlmixr2targets/blob/v0.1.0/vignettes/estimating.Rmd" class="external-link"><code>vignettes/estimating.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/nlmixr2/nlmixr2targets/blob/main/vignettes/estimating.Rmd" class="external-link"><code>vignettes/estimating.Rmd</code></a></small>
       <div class="d-none name"><code>estimating.Rmd</code></div>
     </div>
 
@@ -288,6 +288,70 @@ if it or the dependent model changes.</p>
 <span>  <span class="va">plan_model</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 </div>
+</div>
+<div class="section level2">
+<h2 id="continuing-the-pipeline-when-a-model-fails">Continuing the pipeline when a model fails<a class="anchor" aria-label="anchor" href="#continuing-the-pipeline-when-a-model-fails"></a>
+</h2>
+<p>By default, if a model fails during estimation the error propagates
+and <code><a href="https://docs.ropensci.org/targets/reference/tar_make.html" class="external-link">targets::tar_make()</a></code> stops, just as any other target
+error would. This is usually what you want for a single model, but when
+you are fitting many models at once (for example with
+<code><a href="../reference/tar_nlmixr_multimodel.html">tar_nlmixr_multimodel()</a></code>) one failing model would otherwise
+halt the whole pipeline and prevent you from seeing the models that did
+succeed.</p>
+<p>Both <code><a href="../reference/tar_nlmixr.html">tar_nlmixr()</a></code> and
+<code><a href="../reference/tar_nlmixr_multimodel.html">tar_nlmixr_multimodel()</a></code> accept an <code>error</code>
+argument to control this:</p>
+<ul>
+<li>
+<code>error = "stop"</code> (the default) lets the estimation error
+propagate and halt the pipeline.</li>
+<li>
+<code>error = "continue"</code> catches the estimation error and
+stores a failure sentinel on the target instead, so the rest of the
+pipeline still runs.</li>
+</ul>
+<p>The sentinel is an object of class <code>nlmixr2targetsError</code>
+that also inherits from <code>"try-error"</code>, and it carries the
+original error message. Because it is clearly <strong>not</strong> an
+<code>nlmixr2</code> fit object, you can detect a failed model with a
+simple <code><a href="https://rdrr.io/r/base/class.html" class="external-link">inherits()</a></code> check.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://docs.ropensci.org/targets/" class="external-link">targets</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://docs.ropensci.org/tarchetypes/" class="external-link">tarchetypes</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://nlmixr2.github.io/nlmixr2targets/">nlmixr2targets</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">plan_model</span> <span class="op">&lt;-</span></span>
+<span>  <span class="fu"><a href="../reference/tar_nlmixr_multimodel.html">tar_nlmixr_multimodel</a></span><span class="op">(</span></span>
+<span>    <span class="va">all_models</span>,</span>
+<span>    data <span class="op">=</span> <span class="fu">nlmixr2data</span><span class="fu">::</span><span class="va"><a href="https://nlmixr2.github.io/nlmixr2data/reference/pheno_sd.html" class="external-link">pheno_sd</a></span>,</span>
+<span>    est <span class="op">=</span> <span class="st">"saem"</span>,</span>
+<span>    error <span class="op">=</span> <span class="st">"continue"</span>,</span>
+<span>    <span class="st">"Base model; additive residual error = 1"</span> <span class="op">=</span> <span class="va">pheno</span>,</span>
+<span>    <span class="st">"Base model; additive residual error = 3"</span> <span class="op">=</span> <span class="va">pheno2</span></span>
+<span>  <span class="op">)</span></span>
+<span></span>
+<span><span class="va">plan_report</span> <span class="op">&lt;-</span></span>
+<span>  <span class="fu"><a href="https://docs.ropensci.org/tarchetypes/reference/tar_plan.html" class="external-link">tar_plan</a></span><span class="op">(</span></span>
+<span>    <span class="co"># Keep only the models that estimated successfully</span></span>
+<span>    successful_models <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/funprog.html" class="external-link">Filter</a></span><span class="op">(</span></span>
+<span>      f <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">fit</span><span class="op">)</span> <span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">inherits</a></span><span class="op">(</span><span class="va">fit</span>, <span class="st">"try-error"</span><span class="op">)</span>,</span>
+<span>      x <span class="op">=</span> <span class="va">all_models</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    <span class="co"># Compute AIC for the successful models only</span></span>
+<span>    aic_list <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span>X <span class="op">=</span> <span class="va">successful_models</span>, FUN <span class="op">=</span> <span class="va">AIC</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  <span class="va">plan_model</span>,</span>
+<span>  <span class="va">plan_report</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p>After <code><a href="https://docs.ropensci.org/targets/reference/tar_make.html" class="external-link">tar_make()</a></code>, a target that failed to estimate can
+be inspected directly:</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://docs.ropensci.org/targets/reference/tar_read.html" class="external-link">tar_read</a></span><span class="op">(</span><span class="va">all_models</span><span class="op">)</span><span class="op">[[</span><span class="st">"Base model; additive residual error = 3"</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">inherits</a></span><span class="op">(</span><span class="va">fit</span>, <span class="st">"try-error"</span><span class="op">)</span>  <span class="co"># TRUE if this model failed</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span>                  <span class="co"># shows the captured error message</span></span></code></pre></div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
