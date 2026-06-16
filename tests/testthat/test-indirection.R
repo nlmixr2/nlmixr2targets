@@ -148,3 +148,70 @@ targets::tar_test("nlmixr2_indirect loads from cache and forwards to nlmixr2est:
   expect_identical(captured$est, "saem")
   expect_identical(captured$control, list(n = 1))
 })
+
+# Issue #35: error = "continue" should catch an estimation failure and return
+# a failure sentinel instead of propagating the error.
+targets::tar_test("nlmixr2_indirect returns a failure sentinel when error = 'continue'", {
+  save_nlmixr2obj_indirect(list(md5 = "hh", marker = "x"))
+  testthat::local_mocked_bindings(
+    nlmixr = function(object, data, est, control) stop("synthetic estimation failure"),
+    .package = "nlmixr2est"
+  )
+
+  ret <- nlmixr2_indirect(
+    object = "hh", data = mtcars, est = "saem", control = list(),
+    error = "continue"
+  )
+  expect_s3_class(ret, "nlmixr2targetsError")
+  expect_s3_class(ret, "try-error")
+  # A failed fit is clearly not an nlmixr2 object.
+  expect_false(inherits(ret, "nlmixr2FitCore"))
+  # The error message and the originating condition are preserved.
+  expect_match(as.character(ret), "synthetic estimation failure", fixed = TRUE)
+  expect_s3_class(attr(ret, "condition"), "condition")
+})
+
+# error = "stop" (the default) must let the error propagate so tar_make()
+# halts exactly as it did before this option existed.
+targets::tar_test("nlmixr2_indirect re-throws when error = 'stop' (the default)", {
+  save_nlmixr2obj_indirect(list(md5 = "hh", marker = "x"))
+  testthat::local_mocked_bindings(
+    nlmixr = function(object, data, est, control) stop("synthetic estimation failure"),
+    .package = "nlmixr2est"
+  )
+
+  expect_error(
+    nlmixr2_indirect(object = "hh", data = mtcars, est = "saem", control = list()),
+    regexp = "synthetic estimation failure", fixed = TRUE
+  )
+  # Explicit error = "stop" behaves the same as the default.
+  expect_error(
+    nlmixr2_indirect(
+      object = "hh", data = mtcars, est = "saem", control = list(), error = "stop"
+    ),
+    regexp = "synthetic estimation failure", fixed = TRUE
+  )
+})
+
+test_that("nlmixr2_indirect rejects an unknown error mode", {
+  expect_error(
+    nlmixr2_indirect(
+      object = "hh", data = mtcars, est = "saem", control = list(),
+      error = "nonsense"
+    ),
+    regexp = "should be one of"
+  )
+})
+
+test_that("the failure sentinel prints its captured message", {
+  sentinel <-
+    nlmixr2targets_error_object(simpleError("model blew up"))
+  expect_output(print(sentinel), "failed estimation", fixed = TRUE)
+  expect_output(print(sentinel), "model blew up", fixed = TRUE)
+  # print() returns its argument invisibly. capture.output() keeps the
+  # printed lines from leaking into the test log while we check visibility.
+  vis <- NULL
+  invisible(capture.output(vis <- withVisible(print(sentinel))))
+  expect_identical(vis$value, sentinel)
+  expect_false(vis$visible)
+})

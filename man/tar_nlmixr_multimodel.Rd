@@ -11,7 +11,8 @@ tar_nlmixr_multimodel(
   est,
   control = list(),
   table = nlmixr2est::tableControl(),
-  env = parent.frame()
+  env = parent.frame(),
+  error = c("stop", "continue")
 )
 }
 \arguments{
@@ -59,6 +60,15 @@ to be different for each type of estimation method}
 
 \item{env}{The environment where the model is setup (not needed for typical
 use)}
+
+\item{error}{What should happen if the estimation step throws an error?
+\code{"stop"} (the default) lets the error propagate, halting
+\code{targets::tar_make()} as usual. \code{"continue"} catches the error and stores
+a failure sentinel (an object of class \code{nlmixr2targetsError}, which also
+inherits from \code{"try-error"}) carrying the error message, so a single
+failed model does not stop the rest of the pipeline. Detect a failed fit
+with \code{inherits(fit, "nlmixr2targetsError")} or the broader
+\code{inherits(fit, "try-error")}.}
 }
 \value{
 A list of targets for the model simplification, data simplification,

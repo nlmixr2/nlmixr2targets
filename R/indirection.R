@@ -24,15 +24,64 @@
 #'   call time against whatever store the user has configured for the
 #'   running `tar_make()` (e.g. a `tempdir()` location set via
 #'   `targets::tar_config_set()`).
-#' @returns An nlmixr2 fit object, as returned by [nlmixr2est::nlmixr()].
+#' @inheritParams tar_nlmixr
+#' @returns An nlmixr2 fit object, as returned by [nlmixr2est::nlmixr()]. When
+#'   `error = "continue"` and the estimation step fails, a failure sentinel of
+#'   class `nlmixr2targetsError` (which also inherits from `"try-error"`) is
+#'   returned instead; see [tar_nlmixr()].
 #' @seealso [tar_nlmixr()], [nlmixr_object_simplify()].
 #' @export
 nlmixr2_indirect <- function(object, data, est, control,
-                             directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) {
-  nlmixr2est::nlmixr(
-    object = read_nlmixr2obj_indirect(hash = object, directory = directory),
-    data = data, est = est, control = control
+                             directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"),
+                             error = c("stop", "continue")) {
+  error <- match.arg(error)
+  # Cache misses are infrastructure errors (the upstream `_object_simple`
+  # target is supposed to have written this hash), so they are deliberately
+  # left outside the tryCatch below: `error = "continue"` is for *model*
+  # failures, not for masking a broken pipeline.
+  ui <- read_nlmixr2obj_indirect(hash = object, directory = directory)
+  if (identical(error, "continue")) {
+    tryCatch(
+      nlmixr2est::nlmixr(object = ui, data = data, est = est, control = control),
+      error = function(e) nlmixr2targets_error_object(e)
+    )
+  } else {
+    nlmixr2est::nlmixr(object = ui, data = data, est = est, control = control)
+  }
+}
+
+# Build the failure sentinel returned by nlmixr2_indirect() when
+# `error = "continue"` and estimation throws. It mirrors the shape of a
+# base::try() result -- a character vector holding the error message with the
+# originating condition attached as the "condition" attribute -- but carries
+# an `nlmixr2targetsError` class so downstream code can tell a failed fit
+# apart from a real nlmixr2 fit with a simple inherits() check. The
+# "try-error" class is kept so existing try-error-aware code recognizes it too.
+nlmixr2targets_error_object <- function(cond) {
+  structure(
+    paste0("Error : ", conditionMessage(cond), "\n"),
+    class = c("nlmixr2targetsError", "try-error"),
+    condition = cond
   )
+}
+
+#' Print a failed `nlmixr2targets` estimation result
+#'
+#' When [tar_nlmixr()] or [tar_nlmixr_multimodel()] is called with
+#' `error = "continue"` and the estimation step throws, the target stores a
+#' lightweight failure sentinel of class `nlmixr2targetsError` instead of an
+#' `nlmixr2` fit. This method prints the captured error message. Detect such a
+#' sentinel with `inherits(x, "nlmixr2targetsError")` (or the broader
+#' `inherits(x, "try-error")`).
+#'
+#' @param x A `nlmixr2targetsError` object.
+#' @param ... Ignored; present for compatibility with [print()].
+#' @returns `x`, invisibly.
+#' @export
+print.nlmixr2targetsError <- function(x, ...) {
+  cat("<nlmixr2targets failed estimation>\n")
+  cat(conditionMessage(attr(x, "condition")), "\n", sep = "")
+  invisible(x)
 }
 
 # Indirect cache layout
