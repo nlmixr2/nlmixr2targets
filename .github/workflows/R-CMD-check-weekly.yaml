@@ -34,6 +34,9 @@ jobs:
         with:
           extra-packages: any::rcmdcheck
           needs: check
+          # Mirror R-CMD-check.yaml: use the nlmixr2 r-universe so
+          # nlmixr2est/rxode2 track the fixed dev versions rather than CRAN.
+          extra-repositories: https://nlmixr2.r-universe.dev
 
       - uses: r-lib/actions/check-r-package@v2
         with:

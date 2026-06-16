@@ -44,6 +44,12 @@ jobs:
         with:
           extra-packages: any::rcmdcheck
           needs: check
+          # Pull nlmixr2est/rxode2 from the nlmixr2 r-universe so CI uses
+          # versions newer than CRAN. CRAN's nlmixr2est 6.0.1 has a Windows
+          # cores>=2 cross-DLL OpenMP heap-corruption segfault that crashes
+          # the test run on windows-latest; it is fixed in nlmixr2est >= 6.0.2,
+          # which the r-universe serves.
+          extra-repositories: https://nlmixr2.r-universe.dev
 
       - uses: r-lib/actions/check-r-package@v2
         with:
