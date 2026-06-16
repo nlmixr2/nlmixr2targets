@@ -403,3 +403,72 @@ test_that("tar_nlmixr_multimodel_parse rejects unnamed or duplicate-name model_l
     )
   )
 })
+
+# Issue #35: the error mode must thread through the multimodel layers down to
+# each model's fit_simple command.
+test_that("tar_nlmixr_multimodel threads the error mode into every model's fit_simple command", {
+  pheno <- function() {
+    ini({
+      lcl <- log(0.008); label("Typical value of clearance")
+      lvc <-  log(0.6); label("Typical value of volume of distribution")
+      etalcl + etalvc ~ c(1,
+                          0.01, 1)
+      cpaddSd <- 0.1; label("residual variability")
+    })
+    model({
+      cl <- exp(lcl + etalcl)
+      vc <- exp(lvc + etalvc)
+      kel <- cl/vc
+      d/dt(central) <- -kel*central
+      cp <- central/vc
+      cp ~ add(cpaddSd)
+    })
+  }
+
+  # Default is "stop".
+  default_list <-
+    tar_nlmixr_multimodel(
+      name = foo, data = nlmixr2data::pheno_sd, est = "saem",
+      "m1" = pheno
+    )
+  cmd_default <- paste(deparse(default_list[[1]]$fit_simple$command$expr), collapse = " ")
+  expect_match(cmd_default, 'error = "stop"', fixed = TRUE)
+
+  continue_list <-
+    tar_nlmixr_multimodel(
+      name = foo, data = nlmixr2data::pheno_sd, est = "saem",
+      error = "continue",
+      "m1" = pheno,
+      "m2" = foo[["m1"]] |> rxode2::ini(lcl = log(0.01))
+    )
+  cmd1 <- paste(deparse(continue_list[[1]]$fit_simple$command$expr), collapse = " ")
+  cmd2 <- paste(deparse(continue_list[[2]]$fit_simple$command$expr), collapse = " ")
+  expect_match(cmd1, 'error = "continue"', fixed = TRUE)
+  expect_match(cmd2, 'error = "continue"', fixed = TRUE)
+})
+
+test_that("tar_nlmixr_multimodel rejects an unknown error mode", {
+  expect_error(
+    tar_nlmixr_multimodel(
+      name = foo, data = nlmixr2data::pheno_sd, est = "saem",
+      error = "nope",
+      "m1" = quote(my_model)
+    ),
+    regexp = "should be one of"
+  )
+})
+
+test_that("tar_nlmixr_multimodel_single threads the error mode into the fit_simple command", {
+  out <- tar_nlmixr_multimodel_single(
+    object = quote(my_model),
+    name = "foo",
+    data = quote(my_data),
+    est = "saem",
+    control = quote(list()),
+    table = quote(list()),
+    env = environment(),
+    error = "continue"
+  )
+  cmd <- paste(deparse(out$target$fit_simple$command$expr), collapse = " ")
+  expect_match(cmd, 'error = "continue"', fixed = TRUE)
+})

@@ -31,6 +31,14 @@
 #' @inheritParams targets::tar_target
 #' @param env The environment where the model is setup (not needed for typical
 #'   use)
+#' @param error What should happen if the estimation step throws an error?
+#'   `"stop"` (the default) lets the error propagate, halting
+#'   `targets::tar_make()` as usual. `"continue"` catches the error and stores
+#'   a failure sentinel (an object of class `nlmixr2targetsError`, which also
+#'   inherits from `"try-error"`) carrying the error message, so a single
+#'   failed model does not stop the rest of the pipeline. Detect a failed fit
+#'   with `inherits(fit, "nlmixr2targetsError")` or the broader
+#'   `inherits(fit, "try-error")`.
 #' @returns A list of targets for the model simplification, data simplification,
 #'   and model estimation.
 #' @seealso [tar_nlmixr_multimodel()] for fitting many models against one
@@ -68,10 +76,12 @@
 #' )
 #' @export
 tar_nlmixr <- function(name, object, data, est = NULL, control = list(),
-                       table = nlmixr2est::tableControl(), env = parent.frame()) {
+                       table = nlmixr2est::tableControl(), env = parent.frame(),
+                       error = c("stop", "continue")) {
   if (is.null(est)) {
     stop("'est' must not be null")
   }
+  error <- match.arg(error)
   checkmate::assert_environment(env)
   name_parsed <- targets::tar_deparse_language(substitute(name))
   tar_nlmixr_raw(
@@ -84,7 +94,8 @@ tar_nlmixr <- function(name, object, data, est = NULL, control = list(),
     object_simple_name = paste(name_parsed, "object_simple", sep = "_"),
     data_simple_name = paste(name_parsed, "data_simple", sep = "_"),
     fit_simple_name = paste(name_parsed, "fit_simple", sep = "_"),
-    env = env
+    env = env,
+    error = error
   )
 }
 
@@ -95,10 +106,12 @@ tar_nlmixr <- function(name, object, data, est = NULL, control = list(),
 #'   re-inserted.
 #' @export
 tar_nlmixr_raw <- function(name, object, data, est, control, table,
-                           object_simple_name, data_simple_name, fit_simple_name, env) {
+                           object_simple_name, data_simple_name, fit_simple_name, env,
+                           error = "stop") {
   checkmate::assert_character(name, len = 1, min.chars = 1, any.missing = FALSE)
   checkmate::assert_character(object_simple_name, len = 1, min.chars = 1, any.missing = FALSE)
   checkmate::assert_character(data_simple_name, len = 1, min.chars = 1, any.missing = FALSE)
+  checkmate::assert_choice(error, choices = c("stop", "continue"))
 
   object <- tar_nlmixr_protect_zero_initial(object, env = env)
 
@@ -142,7 +155,8 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table,
             data = data_simple_name,
             est = est,
             control = control,
-            directory = directory
+            directory = directory,
+            error = error
           ),
           list(
             object_simple_name = as.name(object_simple_name),
@@ -150,7 +164,8 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table,
             est = est,
             control = control,
             table = table,
-            directory = directory_expr
+            directory = directory_expr,
+            error = error
           )
         ),
         packages = "nlmixr2est"

@@ -490,3 +490,21 @@ test_that("nlmixr_object_complicate rejects nrow-mismatched data via assign_orig
     regexp = "Must have exactly 3 rows"
   )
 })
+
+# Issue #35: when error = "continue" caught a failed estimation, the final
+# `fit` target runs nlmixr_object_complicate() on the failure sentinel. There
+# is nothing to re-attach, so the sentinel must pass straight through
+# untouched (no attempt to read a ui or swap origData).
+test_that("nlmixr_object_complicate passes a failure sentinel through unchanged", {
+  sentinel <- nlmixr2targets_error_object(simpleError("estimation failed"))
+  out <-
+    nlmixr_object_complicate(
+      fit = sentinel,
+      # object/data are never inspected on the failure path, so deliberately
+      # pass values that would error if they were touched.
+      object = quote(never_evaluated),
+      data = "not a data frame"
+    )
+  expect_identical(out, sentinel)
+  expect_s3_class(out, "nlmixr2targetsError")
+})

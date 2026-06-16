@@ -97,6 +97,14 @@ nlmixr_object_simplify <- function(object,
 #' @seealso [nlmixr_object_simplify()], [assign_origData()].
 #' @export
 nlmixr_object_complicate <- function(fit, object, data) {
+  # When tar_nlmixr(error = "continue") was used and the estimation step
+  # failed, `fit` is the failure sentinel produced by nlmixr2_indirect()
+  # rather than a real nlmixr2 fit. There is nothing to re-attach (no ui, no
+  # origData), so pass it straight through and let the pipeline finish with
+  # the failure recorded on the final target.
+  if (inherits(fit, "nlmixr2targetsError")) {
+    return(fit)
+  }
   # On a real nlmixr2 fit, `fit` is a tibble whose `ui` slot is a virtual
   # accessor backed by `fit$env$ui`. We must read/write through `fit$env`
   # to avoid the tibble column-setter (which validates row counts).

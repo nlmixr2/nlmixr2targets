@@ -147,6 +147,73 @@ test_that("tar_nlmixr_raw rejects malformed simple_name arguments", {
   expect_error(do.call(tar_nlmixr_raw, bad_data), regexp = "data_simple_name")
 })
 
+# Issue #35: the error mode chosen by the user must reach the generated
+# fit_simple target command so nlmixr2_indirect() runs in the right mode.
+# (Called directly rather than via do.call() so the quoted `object` symbol is
+# passed through as a language object instead of being evaluated.)
+test_that("tar_nlmixr_raw threads the error mode into the fit_simple command", {
+  # Default mode is "stop".
+  out_default <- tar_nlmixr_raw(
+    name = "fit_x",
+    object = quote(my_model),
+    data = quote(my_data),
+    est = "saem",
+    control = quote(list()),
+    table = quote(list()),
+    object_simple_name = "fit_x_object_simple",
+    data_simple_name = "fit_x_data_simple",
+    fit_simple_name = "fit_x_fit_simple",
+    env = environment()
+  )
+  cmd_default <- paste(deparse(out_default$fit_simple$command$expr), collapse = " ")
+  expect_match(cmd_default, 'error = "stop"', fixed = TRUE)
+
+  out_continue <- tar_nlmixr_raw(
+    name = "fit_x",
+    object = quote(my_model),
+    data = quote(my_data),
+    est = "saem",
+    control = quote(list()),
+    table = quote(list()),
+    object_simple_name = "fit_x_object_simple",
+    data_simple_name = "fit_x_data_simple",
+    fit_simple_name = "fit_x_fit_simple",
+    env = environment(),
+    error = "continue"
+  )
+  cmd_continue <- paste(deparse(out_continue$fit_simple$command$expr), collapse = " ")
+  expect_match(cmd_continue, 'error = "continue"', fixed = TRUE)
+})
+
+test_that("tar_nlmixr rejects an unknown error mode", {
+  expect_error(
+    tar_nlmixr(
+      name = pheno_model, object = pheno, data = nlmixr2data::pheno_sd,
+      est = "saem", error = "nope"
+    ),
+    regexp = "should be one of"
+  )
+})
+
+test_that("tar_nlmixr_raw rejects an unknown error mode", {
+  expect_error(
+    tar_nlmixr_raw(
+      name = "fit_x",
+      object = quote(my_model),
+      data = quote(my_data),
+      est = "saem",
+      control = quote(list()),
+      table = quote(list()),
+      object_simple_name = "fit_x_object_simple",
+      data_simple_name = "fit_x_data_simple",
+      fit_simple_name = "fit_x_fit_simple",
+      env = environment(),
+      error = "nope"
+    ),
+    regexp = "element of set"
+  )
+})
+
 # targets::tar_test() runs the test code inside a temporary directory
 # to avoid accidentally writing to the user's file space.
 targets::tar_test("tar_nlmixr execution", {
@@ -394,4 +461,89 @@ targets::tar_test("known limitation: cmt(0) functions outside tar_nlmixr still e
     targets::tar_outdated(callr_function = NULL),
     regexp = "bad assignment"
   )
+})
+
+# Issue #35 end-to-end: with error = "continue", an estimation failure must
+# not halt tar_make(). The pipeline runs to completion and the final target
+# stores a failure sentinel. A deliberately invalid `est` is the deterministic
+# failure trigger: the model and data simplification steps (which do not use
+# `est`) succeed, then nlmixr2est errors at the estimation step.
+targets::tar_test("tar_nlmixr(error = 'continue') records a failure sentinel without halting the pipeline", {
+  targets::tar_script({
+    library(nlmixr2targets)
+    pheno <- function() {
+      ini({
+        lcl <- log(0.008); label("Typical value of clearance")
+        lvc <-  log(0.6); label("Typical value of volume of distribution")
+        etalcl + etalvc ~ c(1,
+                            0.01, 1)
+        cpaddSd <- 0.1; label("residual variability")
+      })
+      model({
+        cl <- exp(lcl + etalcl)
+        vc <- exp(lvc + etalvc)
+        kel <- cl/vc
+        d/dt(central) <- -kel*central
+        cp <- central/vc
+        cp ~ add(cpaddSd)
+      })
+    }
+
+    nlmixr2targets::tar_nlmixr(
+      name = pheno_model,
+      object = pheno,
+      data = nlmixr2data::pheno_sd,
+      est = "this_is_not_a_real_estimation_method",
+      error = "continue"
+    )
+  })
+  # tar_make() completes (no error escapes) even though estimation fails.
+  expect_no_error(suppressMessages(suppressWarnings(
+    targets::tar_make(callr_function = NULL)
+  )))
+  # The simplification steps succeeded; only the fit failed.
+  expect_type(targets::tar_read(pheno_model_object_simple), "character")
+  expect_s3_class(targets::tar_read(pheno_model_data_simple), "data.frame")
+  # Both the fit_simple and the final fit hold the failure sentinel.
+  fit_simple <- targets::tar_read(pheno_model_fit_simple)
+  fit <- targets::tar_read(pheno_model)
+  expect_s3_class(fit_simple, "nlmixr2targetsError")
+  expect_s3_class(fit, "nlmixr2targetsError")
+  expect_s3_class(fit, "try-error")
+  expect_false(inherits(fit, "nlmixr2FitCore"))
+})
+
+# The default (error = "stop") must still halt tar_make() on an estimation
+# failure, preserving the pre-issue-#35 behavior.
+targets::tar_test("tar_nlmixr default (error = 'stop') still halts on an estimation failure", {
+  targets::tar_script({
+    library(nlmixr2targets)
+    pheno <- function() {
+      ini({
+        lcl <- log(0.008); label("Typical value of clearance")
+        lvc <-  log(0.6); label("Typical value of volume of distribution")
+        etalcl + etalvc ~ c(1,
+                            0.01, 1)
+        cpaddSd <- 0.1; label("residual variability")
+      })
+      model({
+        cl <- exp(lcl + etalcl)
+        vc <- exp(lvc + etalvc)
+        kel <- cl/vc
+        d/dt(central) <- -kel*central
+        cp <- central/vc
+        cp ~ add(cpaddSd)
+      })
+    }
+
+    nlmixr2targets::tar_nlmixr(
+      name = pheno_model,
+      object = pheno,
+      data = nlmixr2data::pheno_sd,
+      est = "this_is_not_a_real_estimation_method"
+    )
+  })
+  expect_error(suppressMessages(suppressWarnings(
+    targets::tar_make(callr_function = NULL)
+  )))
 })

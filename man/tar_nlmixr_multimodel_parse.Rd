@@ -5,7 +5,16 @@
 \title{Generate nlmixr multimodel target set for all models in one call to
 \code{tar_nlmixr_multimodel()}}
 \usage{
-tar_nlmixr_multimodel_parse(name, data, est, control, table, model_list, env)
+tar_nlmixr_multimodel_parse(
+  name,
+  data,
+  est,
+  control,
+  table,
+  model_list,
+  env,
+  error = "stop"
+)
 }
 \arguments{
 \item{name}{Symbol, name of the target.
@@ -52,6 +61,15 @@ to be different for each type of estimation method}
 
 \item{env}{The environment where the model is setup (not needed for typical
 use)}
+
+\item{error}{What should happen if the estimation step throws an error?
+\code{"stop"} (the default) lets the error propagate, halting
+\code{targets::tar_make()} as usual. \code{"continue"} catches the error and stores
+a failure sentinel (an object of class \code{nlmixr2targetsError}, which also
+inherits from \code{"try-error"}) carrying the error message, so a single
+failed model does not stop the rest of the pipeline. Detect a failed fit
+with \code{inherits(fit, "nlmixr2targetsError")} or the broader
+\code{inherits(fit, "try-error")}.}
 }
 \description{
 Generate nlmixr multimodel target set for all models in one call to
