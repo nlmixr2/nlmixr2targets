@@ -14,19 +14,7 @@ on_cran_local <- function() {
   }
 }
 
-on_ci <- function() {
-  isTRUE(as.logical(Sys.getenv("CI")))
-}
-
-# Limit rxode2/nlmixr2est to a single thread on CRAN and on CI. nlmixr2est
-# 6.0.1 (the current CRAN binary) has a Windows cores>=2 cross-DLL OpenMP
-# heap-corruption segfault, fixed upstream in nlmixr2est >= 6.0.2, that
-# hard-crashes the test run on windows-latest. Single-threaded estimation
-# avoids the parallel region entirely. CRAN already limits cores, so this
-# only changes behaviour on CI (where NOT_CRAN is set, so on_cran_local() is
-# FALSE); local interactive runs are unaffected. Remove the on_ci() guard
-# once CRAN ships nlmixr2est >= 6.0.2.
-if (on_cran_local() || on_ci()) {
+if (on_cran_local()) {
   rxode2::setRxThreads(1L)
 }
 test_check("nlmixr2targets")
