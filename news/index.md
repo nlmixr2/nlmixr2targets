@@ -2,6 +2,17 @@
 
 ## nlmixr2targets 0.1.0.9000
 
+### Bug fixes
+
+- [`tar_nlmixr_multimodel()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel.md)
+  no longer fails when a model function that declares compartment
+  initial conditions with `cmt(0) <- value` is both fit directly and
+  piped through `ini()`/`model()` in the same call (e.g. `"myfit" = mod`
+  alongside `"myfit pipe" = mod |> ini(a <- 2)`). Sharing the model
+  function between entries previously left the piped entry’s command
+  referencing the internal `cmt(initial)` form, which nlmixr2 rejects
+  ([\#37](https://github.com/nlmixr2/nlmixr2targets/issues/37)).
+
 ### New features
 
 - [`tar_nlmixr()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)

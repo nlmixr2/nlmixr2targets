@@ -42,6 +42,11 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.0.9000" id="nlmixr2targets-0109000">nlmixr2targets 0.1.0.9000<a class="anchor" aria-label="anchor" href="#nlmixr2targets-0109000"></a></h2>
 <div class="section level3">
+<h3 id="bug-fixes-0-1-0-9000">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-1-0-9000"></a></h3>
+<ul><li>
+<code><a href="../reference/tar_nlmixr_multimodel.html">tar_nlmixr_multimodel()</a></code> no longer fails when a model function that declares compartment initial conditions with <code>cmt(0) &lt;- value</code> is both fit directly and piped through <code>ini()</code>/<code>model()</code> in the same call (e.g. <code>"myfit" = mod</code> alongside <code>"myfit pipe" = mod |&gt; ini(a &lt;- 2)</code>). Sharing the model function between entries previously left the piped entry’s command referencing the internal <code>cmt(initial)</code> form, which nlmixr2 rejects (<a href="https://github.com/nlmixr2/nlmixr2targets/issues/37" class="external-link">#37</a>).</li>
+</ul></div>
+<div class="section level3">
 <h3 id="new-features-0-1-0-9000">New features<a class="anchor" aria-label="anchor" href="#new-features-0-1-0-9000"></a></h3>
 <ul><li>
 <code><a href="../reference/tar_nlmixr.html">tar_nlmixr()</a></code> and <code><a href="../reference/tar_nlmixr_multimodel.html">tar_nlmixr_multimodel()</a></code> gain an <code>error</code> argument. With the default <code>error = "stop"</code>, a model that fails during estimation halts <code><a href="https://docs.ropensci.org/targets/reference/tar_make.html" class="external-link">targets::tar_make()</a></code> exactly as before. With <code>error = "continue"</code>, the failure is caught and the target stores a failure sentinel (an object of class <code>nlmixr2targetsError</code>, which also inherits from <code>"try-error"</code>) carrying the error message, so one failed model does not stop the rest of the pipeline (<a href="https://github.com/nlmixr2/nlmixr2targets/issues/35" class="external-link">#35</a>).</li>
