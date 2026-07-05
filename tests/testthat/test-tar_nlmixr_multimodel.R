@@ -170,6 +170,133 @@ targets::tar_test("tar_nlmixr_multimodel works with initial condition setting `c
   expect_type(targets::tar_outdated(callr_function = NULL), "character")
 })
 
+# Issue #37: a model function carrying cmt(0) initial conditions is shared
+# between a plain entry and a piped entry (`mod |> ini(...)`). Processing the
+# plain entry mutates `mod` in env from cmt(0) to cmt(initial); the piped
+# entry then rewrites nothing, so before the fix its command was left
+# unwrapped and evaluating the pipe hit the nlmixr2-invalid `cmt(initial)`
+# form. Both entries' object-simplification commands must therefore be wrapped
+# in nlmixr_object_zero_initial_eval() so cmt(0) is restored at runtime.
+test_that("tar_nlmixr_multimodel wraps piped entries that reference a shared cmt(0) model (#37)", {
+  mod <- function() {
+    ini({
+      a <- 1
+      addSd <- 0.1
+    })
+    model({
+      b <- a
+      d/dt(central) <- -b*central
+      central(0) <- 3
+      cp <- central
+      cp ~ add(addSd)
+    })
+  }
+
+  target_list <-
+    tar_nlmixr_multimodel(
+      name = fit_pipe, data = nlmixr2data::pheno_sd, est = "saem",
+      "myfit" = mod,
+      "myfit pipe" = mod |> rxode2::ini(a <- 2)
+    )
+  # Both object-simplification commands must defer evaluation through
+  # nlmixr_object_zero_initial_eval() (order of the two model entries is
+  # irrelevant: whichever is processed second is the one previously left
+  # unwrapped).
+  is_wrapped <- function(single_target) {
+    obj_arg <- single_target$object_simple$command$expr[[1]][["object"]]
+    rxode2::.matchesLangTemplate(
+      obj_arg,
+      str2lang("nlmixr2targets::nlmixr_object_zero_initial_eval(.)")
+    )
+  }
+  expect_true(is_wrapped(target_list[[1]]))
+  expect_true(is_wrapped(target_list[[2]]))
+})
+
+# Issue #37 x #19: a self-reference pipe (`fit_pipe[["myfit"]] |> ini(...)`)
+# whose base model carries cmt(0) must NOT be wrapped in
+# nlmixr_object_zero_initial_eval(). The self-reference resolves to the base
+# model's `_fit_simple` *target* (a fitted object with cmt(0) already
+# compiled in, so there is no cmt(initial) DSL to restore), and wrapping
+# would bury that target name inside quote(), hiding it from targets'
+# dependency graph. The base model itself (bare cmt(0) function) is still
+# wrapped. This pins the boundary that separates "pipe over a source
+# function" (wrap) from "pipe over a target result" (do not wrap).
+test_that("tar_nlmixr_multimodel does not wrap a self-reference pipe over a cmt(0) model (#37/#19)", {
+  mod <- function() {
+    ini({
+      a <- 1
+      addSd <- 0.1
+    })
+    model({
+      b <- a
+      d/dt(central) <- -b*central
+      central(0) <- 3
+      cp <- central
+      cp ~ add(addSd)
+    })
+  }
+
+  target_list <-
+    tar_nlmixr_multimodel(
+      name = fit_pipe, data = nlmixr2data::pheno_sd, est = "saem",
+      "myfit" = mod,
+      "myfit pipe" = fit_pipe[["myfit"]] |> rxode2::ini(a <- 2)
+    )
+  is_wrapped <- function(single_target) {
+    obj_arg <- single_target$object_simple$command$expr[[1]][["object"]]
+    rxode2::.matchesLangTemplate(
+      obj_arg,
+      str2lang("nlmixr2targets::nlmixr_object_zero_initial_eval(.)")
+    )
+  }
+  # Base model is wrapped (bare cmt(0) function).
+  expect_true(is_wrapped(target_list[[1]]))
+  # Self-reference pipe is NOT wrapped, and its base fit_simple target stays
+  # a visible dependency.
+  expect_false(is_wrapped(target_list[[2]]))
+  expect_true(
+    target_list[[1]]$fit_simple$settings$name %in%
+      targets::tar_deps_raw(target_list[[2]]$object_simple$command$expr)
+  )
+})
+
+targets::tar_test("tar_nlmixr_multimodel fits a piped entry sharing a cmt(0) model end-to-end (#37)", {
+  targets::tar_script({
+    mod <- function() {
+      ini({
+        lcl <- log(0.008); label("Typical value of clearance")
+        lvc <-  log(0.6); label("Typical value of volume of distribution")
+        etalcl + etalvc ~ c(1,
+                            0.01, 1)
+        cpaddSd <- 0.1; label("residual variability")
+      })
+      model({
+        cl <- exp(lcl + etalcl)
+        vc <- exp(lvc + etalvc)
+        kel <- cl/vc
+        d/dt(central) <- -kel*central
+        central(0) <- 0
+        cp <- central/vc
+        cp ~ add(cpaddSd)
+      })
+    }
+
+    nlmixr2targets::tar_nlmixr_multimodel(
+      name = fit_pipe, data = nlmixr2data::pheno_sd, est = "saem",
+      control = nlmixr2est::saemControl(nBurn = 1, nEm = 1),
+      "myfit" = mod,
+      "myfit pipe" = mod |> rxode2::ini(lcl = log(0.01))
+    )
+  })
+  expect_no_error(targets::tar_outdated(callr_function = NULL))
+  suppressWarnings(targets::tar_make(callr_function = NULL))
+  fits <- targets::tar_read(fit_pipe)
+  expect_named(fits, c("myfit", "myfit pipe"))
+  expect_s3_class(fits[["myfit"]], "nlmixr2FitCore")
+  expect_s3_class(fits[["myfit pipe"]], "nlmixr2FitCore")
+})
+
 test_that("tar_nlmixr_multimodel works for within-list model piping (#19), direct testing", {
   pheno <- function() {
     ini({

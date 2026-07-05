@@ -262,6 +262,52 @@ nlmixr_object_protect_zero_initial_helper <- function(expr, in_model, state) {
   expr
 }
 
+#' Does a function body contain `name(initial) <- val` inside a
+#' `model({...})` block?
+#'
+#' A model function shared across several entries of a single
+#' `tar_nlmixr_multimodel()` call is mutated in place the first time
+#' `tar_nlmixr_protect_zero_initial()` rewrites its `cmt(0)` lines to
+#' `cmt(initial)`. When a later entry (e.g. a `|>` pipe) references the
+#' same function, that call performs zero rewrites, so `total_n` no
+#' longer signals that the referenced body carries the nlmixr2-invalid
+#' `initial` form. This detector supplies that signal directly so the
+#' pipe is still wrapped for runtime restoration (issue #37).
+#'
+#' Scoped to inside `model({...})` blocks, mirroring
+#' `nlmixr_object_protect_zero_initial_helper()`.
+#'
+#' @param expr A language object (typically a function body).
+#' @returns `TRUE` if any `name(initial) <- val` occurs inside a
+#'   `model({...})` block, otherwise `FALSE`.
+#' @noRd
+nlmixr_object_body_has_model_initial <- function(expr) {
+  nlmixr_object_body_has_model_initial_helper(expr, in_model = FALSE)
+}
+
+nlmixr_object_body_has_model_initial_helper <- function(expr, in_model) {
+  if (in_model && rxode2::.matchesLangTemplate(expr, str2lang(".name(initial) <- ."))) {
+    return(TRUE)
+  }
+  if (is.call(expr)) {
+    enters_model <-
+      !in_model &&
+      length(expr) >= 1L &&
+      identical(expr[[1L]], as.name("model"))
+    for (idx in seq_along(expr)) {
+      child <- expr[[idx]]
+      # Skip NULL children (mirrors the protect helper): indexing a
+      # NULL call slot would error.
+      if (is.null(child)) next
+      child_in_model <- in_model || (enters_model && idx > 1L)
+      if (nlmixr_object_body_has_model_initial_helper(child, in_model = child_in_model)) {
+        return(TRUE)
+      }
+    }
+  }
+  FALSE
+}
+
 #' Runtime helper: undo the `cmt(0) -> cmt(initial)` rewrite before
 #' evaluating the captured `object` expression.
 #'
