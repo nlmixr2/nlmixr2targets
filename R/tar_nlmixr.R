@@ -237,38 +237,22 @@ assign_origData <- function(fit, data) {
 #'   restores the user's natural syntax at target execution time.
 #' @noRd
 tar_nlmixr_protect_zero_initial <- function(object, env) {
-  total_n <- 0L
-
-  # Pass 1: every symbol in the captured expression that points to a
-  # user-defined function in env gets its body rewritten in place.
-  # `assign(..., inherits = TRUE)` walks env upward and modifies the
-  # binding in the frame where it was originally found, so the
-  # rewrite reaches globalenv() -- which is what targets walks.
-  # Package functions are skipped: we never want to mutate, say,
-  # `rxode2::ini` or `base::model`. We also do not need to walk their
-  # bodies for cmt(0) patterns since codetools accepts them as-is
-  # (they have no DSL constructs).
-  for (sym in .collect_top_symbols(object)) {
-    if (exists(sym, envir = env, inherits = TRUE)) {
-      fn <- get(sym, envir = env, inherits = TRUE)
-      fn_env <- if (is.function(fn)) environment(fn) else NULL
-      if (is.function(fn) && !is.null(base::body(fn)) && !is.null(fn_env) && !isNamespace(fn_env)) {
-        res <- nlmixr_object_protect_zero_initial(base::body(fn))
-        if (res$n_rewrites > 0L) {
-          base::body(fn) <- res$expr
-          assign(sym, fn, envir = env, inherits = TRUE)
-          total_n <- total_n + res$n_rewrites
-        }
-      }
-    }
-  }
+  # Pass 1: rewrite every user-defined function referenced by `object` in
+  # env from cmt(0) to cmt(initial), reporting how many rewrites happened
+  # and whether any referenced body already carries cmt(initial).
+  pass1 <- tar_nlmixr_protect_zero_initial_env(object, env)
 
   # Pass 2: rewrite the captured expression itself.
   res2 <- nlmixr_object_protect_zero_initial(object)
   object <- res2$expr
-  total_n <- total_n + res2$n_rewrites
+  total_n <- pass1$total_n + res2$n_rewrites
 
-  if (total_n == 0L) {
+  # Wrap when this call rewrote something, or when a non-symbol (pipe)
+  # expression references a function already carrying cmt(initial). A bare
+  # symbol never needs the referenced-only wrap: nlmixr_object_simplify()
+  # converts cmt(initial) back to cmt(0) on the function body itself, so
+  # only expressions evaluated *before* simplification (pipes) are at risk.
+  if (total_n == 0L && !(pass1$referenced_initial && is.call(object))) {
     return(object)
   }
 
@@ -277,4 +261,48 @@ tar_nlmixr_protect_zero_initial <- function(object, env) {
     nlmixr2targets::nlmixr_object_zero_initial_eval(quote(.(x))),
     list(x = object)
   )
+}
+
+#' Pass 1 of `tar_nlmixr_protect_zero_initial()`: rewrite referenced
+#' functions' bodies in env and report the wrapping signals.
+#'
+#' Every symbol in the captured expression that points to a user-defined
+#' function in env gets its body rewritten in place from `cmt(0)` to
+#' `cmt(initial)`. `assign(..., inherits = TRUE)` walks env upward and
+#' modifies the binding in the frame where it was originally found, so the
+#' rewrite reaches `globalenv()` -- which is what `targets` walks. Package
+#' functions are skipped: we never want to mutate, say, `rxode2::ini` or
+#' `base::model`, and codetools accepts their (DSL-free) bodies as-is.
+#'
+#' @param object The captured `object` expression.
+#' @param env The user's environment.
+#' @returns A list with `total_n` (count of `cmt(0)` rewrites performed)
+#'   and `referenced_initial` (`TRUE` if any referenced function body
+#'   already carries `cmt(initial)` inside a `model({...})` block even
+#'   though this call rewrote nothing -- e.g. a sibling multimodel entry
+#'   already mutated the shared function, or the user hand-wrote the
+#'   `cmt(initial)` workaround; issue #37).
+#' @noRd
+tar_nlmixr_protect_zero_initial_env <- function(object, env) {
+  total_n <- 0L
+  referenced_initial <- FALSE
+  for (sym in .collect_top_symbols(object)) {
+    if (!exists(sym, envir = env, inherits = TRUE)) next
+    fn <- get(sym, envir = env, inherits = TRUE)
+    fn_env <- if (is.function(fn)) environment(fn) else NULL
+    if (!is.function(fn) || is.null(base::body(fn)) || is.null(fn_env) || isNamespace(fn_env)) next
+    res <- nlmixr_object_protect_zero_initial(base::body(fn))
+    if (res$n_rewrites > 0L) {
+      base::body(fn) <- res$expr
+      assign(sym, fn, envir = env, inherits = TRUE)
+      total_n <- total_n + res$n_rewrites
+    }
+    # Detect an already-rewritten (or hand-written) cmt(initial) body,
+    # which res$n_rewrites cannot report because there was no cmt(0)
+    # left to rewrite.
+    if (nlmixr_object_body_has_model_initial(base::body(fn))) {
+      referenced_initial <- TRUE
+    }
+  }
+  list(total_n = total_n, referenced_initial = referenced_initial)
 }

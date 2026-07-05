@@ -243,6 +243,33 @@ test_that("nlmixr_object_protect_zero_initial is a no-op for non-call values", {
   }
 })
 
+test_that("nlmixr_object_body_has_model_initial detects cmt(initial) inside model({})", {
+  body_with_initial <- quote({
+    ini({ a <- 1 })
+    model({
+      d/dt(central) <- -a*central
+      central(initial) <- 3
+    })
+  })
+  expect_true(nlmixr_object_body_has_model_initial(body_with_initial))
+})
+
+test_that("nlmixr_object_body_has_model_initial is FALSE without cmt(initial)", {
+  body_plain <- quote({
+    ini({ a <- 1 })
+    model({
+      d/dt(central) <- -a*central
+      central(0) <- 3
+    })
+  })
+  expect_false(nlmixr_object_body_has_model_initial(body_plain))
+  # cmt(initial) outside a model({}) block is not matched (scoped detection).
+  expect_false(nlmixr_object_body_has_model_initial(quote(central(initial) <- 3)))
+  # Non-call leaves are handled without error.
+  expect_false(nlmixr_object_body_has_model_initial(42))
+  expect_false(nlmixr_object_body_has_model_initial(as.name("central")))
+})
+
 test_that("nlmixr_object_zero_initial_eval restores cmt(0) at runtime", {
   envir <- new.env(parent = baseenv())
   # Fake nlmixr2 model() function: captures its second arg unevaluated
