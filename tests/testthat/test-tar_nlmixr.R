@@ -288,6 +288,32 @@ targets::tar_test("tar_nlmixr execution", {
     iniDf_final$label[iniDf_final$name == "cpaddSd"],
     "residual variability"
   )
+  # The restored labels must also reach the cached parameter tables that
+  # printing reads (fit$env$parFixed / $parFixedDf, baked by nlmixr2est at
+  # estimation time from the stripped model, so absent on fit_simple).
+  expect_false("Parameter" %in% names(fit_simple$parFixed))
+  expect_false("Parameter" %in% names(fit_simple$parFixedDf))
+  fit_final <- targets::tar_read(pheno_model)
+  expect_equal(names(fit_final$parFixed)[1], "Parameter")
+  expect_equal(names(fit_final$parFixedDf)[1], "Parameter")
+  expect_equal(
+    fit_final$parFixedDf["lcl", "Parameter"],
+    "Typical value of clearance"
+  )
+  expect_equal(
+    fit_final$parFixedDf["lvc", "Parameter"],
+    "Typical value of volume of distribution"
+  )
+  expect_equal(
+    fit_final$parFixedDf["cpaddSd", "Parameter"],
+    "residual variability"
+  )
+  # And the printed output carries the labels.
+  expect_match(
+    paste(utils::capture.output(print(fit_final$parFixed)), collapse = "\n"),
+    "Typical value of clearance",
+    fixed = TRUE
+  )
 })
 
 targets::tar_test("tar_nlmixr handling with initial conditions central(0), without running the target", {
