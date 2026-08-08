@@ -8,7 +8,9 @@ nlmixr_data_simplify(
   data,
   object,
   table = list(),
-  directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")
+  directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"),
+  est = NULL,
+  control = NULL
 )
 }
 \arguments{
@@ -28,6 +30,16 @@ mirroring the convention used by \code{targets}' own \code{store = targets::tar_
 call time against whatever store the user has configured for the
 running \code{tar_make()} (e.g. a \code{tempdir()} location set via
 \code{targets::tar_config_set()}).}
+
+\item{est}{The estimation method that will be used with the simplified
+data (as given to \code{nlmixr2est::nlmixr()}).  Some estimation methods read
+data columns beyond the model's own covariates, and those columns are
+kept, too (currently only \code{est = "vae"}; see Details).  \code{NULL} keeps
+only the standard and model covariate columns.}
+
+\item{control}{The estimation control object matching \code{est}, when its
+settings affect which extra columns the method reads (for \code{est = "vae"}:
+\code{shapes}, \code{covCenterType}, \code{covCenter}, and \code{catCutoff}).}
 }
 \value{
 The data with the nlmixr2 column lower case and on the left and the
@@ -41,6 +53,15 @@ The standardization keeps columns that rxode2 and nlmixr2 use along with the
 covariates.  Column order is standardized (rxode2 then nlmixr2 then
 alphabetically sorted covariates), and rxode2 and nlmixr2 column names are
 converted to lower case.
+
+When \code{est = "vae"}, the automated covariate selection searches
+subject-constant data columns beyond the covariates named in the model, so
+the candidate columns reported by \code{nlmixr2est::vaeCovariates()} (honoring
+the \code{shapes}, \code{covCenterType}, \code{covCenter}, and \code{catCutoff} settings in
+\code{control}) are kept as well.  Columns the search cannot use (for example
+time-varying or partially-missing columns) are still dropped; the exclusion
+warnings that \code{nlmixr2est::nlmixr()} would raise for them are raised here
+instead, because the estimation step never sees the dropped columns.
 }
 \seealso{
 Other Simplifiers:

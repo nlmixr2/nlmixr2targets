@@ -105,6 +105,13 @@ the simplified data object.
 For the way that the objects are simplified, see \code{nlmixr_object_simplify()}
 and \code{nlmixr_data_simplify()}.  To see how to write initial conditions to work
 with targets, see \code{nlmixr_object_simplify()}.
+
+The simplified data keep the columns that the estimation method reads.  For
+most methods that is the standard event columns plus the covariates named
+in the model; \code{est = "vae"} additionally searches subject-constant data
+columns during its automated covariate selection, so those candidate
+columns are kept, too (see \code{nlmixr_data_simplify()}).  Changes to any kept
+column invalidate the cached fit; changes to dropped columns do not.
 }
 \section{Functions}{
 \itemize{
