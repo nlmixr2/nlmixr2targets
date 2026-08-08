@@ -10,6 +10,13 @@
 #' and `nlmixr_data_simplify()`.  To see how to write initial conditions to work
 #' with targets, see `nlmixr_object_simplify()`.
 #'
+#' The simplified data keep the columns that the estimation method reads.  For
+#' most methods that is the standard event columns plus the covariates named
+#' in the model; `est = "vae"` additionally searches subject-constant data
+#' columns during its automated covariate selection, so those candidate
+#' columns are kept, too (see `nlmixr_data_simplify()`).  Changes to any kept
+#' column invalidate the cached fit; changes to dropped columns do not.
+#'
 #' @section Side effects:
 #' When the user's model function body contains `cmt(0) <- value` inside a
 #' `model({...})` block, `tar_nlmixr()` rewrites those lines to
@@ -136,15 +143,23 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table,
       targets::tar_target_raw(
         name = data_simple_name,
         command = substitute(
-          nlmixr_data_simplify(object = object_simple, data = data, table = table, directory = directory),
+          nlmixr_data_simplify(
+            object = object_simple, data = data, table = table,
+            directory = directory, est = est, control = control
+          ),
           list(
             object_simple = as.name(object_simple_name),
             data = data,
             table = table,
-            directory = directory_expr
+            directory = directory_expr,
+            est = est,
+            control = control
           )
         ),
-        packages = "nlmixr2targets"
+        # nlmixr2est so that un-namespaced `control`/`table` expressions
+        # (e.g. `vaeControl(...)`, `tableControl(...)`) evaluate in the
+        # target's session, as they already do in the fit_simple target.
+        packages = c("nlmixr2targets", "nlmixr2est")
       ),
     fit_simple =
       targets::tar_target_raw(

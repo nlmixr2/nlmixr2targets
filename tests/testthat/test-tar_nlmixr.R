@@ -185,6 +185,31 @@ test_that("tar_nlmixr_raw threads the error mode into the fit_simple command", {
   expect_match(cmd_continue, 'error = "continue"', fixed = TRUE)
 })
 
+# Issue #39: est and control must reach the generated data_simple command so
+# that nlmixr_data_simplify() can keep the extra columns method-specific
+# covariate searches (est = "vae") read.
+test_that("tar_nlmixr_raw threads est and control into the data_simple command", {
+  out <- tar_nlmixr_raw(
+    name = "fit_x",
+    object = quote(my_model),
+    data = quote(my_data),
+    est = "vae",
+    control = quote(vaeControl(catCutoff = 0.01)),
+    table = quote(list()),
+    object_simple_name = "fit_x_object_simple",
+    data_simple_name = "fit_x_data_simple",
+    fit_simple_name = "fit_x_fit_simple",
+    env = environment()
+  )
+  cmd <- paste(deparse(out$data_simple$command$expr), collapse = " ")
+  expect_match(cmd, 'est = "vae"', fixed = TRUE)
+  expect_match(cmd, "control = vaeControl(catCutoff = 0.01)", fixed = TRUE)
+  # the control/table expressions may call un-namespaced nlmixr2est
+  # functions (vaeControl(), tableControl()), so the target must load
+  # nlmixr2est like the fit_simple target does
+  expect_true("nlmixr2est" %in% out$data_simple$command$packages)
+})
+
 test_that("tar_nlmixr rejects an unknown error mode", {
   expect_error(
     tar_nlmixr(

@@ -94,6 +94,127 @@ test_that("nlmixr_data_simplify expected errors", {
     regexp = "The following covariate column(s) are missing from the data: 'WT'",
     fixed = TRUE
   )
+  expect_error(
+    nlmixr_data_simplify(
+      data = nlmixr2data::pheno_sd, object = model_simple,
+      directory = .simplify_cache_dir, est = c("saem", "vae")
+    ),
+    regexp = "Must have length 1"
+  )
+})
+
+# est = "vae" searches subject-constant data columns beyond the model's own
+# covariates during its automated covariate selection, so the simplified data
+# must keep those candidate columns or the covariate search runs on a reduced
+# candidate set and the targets cache misses changes to them (#39).
+test_that("nlmixr_data_simplify keeps the vae covariate-search columns", {
+  skip_if_not(
+    "vaeCovariates" %in% getNamespaceExports("nlmixr2est"),
+    message = "nlmixr2est does not provide vaeCovariates()"
+  )
+  # APGR is subject-constant and not a model covariate: kept only for vae
+  expect_equal(
+    names(nlmixr_data_simplify(
+      data = nlmixr2data::pheno_sd, object = model_simple,
+      directory = .simplify_cache_dir, est = "vae"
+    )),
+    c("id", "time", "amt", "dv", "mdv", "evid", "APGR", "WT")
+  )
+  # other estimation methods keep only the model covariates
+  expect_equal(
+    names(nlmixr_data_simplify(
+      data = nlmixr2data::pheno_sd, object = model_simple,
+      directory = .simplify_cache_dir, est = "saem"
+    )),
+    c("id", "time", "amt", "dv", "mdv", "evid", "WT")
+  )
+})
+
+test_that("nlmixr_data_simplify vae drops unsearchable columns with a warning", {
+  skip_if_not(
+    "vaeCovariates" %in% getNamespaceExports("nlmixr2est"),
+    message = "nlmixr2est does not provide vaeCovariates()"
+  )
+  # A time-varying column cannot be searched by vae; it is dropped, and the
+  # exclusion warning the estimation would have raised is raised here (the
+  # estimation step never sees the column).
+  data_time_varying <- nlmixr2data::pheno_sd
+  data_time_varying$tvcov <- seq_len(nrow(data_time_varying))
+  expect_warning(
+    simplified_tv <- nlmixr_data_simplify(
+      data = data_time_varying, object = model_simple,
+      directory = .simplify_cache_dir, est = "vae"
+    ),
+    regexp = "time-varying covariate(s) were excluded",
+    fixed = TRUE
+  )
+  expect_equal(
+    names(simplified_tv),
+    c("id", "time", "amt", "dv", "mdv", "evid", "APGR", "WT")
+  )
+  # Same for a subject-constant column with missing values
+  data_na <- nlmixr2data::pheno_sd
+  data_na$nacov <- ifelse(data_na$ID == 1, NA_real_, 1.5)
+  expect_warning(
+    simplified_na <- nlmixr_data_simplify(
+      data = data_na, object = model_simple,
+      directory = .simplify_cache_dir, est = "vae"
+    ),
+    regexp = "covariate(s) with missing values were excluded",
+    fixed = TRUE
+  )
+  expect_equal(
+    names(simplified_na),
+    c("id", "time", "amt", "dv", "mdv", "evid", "APGR", "WT")
+  )
+})
+
+test_that("nlmixr_data_simplify vae honors the control search options", {
+  skip_if_not(
+    "vaeCovariates" %in% getNamespaceExports("nlmixr2est"),
+    message = "nlmixr2est does not provide vaeCovariates()"
+  )
+  # Two-level flag whose rare level is held by 1 of 59 subjects: below the
+  # default catCutoff (0.05) it is untestable, so the column is not a
+  # candidate and is dropped
+  data_flag <- nlmixr2data::pheno_sd
+  data_flag$FLAG <- ifelse(data_flag$ID == 1, "rare", "common")
+  expect_equal(
+    names(nlmixr_data_simplify(
+      data = data_flag, object = model_simple,
+      directory = .simplify_cache_dir, est = "vae"
+    )),
+    c("id", "time", "amt", "dv", "mdv", "evid", "APGR", "WT")
+  )
+  # A lower catCutoff makes the level testable and the column a candidate; a
+  # plain-list control is normalized the same way nlmixr2est normalizes it
+  expect_equal(
+    names(nlmixr_data_simplify(
+      data = data_flag, object = model_simple,
+      directory = .simplify_cache_dir, est = "vae",
+      control = list(catCutoff = 0.01)
+    )),
+    c("id", "time", "amt", "dv", "mdv", "evid", "APGR", "FLAG", "WT")
+  )
+  # ... and so is a full vaeControl object
+  expect_equal(
+    names(nlmixr_data_simplify(
+      data = data_flag, object = model_simple,
+      directory = .simplify_cache_dir, est = "vae",
+      control = nlmixr2est::vaeControl(catCutoff = 0.01)
+    )),
+    c("id", "time", "amt", "dv", "mdv", "evid", "APGR", "FLAG", "WT")
+  )
+  # A control object of the wrong class falls back to the default control,
+  # mirroring nlmixr2est::getValidNlmixrCtl.vae()
+  expect_equal(
+    names(nlmixr_data_simplify(
+      data = data_flag, object = model_simple,
+      directory = .simplify_cache_dir, est = "vae",
+      control = structure(list(catCutoff = 0.01), class = "saemControl")
+    )),
+    c("id", "time", "amt", "dv", "mdv", "evid", "APGR", "WT")
+  )
 })
 
 test_that("nlmixr_object_simplify_zero_initial", {

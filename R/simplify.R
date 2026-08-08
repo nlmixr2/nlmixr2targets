@@ -430,6 +430,18 @@ nlmixr_object_zero_initial_eval <- function(expr, envir = parent.frame()) {
 #' alphabetically sorted covariates), and rxode2 and nlmixr2 column names are
 #' converted to lower case.
 #'
+#' `est` and `control` only affect which columns are kept: with the default
+#' `est = NULL`, or any estimation method other than `"vae"`, the standard
+#' and model covariate columns above are all that is kept.  When
+#' `est = "vae"`, the automated covariate selection searches
+#' subject-constant data columns beyond the covariates named in the model, so
+#' the candidate columns reported by `nlmixr2est::vaeCovariates()` (honoring
+#' the `shapes`, `covCenterType`, `covCenter`, and `catCutoff` settings in
+#' `control`) are kept as well.  Columns the search cannot use (for example
+#' time-varying or partially-missing columns) are still dropped; the exclusion
+#' warnings that `nlmixr2est::nlmixr()` would raise for them are raised here
+#' instead, because the estimation step never sees the dropped columns.
+#'
 #' @inheritParams nlmixr2est::nlmixr
 #' @inheritParams nlmixr2_indirect
 #' @param object Either an `nlmixr` ui object (e.g. the output of running
@@ -441,9 +453,11 @@ nlmixr_object_zero_initial_eval <- function(expr, envir = parent.frame()) {
 #' @family Simplifiers
 #' @export
 nlmixr_data_simplify <- function(data, object, table = list(),
-                                 directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) {
+                                 directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"),
+                                 est = NULL, control = NULL) {
   checkmate::assert_data_frame(data)
   checkmate::assert_list(table)
+  checkmate::assert_string(est, null.ok = TRUE)
   # `object` is either a character md5 hash (the form used by generated
   # targets) or an nlmixr-style ui / fit object. Tibbles are valid because
   # nlmixr2 fits subclass tbl_df with active bindings for `$ui` etc., so a
@@ -486,6 +500,7 @@ nlmixr_data_simplify <- function(data, object, table = list(),
   }
   cov_names <- nlmixr_data_simplify_cols(data, cols = covVec, type = "covariate")
   keep_names <- nlmixr_data_simplify_cols(data, cols = table$keep, type = "keep")
+  est_names <- nlmixr_data_simplify_est_cols(data, est = est, control = control)
   # Simplifying the nlmixr_names column names to always be lower case ensures
   # that upper/lower case column name changes will not affect the need to rerun.
   # Also, standardizing the column name order to always be the same will prevent
@@ -493,7 +508,7 @@ nlmixr_data_simplify <- function(data, object, table = list(),
 
   # Sorting so that they are in order, unique so that duplication between
   # covariates and keep do not try to duplicate columns in the output data.
-  add_col_names <- sort(unique(c(cov_names, keep_names)))
+  add_col_names <- sort(unique(c(cov_names, keep_names, est_names)))
 
   # Drop names from nlmixr_names from the added names
   add_col_names <- setdiff(add_col_names, nlmixr_names)
@@ -513,4 +528,78 @@ nlmixr_data_simplify_cols <- function(data, cols, type) {
     )
   }
   cols
+}
+
+#' Columns an estimation method reads beyond the model's own covariates
+#'
+#' Most estimation methods only use the columns `nlmixr_data_simplify()`
+#' already keeps; a method that reads more of the data gets a case here so
+#' that its extra columns stay in the simplified data (and therefore in the
+#' `targets` cache hash).
+#'
+#' @inheritParams nlmixr_data_simplify
+#' @returns Character vector of additional column names of `data` to keep
+#'   (possibly empty).
+#' @noRd
+nlmixr_data_simplify_est_cols <- function(data, est, control) {
+  if (identical(est, "vae")) {
+    nlmixr_data_simplify_vae_cols(data, control = control)
+  } else {
+    character(0)
+  }
+}
+
+#' The columns of `data` that the vae automated covariate search reads
+#'
+#' @inheritParams nlmixr_data_simplify
+#' @returns Character vector of column names of `data` (in their original
+#'   case) that `est = "vae"` would explore as covariate candidates.
+#' @noRd
+nlmixr_data_simplify_vae_cols <- function(data, control) {
+  if (!("vaeCovariates" %in% getNamespaceExports("nlmixr2est"))) {
+    # nocov start: only reachable with an nlmixr2est too old for est="vae"
+    stop(
+      "est = \"vae\" requires a version of 'nlmixr2est' that provides ",
+      "vaeCovariates(); please update 'nlmixr2est'"
+    )
+    # nocov end
+  }
+  control <- nlmixr_data_simplify_vae_control(control)
+  # warn = TRUE so exclusions (time-varying or partially-missing columns) are
+  # reported here; the estimation step cannot warn about them because the
+  # excluded columns are dropped from the simplified data.
+  vae_candidates <-
+    nlmixr2est::vaeCovariates(
+      data,
+      warn = TRUE,
+      shapes = control$shapes,
+      covCenterType = control$covCenterType,
+      covCenter = control$covCenter,
+      catCutoff = control$catCutoff
+    )
+  # vaeCovariates() matches columns case-insensitively and reports them
+  # upper-cased in `raw`; map back to the actual column names.
+  names(data)[toupper(names(data)) %in% vae_candidates$raw]
+}
+
+#' Normalize a user-supplied `control` for `est = "vae"`
+#'
+#' Mirrors `nlmixr2est::getValidNlmixrCtl.vae()`: `NULL` and unrecognized
+#' control objects become the default `vaeControl()` (nlmixr2est makes the
+#' same substitution, with a message, when the estimation runs), and a plain
+#' list is used as `vaeControl()` arguments.  Matching those rules keeps the
+#' columns kept here in sync with the columns the estimation step searches.
+#'
+#' @inheritParams nlmixr_data_simplify
+#' @returns A `vaeControl` object.
+#' @noRd
+nlmixr_data_simplify_vae_control <- function(control) {
+  if (is.null(control)) {
+    nlmixr2est::vaeControl()
+  } else if (inherits(control, "vaeControl") ||
+               (is.null(attr(control, "class")) && is.list(control))) {
+    do.call(nlmixr2est::vaeControl, as.list(control))
+  } else {
+    nlmixr2est::vaeControl()
+  }
 }
