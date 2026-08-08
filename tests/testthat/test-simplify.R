@@ -477,6 +477,108 @@ test_that("nlmixr_object_complicate works when fit$ui is an environment (no fit$
   expect_identical(out$env$origData, data.frame(x = 11:13))
 })
 
+test_that("nlmixr_object_complicate rebuilds the Parameter column on the cached parameter tables", {
+  # Only lcl carries a label: pins that unlabeled parameters get a blank
+  # (not NA) cell, mirroring how nlmixr2est builds the column.
+  model <- function() {
+    ini({
+      lcl <- log(0.008); label("Typical clearance")
+      cpaddSd <- 0.1
+    })
+    model({
+      cl <- exp(lcl)
+      d/dt(central) <- -cl/1*central
+      cp <- central/1
+      cp ~ add(cpaddSd)
+    })
+  }
+  fit <- list(env = new.env(parent = emptyenv()))
+  fit$env$origData <- data.frame(x = 1:3)
+  ui <- suppressMessages(suppressWarnings(nlmixr2est::nlmixr(model)))
+  ui$iniDf$label <- NA_character_
+  rm(list = ls(envir = ui$meta, all.names = TRUE), envir = ui$meta)
+  fit$ui <- ui
+  # Cached tables as nlmixr2est's .updateParFixed() leaves them when the
+  # labels were stripped at estimation time: no "Parameter" column, and
+  # parFixed formatted (character) with its print class.
+  fit$env$parFixedDf <-
+    data.frame(
+      Estimate = c(-4.8, 0.1),
+      SE = c(0.2, 0.05),
+      `%RSE` = c(4, 50),
+      row.names = c("lcl", "cpaddSd"),
+      check.names = FALSE
+    )
+  fit$env$parFixed <-
+    structure(
+      data.frame(
+        `Est.` = c("-4.8", "0.1"),
+        SE = c("0.2", "0.05"),
+        row.names = c("lcl", "cpaddSd"),
+        check.names = FALSE
+      ),
+      class = c("nlmixr2ParFixed", "data.frame")
+    )
+  out <-
+    nlmixr_object_complicate(
+      fit = fit,
+      object = model,
+      data = data.frame(x = 11:13)
+    )
+  expect_equal(names(out$env$parFixedDf)[1], "Parameter")
+  expect_equal(out$env$parFixedDf$Parameter, c("Typical clearance", ""))
+  expect_equal(names(out$env$parFixed)[1], "Parameter")
+  expect_equal(out$env$parFixed$Parameter, c("Typical clearance", ""))
+  expect_equal(rownames(out$env$parFixed), c("lcl", "cpaddSd"))
+  expect_s3_class(out$env$parFixed, "nlmixr2ParFixed")
+  # A second complicate pass overwrites the column instead of prepending a
+  # duplicate.
+  out2 <-
+    nlmixr_object_complicate(
+      fit = out,
+      object = model,
+      data = data.frame(x = 11:13)
+    )
+  expect_equal(sum(names(out2$env$parFixed) == "Parameter"), 1L)
+  expect_equal(sum(names(out2$env$parFixedDf) == "Parameter"), 1L)
+  expect_equal(out2$env$parFixedDf$Parameter, c("Typical clearance", ""))
+})
+
+test_that("nlmixr_object_complicate leaves the parameter tables alone for a label-free model", {
+  model <- function() {
+    ini({
+      lcl <- log(0.008)
+      cpaddSd <- 0.1
+    })
+    model({
+      cl <- exp(lcl)
+      d/dt(central) <- -cl/1*central
+      cp <- central/1
+      cp ~ add(cpaddSd)
+    })
+  }
+  fit <- list(env = new.env(parent = emptyenv()))
+  fit$env$origData <- data.frame(x = 1:3)
+  ui <- suppressMessages(suppressWarnings(nlmixr2est::nlmixr(model)))
+  rm(list = ls(envir = ui$meta, all.names = TRUE), envir = ui$meta)
+  fit$ui <- ui
+  parFixedDf <-
+    data.frame(
+      Estimate = c(-4.8, 0.1),
+      row.names = c("lcl", "cpaddSd")
+    )
+  fit$env$parFixedDf <- parFixedDf
+  out <-
+    nlmixr_object_complicate(
+      fit = fit,
+      object = model,
+      data = data.frame(x = 11:13)
+    )
+  # No labels anywhere: the table must stay exactly as estimation left it
+  # (in particular, no all-blank "Parameter" column may appear).
+  expect_identical(out$env$parFixedDf, parFixedDf)
+})
+
 test_that("nlmixr_object_complicate errors when no ui is present", {
   # Neither fit$env$ui nor fit$ui — should fail before even touching the
   # source model.

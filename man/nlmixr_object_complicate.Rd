@@ -29,7 +29,12 @@ function and the original data, this function:
 \itemize{
 \item re-derives parameter labels and the metadata environment from
 \code{object} and writes them back onto \code{fit$ui$iniDf$label} and
-\code{fit$ui$meta}, and
+\code{fit$ui$meta},
+\item rebuilds the \code{Parameter} (label) column of the cached parameter
+tables (\code{fit$env$parFixed} and \code{fit$env$parFixedDf}). nlmixr2est
+computes those tables once, at estimation time -- when the labels were
+still stripped -- so restoring \code{iniDf$label} alone would not make the
+labels show when the fit is printed, and
 \item replaces \code{fit$env$origData} with the original \code{data}.
 }
 

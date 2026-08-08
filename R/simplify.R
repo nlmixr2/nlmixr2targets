@@ -72,7 +72,12 @@ nlmixr_object_simplify <- function(object,
 #' \itemize{
 #'   \item re-derives parameter labels and the metadata environment from
 #'   `object` and writes them back onto `fit$ui$iniDf$label` and
-#'   `fit$ui$meta`, and
+#'   `fit$ui$meta`,
+#'   \item rebuilds the `Parameter` (label) column of the cached parameter
+#'   tables (`fit$env$parFixed` and `fit$env$parFixedDf`). nlmixr2est
+#'   computes those tables once, at estimation time -- when the labels were
+#'   still stripped -- so restoring `iniDf$label` alone would not make the
+#'   labels show when the fit is printed, and
 #'   \item replaces `fit$env$origData` with the original `data`.
 #' }
 #'
@@ -154,6 +159,11 @@ nlmixr_object_complicate <- function(fit, object, data) {
   # If fit$ui is itself an environment (fresh rxUi), the env-mode branches
   # have already mutated it in place; nothing more to write back.
 
+  # The parameter tables printing uses (fit$env$parFixed / $parFixedDf) were
+  # baked by nlmixr2est at estimation time from the label-stripped iniDf, so
+  # the label restore above does not reach them; rebuild their label column.
+  nlmixr_object_complicate_parfixed(fit = fit, labels = labels)
+
   # Finally swap in the original data, reusing the existing helper for
   # validation and in-place mutation of fit$env$origData.
   assign_origData(fit = fit, data = data)
@@ -178,6 +188,52 @@ nlmixr_object_complicate_assign <- function(ui, field, value) {
     class(ui) <- cls
     ui
   }
+}
+
+#' Rebuild the "Parameter" label column on a fit's cached parameter tables
+#'
+#' `fit$env$parFixed` and `fit$env$parFixedDf` are computed by nlmixr2est
+#' once, at estimation time, and printing a fit reads these cached tables
+#' rather than re-deriving them from `ui$iniDf`. Mirrors the column
+#' construction in nlmixr2est's `.updateParFixedAddParameterLabel()`:
+#' blank for unlabeled parameters, whitespace-trimmed, prepended as the
+#' first column, and no column at all when every label is blank.
+#'
+#' @param fit An estimated nlmixr2 fit; its `fit$env` is mutated in place.
+#'   Anything without an environment `fit$env` (or without cached tables in
+#'   it) passes through untouched.
+#' @param labels A character vector of labels named by parameter name
+#'   (from the original model's `iniDf`).
+#' @returns Nothing, called for the side effect of updating `fit$env`.
+#' @noRd
+nlmixr_object_complicate_parfixed <- function(fit, labels) {
+  if (!is.environment(fit$env)) {
+    return(invisible(NULL))
+  }
+  for (tableName in c("parFixed", "parFixedDf")) {
+    if (!exists(tableName, envir = fit$env, inherits = FALSE)) next
+    tbl <- get(tableName, envir = fit$env)
+    if (!is.data.frame(tbl)) next
+    # Table rows are the fixed-effect parameters, named by iniDf$name; a
+    # parameter without a label gets a blank, like nlmixr2est prints it.
+    lab <- unname(labels[rownames(tbl)])
+    lab[is.na(lab)] <- ""
+    lab <- gsub(" *$", "", gsub("^ *", "", lab))
+    if ("Parameter" %in% names(tbl)) {
+      tbl$Parameter <- lab
+    } else if (any(lab != "")) {
+      # Unclass/reclass so data.frame() cannot strip the "nlmixr2ParFixed"
+      # print class from fit$env$parFixed.
+      cls <- class(tbl)
+      class(tbl) <- "data.frame"
+      tbl <- data.frame(Parameter = lab, tbl, check.names = FALSE)
+      class(tbl) <- cls
+    } else {
+      next
+    }
+    assign(tableName, tbl, envir = fit$env)
+  }
+  invisible(NULL)
 }
 
 #' Convert initial conditions from cmt(initial) to cmt(0) to work with `targets`
