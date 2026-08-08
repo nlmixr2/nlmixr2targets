@@ -9,7 +9,9 @@ nlmixr_data_simplify(
   data,
   object,
   table = list(),
-  directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")
+  directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"),
+  est = NULL,
+  control = NULL
 )
 ```
 
@@ -44,6 +46,16 @@ nlmixr_data_simplify(
   set via
   [`targets::tar_config_set()`](https://docs.ropensci.org/targets/reference/tar_config_set.html)).
 
+- est:
+
+  estimation method (all methods are shown by \`nlmixr2AllEst()\`).
+  Methods can be added for other tools
+
+- control:
+
+  The estimation control object. These are expected to be different for
+  each type of estimation method
+
 ## Value
 
 The data with the nlmixr2 column lower case and on the left and the
@@ -55,6 +67,21 @@ The standardization keeps columns that rxode2 and nlmixr2 use along with
 the covariates. Column order is standardized (rxode2 then nlmixr2 then
 alphabetically sorted covariates), and rxode2 and nlmixr2 column names
 are converted to lower case.
+
+`est` and `control` only affect which columns are kept: with the default
+`est = NULL`, or any estimation method other than `"vae"`, the standard
+and model covariate columns above are all that is kept. When
+`est = "vae"`, the automated covariate selection searches
+subject-constant data columns beyond the covariates named in the model,
+so the candidate columns reported by
+[`nlmixr2est::vaeCovariates()`](https://nlmixr2.github.io/nlmixr2est/reference/vaeCovariates.html)
+(honoring the `shapes`, `covCenterType`, `covCenter`, and `catCutoff`
+settings in `control`) are kept as well. Columns the search cannot use
+(for example time-varying or partially-missing columns) are still
+dropped; the exclusion warnings that
+[`nlmixr2est::nlmixr()`](https://nlmixr2.github.io/nlmixr2est/reference/nlmixr2.html)
+would raise for them are raised here instead, because the estimation
+step never sees the dropped columns.
 
 ## See also
 

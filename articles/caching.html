@@ -101,7 +101,9 @@ the four targets generated are:</p>
 <td>simplified data frame</td>
 <td>
 <code>&lt;name&gt;_object_simple</code>, the captured
-<code>data</code> expression, the <code>table$keep</code> columns</td>
+<code>data</code> expression, the <code>table$keep</code> columns, and
+<code>est</code>/<code>control</code> (methods like
+<code>est = "vae"</code> also keep their covariate-search columns)</td>
 </tr>
 <tr class="odd">
 <td><code>&lt;name&gt;_fit_simple</code></td>
@@ -145,9 +147,17 @@ do not invalidate the expensive estimation step.</p>
 <span><span class="co">#   re-runs `_data_simple` and `_fit_simple`. `_object_simple` is reused</span></span>
 <span><span class="co">#   if the model didn't change.</span></span>
 <span></span>
+<span><span class="co"># Editing a subject-constant column that the model does not use:</span></span>
+<span><span class="co">#   for most `est` methods nothing re-fits (`_data_simple` re-executes,</span></span>
+<span><span class="co">#   but its value is unchanged, so `_fit_simple` is reused). With</span></span>
+<span><span class="co">#   `est = "vae"` the automated covariate selection searches such</span></span>
+<span><span class="co">#   columns, so they are kept in `_data_simple` and the edit re-runs</span></span>
+<span><span class="co">#   `_fit_simple` too.</span></span>
+<span></span>
 <span><span class="co"># Changing `est` or `control`:</span></span>
-<span><span class="co">#   re-runs `_fit_simple` and the final target. `_object_simple` and</span></span>
-<span><span class="co">#   `_data_simple` are reused.</span></span></code></pre></div>
+<span><span class="co">#   re-runs the cheap `_data_simple` (they determine the columns kept</span></span>
+<span><span class="co">#   for method-specific covariate searches, e.g. `est = "vae"`) and the</span></span>
+<span><span class="co">#   `_fit_simple` and final targets. `_object_simple` is reused.</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="inspecting-and-pruning-the-indirect-cache">Inspecting and pruning the indirect cache<a class="anchor" aria-label="anchor" href="#inspecting-and-pruning-the-indirect-cache"></a>

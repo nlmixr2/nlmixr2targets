@@ -126,6 +126,15 @@ and
 To see how to write initial conditions to work with targets, see
 [`nlmixr_object_simplify()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_object_simplify.md).
 
+The simplified data keep the columns that the estimation method reads.
+For most methods that is the standard event columns plus the covariates
+named in the model; `est = "vae"` additionally searches subject-constant
+data columns during its automated covariate selection, so those
+candidate columns are kept, too (see
+[`nlmixr_data_simplify()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_data_simplify.md)).
+Changes to any kept column invalidate the cached fit; changes to dropped
+columns do not.
+
 ## Functions
 
 - `tar_nlmixr_raw()`: An internal function to generate the targets
@@ -226,7 +235,8 @@ tar_nlmixr(
 #>   command:
 #>     nlmixr_data_simplify(object = pheno_model_object_simple, 
 #>         data = nlmixr2data::pheno_sd, table = nlmixr2est::tableControl(), 
-#>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) 
+#>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"), 
+#>         est = "saem", control = list()) 
 #>   format: rds 
 #>   repository: local 
 #>   iteration method: vector 
@@ -248,7 +258,8 @@ tar_nlmixr(
 #>     command: TRUE
 #>     mode: thorough 
 #>   packages:
-#>     nlmixr2targets 
+#>     nlmixr2targets
+#>     nlmixr2est 
 #>   library:
 #>     NULL
 #> $fit_simple

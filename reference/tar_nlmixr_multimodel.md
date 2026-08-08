@@ -188,7 +188,8 @@ tar_nlmixr_multimodel(
 #>   command:
 #>     nlmixr_data_simplify(object = all_models_8ae20c5c_object_simple, 
 #>         data = nlmixr2data::pheno_sd, table = nlmixr2est::tableControl(), 
-#>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) 
+#>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"), 
+#>         est = "saem", control = list()) 
 #>   format: rds 
 #>   repository: local 
 #>   iteration method: vector 
@@ -210,7 +211,8 @@ tar_nlmixr_multimodel(
 #>     command: TRUE
 #>     mode: thorough 
 #>   packages:
-#>     nlmixr2targets 
+#>     nlmixr2targets
+#>     nlmixr2est 
 #>   library:
 #>     NULL
 #> [[1]]$fit_simple
@@ -318,7 +320,8 @@ tar_nlmixr_multimodel(
 #>   command:
 #>     nlmixr_data_simplify(object = all_models_b0a374c4_object_simple, 
 #>         data = nlmixr2data::pheno_sd, table = nlmixr2est::tableControl(), 
-#>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) 
+#>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"), 
+#>         est = "saem", control = list()) 
 #>   format: rds 
 #>   repository: local 
 #>   iteration method: vector 
@@ -340,7 +343,8 @@ tar_nlmixr_multimodel(
 #>     command: TRUE
 #>     mode: thorough 
 #>   packages:
-#>     nlmixr2targets 
+#>     nlmixr2targets
+#>     nlmixr2est 
 #>   library:
 #>     NULL
 #> [[2]]$fit_simple

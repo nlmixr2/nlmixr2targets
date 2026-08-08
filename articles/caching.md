@@ -19,7 +19,7 @@ generated are:
 | Target | Stores | Hashed inputs |
 |----|----|----|
 | `<name>_object_simple` | md5 string identifying the simplified ui in the indirect cache | the captured `object` expression |
-| `<name>_data_simple` | simplified data frame | `<name>_object_simple`, the captured `data` expression, the `table$keep` columns |
+| `<name>_data_simple` | simplified data frame | `<name>_object_simple`, the captured `data` expression, the `table$keep` columns, and `est`/`control` (methods like `est = "vae"` also keep their covariate-search columns) |
 | `<name>_fit_simple` | fitted nlmixr2 object | `<name>_object_simple`, `<name>_data_simple`, `est`, `control` |
 | `<name>` | final fit, with labels and metadata restored | `<name>_fit_simple`, the captured `object` (re-read for labels), `data` |
 
@@ -47,9 +47,17 @@ estimation step.
 #   re-runs `_data_simple` and `_fit_simple`. `_object_simple` is reused
 #   if the model didn't change.
 
+# Editing a subject-constant column that the model does not use:
+#   for most `est` methods nothing re-fits (`_data_simple` re-executes,
+#   but its value is unchanged, so `_fit_simple` is reused). With
+#   `est = "vae"` the automated covariate selection searches such
+#   columns, so they are kept in `_data_simple` and the edit re-runs
+#   `_fit_simple` too.
+
 # Changing `est` or `control`:
-#   re-runs `_fit_simple` and the final target. `_object_simple` and
-#   `_data_simple` are reused.
+#   re-runs the cheap `_data_simple` (they determine the columns kept
+#   for method-specific covariate searches, e.g. `est = "vae"`) and the
+#   `_fit_simple` and final targets. `_object_simple` is reused.
 ```
 
 ## Inspecting and pruning the indirect cache

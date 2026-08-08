@@ -4,6 +4,19 @@
 
 ### Bug fixes
 
+- Fits with `est = "vae"` are now cached correctly: the simplified
+  dataset keeps the subject-constant columns that vae’s automated
+  covariate selection searches (as reported by
+  [`nlmixr2est::vaeCovariates()`](https://nlmixr2.github.io/nlmixr2est/reference/vaeCovariates.html),
+  honoring the search-related `control` options), not just the
+  covariates named in the model. Previously those candidate columns were
+  dropped, so the covariate search ran on a reduced candidate set and
+  editing such a column did not invalidate the cached fit
+  ([\#39](https://github.com/nlmixr2/nlmixr2targets/issues/39)).
+  Existing `_data_simple` targets will re-run once after upgrading
+  because their command changed; downstream fit targets only re-run if
+  the simplified data actually change.
+
 - Parameter labels set with `label()` now show when printing a fit
   produced by
   [`tar_nlmixr()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
