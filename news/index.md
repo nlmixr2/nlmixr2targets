@@ -4,6 +4,20 @@
 
 ### Bug fixes
 
+- Parameter labels set with `label()` now show when printing a fit
+  produced by
+  [`tar_nlmixr()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
+  or
+  [`tar_nlmixr_multimodel()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel.md).
+  The labels are stripped before estimation (so that label-only edits do
+  not invalidate the cached fit), and nlmixr2est bakes the printed
+  parameter table at estimation time, so the final fit’s table lacked
+  its `Parameter` column even though the labels were restored on
+  `fit$ui`.
+  [`nlmixr_object_complicate()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_object_complicate.md)
+  now also rebuilds the label column on the cached
+  `parFixed`/`parFixedDf` tables.
+
 - [`tar_nlmixr_multimodel()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel.md)
   no longer fails when a model function that declares compartment
   initial conditions with `cmt(0) <- value` is both fit directly and

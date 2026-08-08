@@ -43,8 +43,8 @@
 <h2 class="pkg-version" data-toc-text="0.1.0.9000" id="nlmixr2targets-0109000">nlmixr2targets 0.1.0.9000<a class="anchor" aria-label="anchor" href="#nlmixr2targets-0109000"></a></h2>
 <div class="section level3">
 <h3 id="bug-fixes-0-1-0-9000">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-1-0-9000"></a></h3>
-<ul><li>
-<code><a href="../reference/tar_nlmixr_multimodel.html">tar_nlmixr_multimodel()</a></code> no longer fails when a model function that declares compartment initial conditions with <code>cmt(0) &lt;- value</code> is both fit directly and piped through <code>ini()</code>/<code>model()</code> in the same call (e.g. <code>"myfit" = mod</code> alongside <code>"myfit pipe" = mod |&gt; ini(a &lt;- 2)</code>). Sharing the model function between entries previously left the piped entry’s command referencing the internal <code>cmt(initial)</code> form, which nlmixr2 rejects (<a href="https://github.com/nlmixr2/nlmixr2targets/issues/37" class="external-link">#37</a>).</li>
+<ul><li><p>Parameter labels set with <code>label()</code> now show when printing a fit produced by <code><a href="../reference/tar_nlmixr.html">tar_nlmixr()</a></code> or <code><a href="../reference/tar_nlmixr_multimodel.html">tar_nlmixr_multimodel()</a></code>. The labels are stripped before estimation (so that label-only edits do not invalidate the cached fit), and nlmixr2est bakes the printed parameter table at estimation time, so the final fit’s table lacked its <code>Parameter</code> column even though the labels were restored on <code>fit$ui</code>. <code><a href="../reference/nlmixr_object_complicate.html">nlmixr_object_complicate()</a></code> now also rebuilds the label column on the cached <code>parFixed</code>/<code>parFixedDf</code> tables.</p></li>
+<li><p><code><a href="../reference/tar_nlmixr_multimodel.html">tar_nlmixr_multimodel()</a></code> no longer fails when a model function that declares compartment initial conditions with <code>cmt(0) &lt;- value</code> is both fit directly and piped through <code>ini()</code>/<code>model()</code> in the same call (e.g. <code>"myfit" = mod</code> alongside <code>"myfit pipe" = mod |&gt; ini(a &lt;- 2)</code>). Sharing the model function between entries previously left the piped entry’s command referencing the internal <code>cmt(initial)</code> form, which nlmixr2 rejects (<a href="https://github.com/nlmixr2/nlmixr2targets/issues/37" class="external-link">#37</a>).</p></li>
 </ul></div>
 <div class="section level3">
 <h3 id="new-features-0-1-0-9000">New features<a class="anchor" aria-label="anchor" href="#new-features-0-1-0-9000"></a></h3>
@@ -69,7 +69,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

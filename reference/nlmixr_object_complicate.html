@@ -84,7 +84,12 @@ fit, mirroring <code><a href="assign_origData.html">assign_origData()</a></code>
 
 <ul><li><p>re-derives parameter labels and the metadata environment from
 <code>object</code> and writes them back onto <code>fit$ui$iniDf$label</code> and
-<code>fit$ui$meta</code>, and</p></li>
+<code>fit$ui$meta</code>,</p></li>
+<li><p>rebuilds the <code>Parameter</code> (label) column of the cached parameter
+tables (<code>fit$env$parFixed</code> and <code>fit$env$parFixedDf</code>). nlmixr2est
+computes those tables once, at estimation time – when the labels were
+still stripped – so restoring <code>iniDf$label</code> alone would not make the
+labels show when the fit is printed, and</p></li>
 <li><p>replaces <code>fit$env$origData</code> with the original <code>data</code>.</p></li>
 </ul><p>This is what makes label/meta edits in the source model cheap under
 <code>targets</code>: the cache hash for the simplified model object is independent
@@ -111,7 +116,7 @@ command for the final target produced by <code><a href="tar_nlmixr.html">tar_nlm
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

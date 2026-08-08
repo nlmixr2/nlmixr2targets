@@ -37,7 +37,13 @@ The modified `fit`.
 ## Details
 
 - re-derives parameter labels and the metadata environment from `object`
-  and writes them back onto `fit$ui$iniDf$label` and `fit$ui$meta`, and
+  and writes them back onto `fit$ui$iniDf$label` and `fit$ui$meta`,
+
+- rebuilds the `Parameter` (label) column of the cached parameter tables
+  (`fit$env$parFixed` and `fit$env$parFixedDf`). nlmixr2est computes
+  those tables once, at estimation time – when the labels were still
+  stripped – so restoring `iniDf$label` alone would not make the labels
+  show when the fit is printed, and
 
 - replaces `fit$env$origData` with the original `data`.
 
