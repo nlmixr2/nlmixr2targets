@@ -111,14 +111,18 @@ tar_nlmixr <- function(name, object, data, est = NULL, control = list(),
 #'   use for the simplified object, simplified data, fit of the simplified
 #'   object with the simplified data, and fit with the original data
 #'   re-inserted.
+#' @param description Human-readable name for the model, announced by the
+#'   estimation target when it starts to run.  `NULL` (the default) announces
+#'   nothing.
 #' @export
 tar_nlmixr_raw <- function(name, object, data, est, control, table,
                            object_simple_name, data_simple_name, fit_simple_name, env,
-                           error = "stop") {
+                           error = "stop", description = NULL) {
   checkmate::assert_character(name, len = 1, min.chars = 1, any.missing = FALSE)
   checkmate::assert_character(object_simple_name, len = 1, min.chars = 1, any.missing = FALSE)
   checkmate::assert_character(data_simple_name, len = 1, min.chars = 1, any.missing = FALSE)
   checkmate::assert_choice(error, choices = c("stop", "continue"))
+  checkmate::assert_string(description, min.chars = 1, null.ok = TRUE)
 
   object <- tar_nlmixr_protect_zero_initial(object, env = env)
 
@@ -128,6 +132,35 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table,
   # resolves at target-execution time, so the cache always sits inside
   # whatever store the user has configured for their `tar_make()` call.
   directory_expr <- quote(file.path(targets::tar_config_get("store"), "user/nlmixr2"))
+
+  fit_simple_command <-
+    substitute(
+      nlmixr2_indirect(
+        object = object_simple_name,
+        data = data_simple_name,
+        est = est,
+        control = control,
+        directory = directory,
+        error = error
+      ),
+      list(
+        object_simple_name = as.name(object_simple_name),
+        data_simple_name = as.name(data_simple_name),
+        est = est,
+        control = control,
+        table = table,
+        directory = directory_expr,
+        error = error
+      )
+    )
+  # `targets` decides whether a target is out of date by hashing the deparsed
+  # command.  Hashing the description-free command (what `tar_target_raw()`
+  # would have produced on its own) keeps a renamed model from re-running its
+  # fit; `string` exists for exactly this kind of external control.
+  fit_simple_string <- targets::tar_deparse_language(as.expression(fit_simple_command))
+  if (!is.null(description)) {
+    fit_simple_command$description <- description
+  }
 
   list(
     object_simple =
@@ -164,25 +197,8 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table,
     fit_simple =
       targets::tar_target_raw(
         name = fit_simple_name,
-        command = substitute(
-          nlmixr2_indirect(
-            object = object_simple_name,
-            data = data_simple_name,
-            est = est,
-            control = control,
-            directory = directory,
-            error = error
-          ),
-          list(
-            object_simple_name = as.name(object_simple_name),
-            data_simple_name = as.name(data_simple_name),
-            est = est,
-            control = control,
-            table = table,
-            directory = directory_expr,
-            error = error
-          )
-        ),
+        command = fit_simple_command,
+        string = fit_simple_string,
         packages = "nlmixr2est"
       ),
     fit =

@@ -87,9 +87,8 @@ tar_nlmixr_multimodel_parse <- function(name, data, est, control, table, model_l
   checkmate::assert_environment(env)
 
   ret_prep <-
-    lapply(
-      X = model_list,
-      FUN = tar_nlmixr_multimodel_single,
+    tar_nlmixr_multimodel_prep(
+      model_list = model_list,
       name = name,
       data = data,
       est = est,
@@ -138,9 +137,8 @@ tar_nlmixr_multimodel_parse <- function(name, data, est, control, table, model_l
     model_list[names(model_list_fewer_self_ref)] <- model_list_fewer_self_ref
     # Update the possibly-not-self-referential models
     ret_prep[names(model_list_fewer_self_ref)] <-
-      lapply(
-        X = model_list[names(model_list_fewer_self_ref)],
-        FUN = tar_nlmixr_multimodel_single,
+      tar_nlmixr_multimodel_prep(
+        model_list = model_list[names(model_list_fewer_self_ref)],
         name = name,
         data = data,
         est = est,
@@ -250,12 +248,39 @@ tar_nlmixr_multimodel_remove_self_reference_single <- function(model, name_map) 
   model
 }
 
+#' Generate the target sets for every model in a model list
+#'
+#' The name of each `model_list` element becomes that model's description, so
+#' the estimation target can announce which model it is running.
+#'
+#' @inheritParams tar_nlmixr_multimodel_parse
+#' @keywords Internal
+tar_nlmixr_multimodel_prep <- function(model_list, name, data, est, control, table, env, error = "stop") {
+  mapply(
+    FUN = tar_nlmixr_multimodel_single,
+    object = model_list,
+    description = names(model_list),
+    MoreArgs = list(
+      name = name,
+      data = data,
+      est = est,
+      control = control,
+      table = table,
+      env = env,
+      error = error
+    ),
+    SIMPLIFY = FALSE
+  )
+}
+
 #' Generate a single nlmixr multimodel target set for one model
 #'
 #' @inheritParams tar_nlmixr_multimodel
 #' @inheritParams tar_nlmixr
+#' @inheritParams tar_nlmixr_raw
 #' @keywords Internal
-tar_nlmixr_multimodel_single <- function(object, name, data, est, control, table, env, error = "stop") {
+tar_nlmixr_multimodel_single <- function(object, name, data, est, control, table, env, error = "stop",
+                                         description = NULL) {
   # Trade-off: Running digest() on the call (object) will rerun the model if the
   # function name changes even if the underlying model does not change.  Running
   # digest on the evaluated call (eval(object, envir = env)) will not rerun if
@@ -280,7 +305,8 @@ tar_nlmixr_multimodel_single <- function(object, name, data, est, control, table
       data_simple_name = paste0(name_hash, "_data_simple"),
       fit_simple_name = paste0(name_hash, "_fit_simple"),
       env = env,
-      error = error
+      error = error,
+      description = description
     )
   list(
     target = tar_prep,

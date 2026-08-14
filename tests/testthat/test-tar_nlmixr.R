@@ -185,6 +185,122 @@ test_that("tar_nlmixr_raw threads the error mode into the fit_simple command", {
   expect_match(cmd_continue, 'error = "continue"', fixed = TRUE)
 })
 
+test_that("tar_nlmixr_raw threads the description into the fit_simple command", {
+  out_none <- tar_nlmixr_raw(
+    name = "fit_x",
+    object = quote(my_model),
+    data = quote(my_data),
+    est = "saem",
+    control = quote(list()),
+    table = quote(list()),
+    object_simple_name = "fit_x_object_simple",
+    data_simple_name = "fit_x_data_simple",
+    fit_simple_name = "fit_x_fit_simple",
+    env = environment()
+  )
+  cmd_none <- paste(deparse(out_none$fit_simple$command$expr), collapse = " ")
+  expect_false(grepl("description", cmd_none, fixed = TRUE))
+
+  out_described <- tar_nlmixr_raw(
+    name = "fit_x",
+    object = quote(my_model),
+    data = quote(my_data),
+    est = "saem",
+    control = quote(list()),
+    table = quote(list()),
+    object_simple_name = "fit_x_object_simple",
+    data_simple_name = "fit_x_data_simple",
+    fit_simple_name = "fit_x_fit_simple",
+    env = environment(),
+    description = "Base model"
+  )
+  cmd_described <- paste(deparse(out_described$fit_simple$command$expr), collapse = " ")
+  expect_match(cmd_described, 'description = "Base model"', fixed = TRUE)
+
+  # Only the fit_simple target announces itself.
+  expect_false(grepl("description", paste(deparse(out_described$object_simple$command$expr), collapse = " "), fixed = TRUE))
+  expect_false(grepl("description", paste(deparse(out_described$data_simple$command$expr), collapse = " "), fixed = TRUE))
+  expect_false(grepl("description", paste(deparse(out_described$fit$command$expr), collapse = " "), fixed = TRUE))
+
+  # Dependency detection is unaffected by the added argument.
+  expect_true("fit_x_object_simple" %in% targets::tar_deps_raw(out_described$fit_simple$command$expr))
+  expect_true("fit_x_data_simple" %in% targets::tar_deps_raw(out_described$fit_simple$command$expr))
+})
+
+described_fit_simple <- function(description) {
+  tar_nlmixr_raw(
+    name = "fit_x",
+    object = quote(my_model),
+    data = quote(my_data),
+    est = "saem",
+    control = quote(list()),
+    table = quote(list()),
+    object_simple_name = "fit_x_object_simple",
+    data_simple_name = "fit_x_data_simple",
+    fit_simple_name = "fit_x_fit_simple",
+    env = environment(),
+    description = description
+  )$fit_simple
+}
+
+# The description is a label, so a rename must not invalidate a fit that may
+# have taken hours. `tar_target_raw(string = )` keeps targets hashing the
+# command as though `description` were absent.
+test_that("tar_nlmixr_raw keeps the description out of the fit_simple hash", {
+  none <- described_fit_simple(NULL)
+  first <- described_fit_simple("Base model")
+  renamed <- described_fit_simple("Base model, renamed")
+
+  expect_identical(first$command$string, none$command$string)
+  expect_identical(first$command$hash, none$command$hash)
+  expect_identical(renamed$command$hash, none$command$hash)
+  # The undescribed hash must match what targets computes on its own, so
+  # upgrading does not invalidate existing pipelines.
+  expect_identical(
+    none$command$hash,
+    targets::tar_target_raw(
+      name = "fit_x_fit_simple",
+      command = none$command$expr[[1]],
+      packages = "nlmixr2est"
+    )$command$hash
+  )
+})
+
+test_that("tar_nlmixr_raw rejects a malformed description", {
+  expect_error(
+    tar_nlmixr_raw(
+      name = "fit_x",
+      object = quote(my_model),
+      data = quote(my_data),
+      est = "saem",
+      control = quote(list()),
+      table = quote(list()),
+      object_simple_name = "fit_x_object_simple",
+      data_simple_name = "fit_x_data_simple",
+      fit_simple_name = "fit_x_fit_simple",
+      env = environment(),
+      description = c("a", "b")
+    ),
+    regexp = "description"
+  )
+  expect_error(
+    tar_nlmixr_raw(
+      name = "fit_x",
+      object = quote(my_model),
+      data = quote(my_data),
+      est = "saem",
+      control = quote(list()),
+      table = quote(list()),
+      object_simple_name = "fit_x_object_simple",
+      data_simple_name = "fit_x_data_simple",
+      fit_simple_name = "fit_x_fit_simple",
+      env = environment(),
+      description = ""
+    ),
+    regexp = "description"
+  )
+})
+
 # Issue #39: est and control must reach the generated data_simple command so
 # that nlmixr_data_simplify() can keep the extra columns method-specific
 # covariate searches (est = "vae") read.

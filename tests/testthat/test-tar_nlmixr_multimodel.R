@@ -213,6 +213,12 @@ test_that("tar_nlmixr_multimodel wraps piped entries that reference a shared cmt
   expect_true(is_wrapped(target_list[[2]]))
 })
 
+# The `description` argument spliced into a model's nlmixr2_indirect() call,
+# or NULL when the model does not announce itself.
+fit_simple_description <- function(single_target) {
+  single_target$fit_simple$command$expr[[1]][["description"]]
+}
+
 # Issue #37 x #19: a self-reference pipe (`fit_pipe[["myfit"]] |> ini(...)`)
 # whose base model carries cmt(0) must NOT be wrapped in
 # nlmixr_object_zero_initial_eval(). The self-reference resolves to the base
@@ -259,6 +265,105 @@ test_that("tar_nlmixr_multimodel does not wrap a self-reference pipe over a cmt(
     target_list[[1]]$fit_simple$settings$name %in%
       targets::tar_deps_raw(target_list[[2]]$object_simple$command$expr)
   )
+  # Self-reference resolution rebuilds the affected targets; the descriptions
+  # must survive that rebuild.
+  expect_equal(fit_simple_description(target_list[[1]]), "myfit")
+  expect_equal(fit_simple_description(target_list[[2]]), "myfit pipe")
+})
+
+# Without this, tar_make() reports only the hashed target names, which say
+# nothing about which model is running.
+test_that("tar_nlmixr_multimodel announces each model by its list name", {
+  pheno <- function() {
+    ini({
+      lcl <- log(0.008)
+      lvc <- log(0.6)
+      cpaddSd <- 0.1
+    })
+    model({
+      cl <- exp(lcl)
+      vc <- exp(lvc)
+      d/dt(central) <- -(cl/vc)*central
+      cp <- central/vc
+      cp ~ add(cpaddSd)
+    })
+  }
+  pheno2 <- function() {
+    ini({
+      lcl <- log(0.008)
+      lvc <- log(0.6)
+      cpaddSd <- 3.0
+    })
+    model({
+      cl <- exp(lcl)
+      vc <- exp(lvc)
+      d/dt(central) <- -(cl/vc)*central
+      cp <- central/vc
+      cp ~ add(cpaddSd)
+    })
+  }
+
+  target_list <-
+    tar_nlmixr_multimodel(
+      name = foo, data = nlmixr2data::pheno_sd, est = "saem",
+      "my first model" = pheno,
+      "my second model" = pheno2
+    )
+  expect_equal(fit_simple_description(target_list[[1]]), "my first model")
+  expect_equal(fit_simple_description(target_list[[2]]), "my second model")
+
+  # Renaming the models must not re-run their fits: same target names, same
+  # command hashes.
+  renamed <-
+    tar_nlmixr_multimodel(
+      name = foo, data = nlmixr2data::pheno_sd, est = "saem",
+      "my first model, renamed" = pheno,
+      "my second model, renamed" = pheno2
+    )
+  expect_equal(fit_simple_description(renamed[[1]]), "my first model, renamed")
+  for (idx in 1:2) {
+    expect_identical(
+      renamed[[idx]]$fit_simple$settings$name,
+      target_list[[idx]]$fit_simple$settings$name
+    )
+    expect_identical(
+      renamed[[idx]]$fit_simple$command$hash,
+      target_list[[idx]]$fit_simple$command$hash
+    )
+  }
+})
+
+targets::tar_test("tar_nlmixr_multimodel announces the model when tar_make() runs it", {
+  targets::tar_script({
+    pheno <- function() {
+      ini({
+        lcl <- log(0.008)
+        lvc <- log(0.6)
+        etalcl ~ 1
+        cpaddSd <- 0.1
+      })
+      model({
+        cl <- exp(lcl + etalcl)
+        vc <- exp(lvc)
+        d/dt(central) <- -(cl/vc)*central
+        cp <- central/vc
+        cp ~ add(cpaddSd)
+      })
+    }
+    nlmixr2targets::tar_nlmixr_multimodel(
+      name = all_models, data = nlmixr2data::pheno_sd, est = "saem",
+      control = nlmixr2est::saemControl(nBurn = 1, nEm = 1),
+      "my first model" = pheno
+    )
+  })
+  # `tar_test()` wraps its body in suppressMessages(), so capture with a
+  # calling handler (which runs first) rather than by sinking the message
+  # stream (which the outer muffle would have already emptied).
+  output <-
+    testthat::capture_messages(
+      suppressWarnings(targets::tar_make(callr_function = NULL))
+    )
+  expect_true(any(grepl("Model description: my first model", output, fixed = TRUE)))
 })
 
 targets::tar_test("tar_nlmixr_multimodel fits a piped entry sharing a cmt(0) model end-to-end (#37)", {

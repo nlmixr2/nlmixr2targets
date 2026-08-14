@@ -193,6 +193,45 @@ targets::tar_test("nlmixr2_indirect re-throws when error = 'stop' (the default)"
   )
 })
 
+# tar_nlmixr_multimodel() names its targets after a hash of the model, so the
+# announcement is the only way to tell which model tar_make() is running.
+targets::tar_test("nlmixr2_indirect announces the model description before estimating", {
+  save_nlmixr2obj_indirect(list(md5 = "hh", marker = "x"))
+  testthat::local_mocked_bindings(
+    nlmixr = function(object, data, est, control) {
+      message("estimating")
+      "fit"
+    },
+    .package = "nlmixr2est"
+  )
+
+  expect_message(
+    nlmixr2_indirect(
+      object = "hh", data = mtcars, est = "saem", control = list(),
+      description = "my first model"
+    ),
+    regexp = "Model description: my first model", fixed = TRUE
+  )
+  # The announcement comes before estimation starts, not after it finishes.
+  messages <-
+    conditionMessage(
+      testthat::capture_message(
+        nlmixr2_indirect(
+          object = "hh", data = mtcars, est = "saem", control = list(),
+          description = "my first model"
+        )
+      )
+    )
+  expect_identical(messages, "Model description: my first model\n")
+
+  # No description (e.g. from tar_nlmixr()) announces nothing.
+  quiet <-
+    testthat::capture_messages(
+      nlmixr2_indirect(object = "hh", data = mtcars, est = "saem", control = list())
+    )
+  expect_identical(quiet, "estimating\n")
+})
+
 test_that("nlmixr2_indirect rejects an unknown error mode", {
   expect_error(
     nlmixr2_indirect(
