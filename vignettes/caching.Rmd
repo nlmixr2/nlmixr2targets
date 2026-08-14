@@ -67,6 +67,11 @@ invalidate the expensive estimation step.
 #   re-runs the cheap `_data_simple` (they determine the columns kept
 #   for method-specific covariate searches, e.g. `est = "vae"`) and the
 #   `_fit_simple` and final targets. `_object_simple` is reused.
+
+# Renaming a `tar_nlmixr_multimodel()` entry:
+#   only re-runs the cheap combining target that collects the fits into a
+#   named list. The name is the description that `_fit_simple` announces
+#   when it runs, and it is deliberately excluded from that target's hash.
 ```
 
 # Inspecting and pruning the indirect cache

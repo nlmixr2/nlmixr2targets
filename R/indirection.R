@@ -25,6 +25,7 @@
 #'   running `tar_make()` (e.g. a `tempdir()` location set via
 #'   `targets::tar_config_set()`).
 #' @inheritParams tar_nlmixr
+#' @inheritParams tar_nlmixr_raw
 #' @returns An nlmixr2 fit object, as returned by [nlmixr2est::nlmixr()]. When
 #'   `error = "continue"` and the estimation step fails, a failure sentinel of
 #'   class `nlmixr2targetsError` (which also inherits from `"try-error"`) is
@@ -33,8 +34,14 @@
 #' @export
 nlmixr2_indirect <- function(object, data, est, control,
                              directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"),
-                             error = c("stop", "continue")) {
+                             error = c("stop", "continue"), description = NULL) {
   error <- match.arg(error)
+  if (!is.null(description)) {
+    # `tar_nlmixr_multimodel()` names its targets after a hash of the model, so
+    # the description is the only way to tell from the console which model is
+    # being estimated.
+    message("Model description: ", description)
+  }
   # Cache misses are infrastructure errors (the upstream `_object_simple`
   # target is supposed to have written this hash), so they are deliberately
   # left outside the tryCatch below: `error = "continue"` is for *model*

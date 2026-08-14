@@ -27,7 +27,8 @@ tar_nlmixr_raw(
   data_simple_name,
   fit_simple_name,
   env,
-  error = "stop"
+  error = "stop",
+  description = NULL
 )
 }
 \arguments{
@@ -89,6 +90,10 @@ with \code{inherits(fit, "nlmixr2targetsError")} or the broader
 use for the simplified object, simplified data, fit of the simplified
 object with the simplified data, and fit with the original data
 re-inserted.}
+
+\item{description}{Human-readable name for the model, announced by the
+estimation target when it starts to run.  \code{NULL} (the default) announces
+nothing.}
 }
 \value{
 A list of targets for the model simplification, data simplification,

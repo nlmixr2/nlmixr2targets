@@ -10,7 +10,8 @@ nlmixr2_indirect(
   est,
   control,
   directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"),
-  error = c("stop", "continue")
+  error = c("stop", "continue"),
+  description = NULL
 )
 }
 \arguments{
@@ -39,6 +40,10 @@ inherits from \code{"try-error"}) carrying the error message, so a single
 failed model does not stop the rest of the pipeline. Detect a failed fit
 with \code{inherits(fit, "nlmixr2targetsError")} or the broader
 \code{inherits(fit, "try-error")}.}
+
+\item{description}{Human-readable name for the model, announced by the
+estimation target when it starts to run.  \code{NULL} (the default) announces
+nothing.}
 }
 \value{
 An nlmixr2 fit object, as returned by \code{\link[nlmixr2est:nlmixr]{nlmixr2est::nlmixr()}}. When
