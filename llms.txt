@@ -119,6 +119,9 @@ targets::tar_make()
   Generate nlmixr multimodel target set for all models in one call to
   [`tar_nlmixr_multimodel()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel.md)
 
+- [`tar_nlmixr_multimodel_prep()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel_prep.md)
+  : Generate the target sets for every model in a model list
+
 - [`tar_nlmixr_multimodel_single()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel_single.md)
   : Generate a single nlmixr multimodel target set for one model
 

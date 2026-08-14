@@ -2,6 +2,16 @@
 
 ## nlmixr2targets 0.1.0.9000
 
+### New features
+
+- [`tar_nlmixr_multimodel()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel.md)
+  estimation targets now announce themselves with
+  `Model description: <list name>` before estimation starts, so
+  [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+  output identifies which model is running (the targets themselves are
+  named after a hash of the model). Renaming a model does not invalidate
+  its fit, and existing pipelines are not re-run by this change.
+
 ### Bug fixes
 
 - Fits with `est = "vae"` are now cached correctly: the simplified

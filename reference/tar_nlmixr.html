@@ -80,7 +80,8 @@ the simplified data object.</p>
 <span>  <span class="va">data_simple_name</span>,</span>
 <span>  <span class="va">fit_simple_name</span>,</span>
 <span>  <span class="va">env</span>,</span>
-<span>  error <span class="op">=</span> <span class="st">"stop"</span></span>
+<span>  error <span class="op">=</span> <span class="st">"stop"</span>,</span>
+<span>  description <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -160,6 +161,12 @@ with <code>inherits(fit, "nlmixr2targetsError")</code> or the broader
 use for the simplified object, simplified data, fit of the simplified
 object with the simplified data, and fit with the original data
 re-inserted.</p></dd>
+
+
+<dt id="arg-description">description<a class="anchor" aria-label="anchor" href="#arg-description"></a></dt>
+<dd><p>Human-readable name for the model, announced by the
+estimation target when it starts to run.  <code>NULL</code> (the default) announces
+nothing.</p></dd>
 
 </dl></div>
     <div class="section level2">

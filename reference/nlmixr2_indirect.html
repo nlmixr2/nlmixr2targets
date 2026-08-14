@@ -55,7 +55,8 @@ tar_nlmixr(); it is not typically invoked by end users."></head><body>
 <span>  <span class="va">est</span>,</span>
 <span>  <span class="va">control</span>,</span>
 <span>  directory <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu">targets</span><span class="fu">::</span><span class="fu"><a href="https://docs.ropensci.org/targets/reference/tar_config_get.html" class="external-link">tar_config_get</a></span><span class="op">(</span><span class="st">"store"</span><span class="op">)</span>, <span class="st">"user/nlmixr2"</span><span class="op">)</span>,</span>
-<span>  error <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"stop"</span>, <span class="st">"continue"</span><span class="op">)</span></span>
+<span>  error <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"stop"</span>, <span class="st">"continue"</span><span class="op">)</span>,</span>
+<span>  description <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -99,6 +100,12 @@ inherits from <code>"try-error"</code>) carrying the error message, so a single
 failed model does not stop the rest of the pipeline. Detect a failed fit
 with <code>inherits(fit, "nlmixr2targetsError")</code> or the broader
 <code>inherits(fit, "try-error")</code>.</p></dd>
+
+
+<dt id="arg-description">description<a class="anchor" aria-label="anchor" href="#arg-description"></a></dt>
+<dd><p>Human-readable name for the model, announced by the
+estimation target when it starts to run.  <code>NULL</code> (the default) announces
+nothing.</p></dd>
 
 </dl></div>
     <div class="section level2">

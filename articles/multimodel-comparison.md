@@ -71,6 +71,17 @@ After
 the `aic_table` target gives you a compact summary of the candidates.
 Add `dAIC` or weight columns to taste.
 
+The per-model targets are named after a hash of the model
+(`candidate_fits_8ae20c5c`, …), so
+[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)’s
+progress lines do not say which candidate is being estimated. Each
+estimation step therefore announces itself first:
+
+    Model description: Base + tighter residual prior
+
+The name you give the model in the list is the description. Renaming it
+does not invalidate the fit.
+
 ## Extracting parameter estimates across models
 
 A common pattern is to pull a particular fixed effect out of every

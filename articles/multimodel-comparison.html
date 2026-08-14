@@ -132,13 +132,20 @@ not have to be re-prepared.</p>
 <p>After <code><a href="https://docs.ropensci.org/targets/reference/tar_make.html" class="external-link">tar_make()</a></code>, the <code>aic_table</code> target
 gives you a compact summary of the candidates. Add <code>dAIC</code> or
 weight columns to taste.</p>
+<p>The per-model targets are named after a hash of the model
+(<code>candidate_fits_8ae20c5c</code>, …), so <code><a href="https://docs.ropensci.org/targets/reference/tar_make.html" class="external-link">tar_make()</a></code>’s
+progress lines do not say which candidate is being estimated. Each
+estimation step therefore announces itself first:</p>
+<pre><code>Model description: Base + tighter residual prior</code></pre>
+<p>The name you give the model in the list is the description. Renaming
+it does not invalidate the fit.</p>
 </div>
 <div class="section level2">
 <h2 id="extracting-parameter-estimates-across-models">Extracting parameter estimates across models<a class="anchor" aria-label="anchor" href="#extracting-parameter-estimates-across-models"></a>
 </h2>
 <p>A common pattern is to pull a particular fixed effect out of every
 candidate fit to compare:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://docs.ropensci.org/targets/reference/tar_target.html" class="external-link">tar_target</a></span><span class="op">(</span></span>
 <span>  <span class="va">clearance_estimates</span>,</span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
@@ -158,7 +165,7 @@ target whose value is a named list of fits.</p>
 </h2>
 <p>If the second model is an edit of the first, refer to the first by
 its key inside the same <code><a href="../reference/tar_nlmixr_multimodel.html">tar_nlmixr_multimodel()</a></code> call:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/tar_nlmixr_multimodel.html">tar_nlmixr_multimodel</a></span><span class="op">(</span></span>
 <span>  name <span class="op">=</span> <span class="va">candidate_fits</span>,</span>
 <span>  data <span class="op">=</span> <span class="fu">nlmixr2data</span><span class="fu">::</span><span class="va"><a href="https://nlmixr2.github.io/nlmixr2data/reference/pheno_sd.html" class="external-link">pheno_sd</a></span>,</span>

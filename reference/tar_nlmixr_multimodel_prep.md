@@ -1,28 +1,28 @@
-# Generate a single nlmixr multimodel target set for one model
+# Generate the target sets for every model in a model list
 
-Generate a single nlmixr multimodel target set for one model
+The name of each `model_list` element becomes that model's description,
+so the estimation target can announce which model it is running.
 
 ## Usage
 
 ``` r
-tar_nlmixr_multimodel_single(
-  object,
+tar_nlmixr_multimodel_prep(
+  model_list,
   name,
   data,
   est,
   control,
   table,
   env,
-  error = "stop",
-  description = NULL
+  error = "stop"
 )
 ```
 
 ## Arguments
 
-- object:
+- model_list:
 
-  Fitted object or function specifying the model.
+  A named list of calls for model targets to be created
 
 - name:
 
@@ -88,8 +88,3 @@ tar_nlmixr_multimodel_single(
   does not stop the rest of the pipeline. Detect a failed fit with
   `inherits(fit, "nlmixr2targetsError")` or the broader
   `inherits(fit, "try-error")`.
-
-- description:
-
-  Human-readable name for the model, announced by the estimation target
-  when it starts to run. `NULL` (the default) announces nothing.

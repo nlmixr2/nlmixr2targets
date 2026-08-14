@@ -31,7 +31,8 @@ tar_nlmixr_raw(
   data_simple_name,
   fit_simple_name,
   env,
-  error = "stop"
+  error = "stop",
+  description = NULL
 )
 ```
 
@@ -111,6 +112,11 @@ tar_nlmixr_raw(
   target names to use for the simplified object, simplified data, fit of
   the simplified object with the simplified data, and fit with the
   original data re-inserted.
+
+- description:
+
+  Human-readable name for the model, announced by the estimation target
+  when it starts to run. `NULL` (the default) announces nothing.
 
 ## Value
 

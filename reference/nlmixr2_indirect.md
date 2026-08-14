@@ -13,7 +13,8 @@ nlmixr2_indirect(
   est,
   control,
   directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"),
-  error = c("stop", "continue")
+  error = c("stop", "continue"),
+  description = NULL
 )
 ```
 
@@ -61,6 +62,11 @@ nlmixr2_indirect(
   does not stop the rest of the pipeline. Detect a failed fit with
   `inherits(fit, "nlmixr2targetsError")` or the broader
   `inherits(fit, "try-error")`.
+
+- description:
+
+  Human-readable name for the model, announced by the estimation target
+  when it starts to run. `NULL` (the default) announces nothing.
 
 ## Value
 

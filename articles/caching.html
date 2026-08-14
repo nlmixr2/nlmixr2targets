@@ -157,7 +157,12 @@ do not invalidate the expensive estimation step.</p>
 <span><span class="co"># Changing `est` or `control`:</span></span>
 <span><span class="co">#   re-runs the cheap `_data_simple` (they determine the columns kept</span></span>
 <span><span class="co">#   for method-specific covariate searches, e.g. `est = "vae"`) and the</span></span>
-<span><span class="co">#   `_fit_simple` and final targets. `_object_simple` is reused.</span></span></code></pre></div>
+<span><span class="co">#   `_fit_simple` and final targets. `_object_simple` is reused.</span></span>
+<span></span>
+<span><span class="co"># Renaming a `tar_nlmixr_multimodel()` entry:</span></span>
+<span><span class="co">#   only re-runs the cheap combining target that collects the fits into a</span></span>
+<span><span class="co">#   named list. The name is the description that `_fit_simple` announces</span></span>
+<span><span class="co">#   when it runs, and it is deliberately excluded from that target's hash.</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="inspecting-and-pruning-the-indirect-cache">Inspecting and pruning the indirect cache<a class="anchor" aria-label="anchor" href="#inspecting-and-pruning-the-indirect-cache"></a>
