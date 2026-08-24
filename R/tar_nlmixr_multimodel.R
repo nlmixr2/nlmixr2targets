@@ -253,24 +253,33 @@ tar_nlmixr_multimodel_remove_self_reference_single <- function(model, name_map) 
 #' The name of each `model_list` element becomes that model's description, so
 #' the estimation target can announce which model it is running.
 #'
+#' `data`, `est`, `control`, and `table` are unevaluated language captured by
+#' `substitute()` in `tar_nlmixr_multimodel()` and must reach
+#' `tar_nlmixr_multimodel_single()` that way: `data` is typically the name of an
+#' upstream target, which has no value while the pipeline is being built.  They
+#' are handed over directly rather than through an apply-family function's
+#' `...`, because `mapply()`/`Map()` splice their `MoreArgs` values into a
+#' constructed call and evaluate them.
+#'
 #' @inheritParams tar_nlmixr_multimodel_parse
 #' @keywords Internal
 tar_nlmixr_multimodel_prep <- function(model_list, name, data, est, control, table, env, error = "stop") {
-  mapply(
-    FUN = tar_nlmixr_multimodel_single,
-    object = model_list,
-    description = names(model_list),
-    MoreArgs = list(
-      name = name,
-      data = data,
-      est = est,
-      control = control,
-      table = table,
-      env = env,
-      error = error
-    ),
-    SIMPLIFY = FALSE
-  )
+  ret <- stats::setNames(vector(mode = "list", length = length(model_list)), names(model_list))
+  for (idx in seq_along(model_list)) {
+    ret[[idx]] <-
+      tar_nlmixr_multimodel_single(
+        object = model_list[[idx]],
+        description = names(model_list)[idx],
+        name = name,
+        data = data,
+        est = est,
+        control = control,
+        table = table,
+        env = env,
+        error = error
+      )
+  }
+  ret
 }
 
 #' Generate a single nlmixr multimodel target set for one model

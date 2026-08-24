@@ -704,3 +704,151 @@ test_that("tar_nlmixr_multimodel_single threads the error mode into the fit_simp
   cmd <- paste(deparse(out$target$fit_simple$command$expr), collapse = " ")
   expect_match(cmd, 'error = "continue"', fixed = TRUE)
 })
+
+# `data`, `est`, `control`, and `table` are captured by `substitute()` and must
+# reach the generated target commands as unevaluated language: `data` is
+# normally the name of an upstream target, which does not exist as an object
+# when the pipeline is built. Every other test in this file passes arguments
+# that happen to resolve (`nlmixr2data::pheno_sd`), so they cannot tell a
+# forwarded promise from an evaluated one. These use names that exist nowhere.
+test_that("tar_nlmixr_multimodel does not evaluate data, control, or table", {
+  pheno <- function() {
+    ini({
+      lcl <- log(0.008); label("Typical value of clearance")
+      lvc <-  log(0.6); label("Typical value of volume of distribution")
+      cpaddSd <- 0.1; label("residual variability")
+    })
+    model({
+      cl <- exp(lcl)
+      vc <- exp(lvc)
+      kel <- cl/vc
+      d/dt(central) <- -kel*central
+      cp <- central/vc
+      cp ~ add(cpaddSd)
+    })
+  }
+  pheno2 <- function() {
+    ini({
+      lcl <- log(0.008); label("Typical value of clearance")
+      lvc <-  log(0.6); label("Typical value of volume of distribution")
+      cpaddSd <- 3.0; label("residual variability")
+    })
+    model({
+      cl <- exp(lcl)
+      vc <- exp(lvc)
+      kel <- cl/vc
+      d/dt(central) <- -kel*central
+      cp <- central/vc
+      cp ~ add(cpaddSd)
+    })
+  }
+
+  expect_false(exists("no_such_data_target"))
+  expect_false(exists("no_such_control_fn"))
+  expect_false(exists("no_such_table_fn"))
+
+  target_list <-
+    tar_nlmixr_multimodel(
+      name = foo,
+      data = no_such_data_target,
+      est = "saem",
+      control = no_such_control_fn(),
+      table = no_such_table_fn(),
+      "my first model" = pheno,
+      "my second model" = pheno2
+    )
+  expect_length(target_list, 3)
+
+  for (idx in 1:2) {
+    data_cmd <- paste(deparse(target_list[[idx]]$data_simple$command$expr), collapse = " ")
+    expect_match(data_cmd, "data = no_such_data_target", fixed = TRUE)
+    expect_match(data_cmd, "table = no_such_table_fn()", fixed = TRUE)
+    expect_match(data_cmd, "control = no_such_control_fn()", fixed = TRUE)
+
+    fit_simple_cmd <- paste(deparse(target_list[[idx]]$fit_simple$command$expr), collapse = " ")
+    expect_match(fit_simple_cmd, "control = no_such_control_fn()", fixed = TRUE)
+
+    fit_cmd <- paste(deparse(target_list[[idx]]$fit$command$expr), collapse = " ")
+    expect_match(fit_cmd, "data = no_such_data_target", fixed = TRUE)
+  }
+
+  # The description is still threaded to each model's estimation target.
+  expect_match(
+    paste(deparse(target_list[[1]]$fit_simple$command$expr), collapse = " "),
+    'description = "my first model"',
+    fixed = TRUE
+  )
+  expect_match(
+    paste(deparse(target_list[[2]]$fit_simple$command$expr), collapse = " "),
+    'description = "my second model"',
+    fixed = TRUE
+  )
+})
+
+test_that("tar_nlmixr_multimodel_prep forwards language arguments without evaluating them", {
+  expect_false(exists("no_such_data_target"))
+  expect_false(exists("no_such_control_fn"))
+
+  ret <-
+    tar_nlmixr_multimodel_prep(
+      model_list = list(A = quote(my_model_a), B = quote(my_model_b)),
+      name = "foo",
+      data = quote(no_such_data_target),
+      est = "saem",
+      control = quote(no_such_control_fn()),
+      table = quote(list()),
+      env = environment()
+    )
+  expect_named(ret, c("A", "B"))
+  expect_match(ret$A$name, "^foo_[0-9a-f]{8}$")
+  expect_match(ret$B$name, "^foo_[0-9a-f]{8}$")
+  # Distinct models hash to distinct target names.
+  expect_false(ret$A$name == ret$B$name)
+  expect_named(ret$A$target, c("object_simple", "data_simple", "fit_simple", "fit"))
+
+  data_cmd <- paste(deparse(ret$A$target$data_simple$command$expr), collapse = " ")
+  expect_match(data_cmd, "data = no_such_data_target", fixed = TRUE)
+  expect_match(data_cmd, "control = no_such_control_fn()", fixed = TRUE)
+
+  fit_simple_cmd <- paste(deparse(ret$A$target$fit_simple$command$expr), collapse = " ")
+  expect_match(fit_simple_cmd, "control = no_such_control_fn()", fixed = TRUE)
+
+  # Each model keeps its own list name as its description and its own model.
+  expect_match(fit_simple_cmd, 'description = "A"', fixed = TRUE)
+  expect_match(
+    paste(deparse(ret$A$target$object_simple$command$expr), collapse = " "),
+    "object = my_model_a",
+    fixed = TRUE
+  )
+  expect_match(
+    paste(deparse(ret$B$target$fit_simple$command$expr), collapse = " "),
+    'description = "B"',
+    fixed = TRUE
+  )
+  expect_match(
+    paste(deparse(ret$B$target$object_simple$command$expr), collapse = " "),
+    "object = my_model_b",
+    fixed = TRUE
+  )
+})
+
+test_that("tar_nlmixr_multimodel_prep threads the error mode to every model", {
+  ret <-
+    tar_nlmixr_multimodel_prep(
+      model_list = list(A = quote(my_model_a), B = quote(my_model_b)),
+      name = "foo",
+      data = quote(no_such_data_target),
+      est = "saem",
+      control = quote(list()),
+      table = quote(list()),
+      env = environment(),
+      error = "continue"
+    )
+  for (nm in c("A", "B")) {
+    expect_match(
+      paste(deparse(ret[[nm]]$target$fit_simple$command$expr), collapse = " "),
+      'error = "continue"',
+      fixed = TRUE
+    )
+  }
+})
