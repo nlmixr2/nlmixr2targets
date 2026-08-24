@@ -74,4 +74,13 @@ with \code{inherits(fit, "nlmixr2targetsError")} or the broader
 The name of each \code{model_list} element becomes that model's description, so
 the estimation target can announce which model it is running.
 }
+\details{
+\code{data}, \code{est}, \code{control}, and \code{table} are unevaluated language captured by
+\code{substitute()} in \code{tar_nlmixr_multimodel()} and must reach
+\code{tar_nlmixr_multimodel_single()} that way: \code{data} is typically the name of an
+upstream target, which has no value while the pipeline is being built.  They
+are handed over directly rather than through an apply-family function's
+\code{...}, because \code{mapply()}/\code{Map()} splice their \code{MoreArgs} values into a
+constructed call and evaluate them.
+}
 \keyword{Internal}
