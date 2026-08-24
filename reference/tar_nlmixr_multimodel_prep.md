@@ -88,3 +88,17 @@ tar_nlmixr_multimodel_prep(
   does not stop the rest of the pipeline. Detect a failed fit with
   `inherits(fit, "nlmixr2targetsError")` or the broader
   `inherits(fit, "try-error")`.
+
+## Details
+
+`data`, `est`, `control`, and `table` are unevaluated language captured
+by [`substitute()`](https://rdrr.io/r/base/substitute.html) in
+[`tar_nlmixr_multimodel()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel.md)
+and must reach
+[`tar_nlmixr_multimodel_single()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel_single.md)
+that way: `data` is typically the name of an upstream target, which has
+no value while the pipeline is being built. They are handed over
+directly rather than through an apply-family function's `...`, because
+[`mapply()`](https://rdrr.io/r/base/mapply.html)/[`Map()`](https://rdrr.io/r/base/funprog.html)
+splice their `MoreArgs` values into a constructed call and evaluate
+them.

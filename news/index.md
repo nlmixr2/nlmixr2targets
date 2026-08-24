@@ -14,6 +14,18 @@
 
 ### Bug fixes
 
+- [`tar_nlmixr_multimodel()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel.md)
+  again accepts `data`, `control`, and `table` arguments that cannot be
+  evaluated where the pipeline is defined – most importantly
+  `data = <name of an upstream target>`, which is the normal way to
+  write a pipeline and which failed with
+  `object '<target name>' not found` when `_targets.R` was sourced. The
+  model-description feature above dispatched over the model list with
+  [`mapply()`](https://rdrr.io/r/base/mapply.html), which splices its
+  `MoreArgs` values into a constructed call and evaluates them, so the
+  captured expressions were evaluated during pipeline construction
+  instead of reaching the target commands unevaluated.
+
 - Fits with `est = "vae"` are now cached correctly: the simplified
   dataset keeps the subject-constant columns that vae’s automated
   covariate selection searches (as reported by
