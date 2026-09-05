@@ -10,6 +10,26 @@
 
 ## Bug fixes
 
+* `table` now reaches estimation. `tar_nlmixr()` and
+  `tar_nlmixr_multimodel()` accept a `table` (`nlmixr2est::tableControl()`)
+  argument and used it to decide which data columns survive into the
+  simplified dataset, but never passed it to `nlmixr2est::nlmixr()`, so the
+  residual/table step always ran with the defaults. `tableControl(keep =
+  ...)` columns, for example, were kept in the data and then dropped from the
+  fit. Pipelines that leave `table` at its default are unaffected and are not
+  re-run; supplying any other `tableControl()` re-runs the fit, as a changed
+  `control` would.
+
+* A fit whose residual/table step failed is no longer returned silently.
+  nlmixr2est catches an `addTable()` failure, downgrades it to the warning
+  `error calculating tables, returning without table step`, and returns the
+  bare fit environment (class `"nlmixr2FitCore"`) instead of the
+  `nlmixr2FitData` tibble. Inside `tar_make()` that warning is easy to miss,
+  and the degraded fit then flows into downstream packages that expect the
+  tibble. `nlmixr2_indirect()` now raises it as an error naming the model
+  responsible, unless `calcTables = FALSE` was requested, in which case a fit
+  without tables is expected and is returned unchanged.
+
 * `tar_nlmixr_multimodel()` again accepts `data`, `control`, and `table`
   arguments that cannot be evaluated where the pipeline is defined -- most
   importantly `data = <name of an upstream target>`, which is the normal way

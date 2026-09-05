@@ -17,6 +17,17 @@
 #' columns are kept, too (see `nlmixr_data_simplify()`).  Changes to any kept
 #' column invalidate the cached fit; changes to dropped columns do not.
 #'
+#' `table` does two jobs: `table$keep` names data columns to carry through to
+#' the simplified data, and a non-default `tableControl()` is handed to
+#' [nlmixr2est::nlmixr()] so the residual/table step honors it.  Left at its
+#' default, `table` is omitted from the generated command entirely.  That
+#' keeps the command byte-identical to what earlier versions produced, so
+#' upgrading does not re-run cached fits, and it preserves nlmixr2est's merge
+#' of the table settings carried on `ui$meta` (`addDosing`, `subsetNonmem`,
+#' `cores`, `keep`, `drop`), which happens only when its own `table` argument
+#' is missing.  Supplying any other `tableControl()` changes the command and
+#' re-runs the fit, as a changed `control` would.
+#'
 #' @section Side effects:
 #' When the user's model function body contains `cmt(0) <- value` inside a
 #' `model({...})` block, `tar_nlmixr()` rewrites those lines to
@@ -148,11 +159,19 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table,
         data_simple_name = as.name(data_simple_name),
         est = est,
         control = control,
-        table = table,
         directory = directory_expr,
         error = error
       )
     )
+  # `table` reaches the estimation step only when the user asked for something
+  # other than the default.  Splicing `table = nlmixr2est::tableControl()` in
+  # unconditionally would be behaviour-neutral (it is what
+  # `nlmixr2est::nlmixr()` uses anyway) but would change the deparsed command
+  # of every existing pipeline and re-run every cached fit, which is the one
+  # cost this package exists to avoid.
+  if (!tar_nlmixr_table_is_default(table)) {
+    fit_simple_command$table <- table
+  }
   # `targets` decides whether a target is out of date by hashing the deparsed
   # command.  Hashing the description-free command (what `tar_target_raw()`
   # would have produced on its own) keeps a renamed model from re-running its
@@ -215,6 +234,24 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table,
         packages = "nlmixr2targets"
       )
   )
+}
+
+#' Is the captured `table` expression the one `tar_nlmixr()` defaults to?
+#'
+#' `table` is captured unevaluated, so the comparison is between language
+#' objects rather than values.  An unsupplied `table` yields the formal
+#' default expression, `nlmixr2est::tableControl()`; matching only that exact
+#' expression is what makes omitting it from the generated command provably
+#' identical to letting `nlmixr2est::nlmixr()` apply its own default.  Any
+#' other spelling -- including a bare `tableControl()`, which could in
+#' principle resolve to something else -- is treated as user-supplied and is
+#' forwarded (and therefore hashed).
+#'
+#' @param table The captured `table` expression.
+#' @returns `TRUE` when `table` is the default expression.
+#' @noRd
+tar_nlmixr_table_is_default <- function(table) {
+  identical(table, quote(nlmixr2est::tableControl()))
 }
 
 #' Replace the fit data with the original data, then return the modified fit

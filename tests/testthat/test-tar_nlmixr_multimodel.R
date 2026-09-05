@@ -398,8 +398,16 @@ targets::tar_test("tar_nlmixr_multimodel fits a piped entry sharing a cmt(0) mod
   suppressWarnings(targets::tar_make(callr_function = NULL))
   fits <- targets::tar_read(fit_pipe)
   expect_named(fits, c("myfit", "myfit pipe"))
-  expect_s3_class(fits[["myfit"]], "nlmixr2FitCore")
-  expect_s3_class(fits[["myfit pipe"]], "nlmixr2FitCore")
+  # Exact class: "nlmixr2FitCore" alone is what nlmixr2est returns when the
+  # residual/table step fails, so inherits() cannot detect that degradation.
+  expect_identical(
+    as.character(class(fits[["myfit"]])),
+    c("nlmixr2FitData", "nlmixr2FitCore", "nlmixr2.saem", "tbl_df", "tbl", "data.frame")
+  )
+  expect_identical(
+    as.character(class(fits[["myfit pipe"]])),
+    c("nlmixr2FitData", "nlmixr2FitCore", "nlmixr2.saem", "tbl_df", "tbl", "data.frame")
+  )
 })
 
 test_that("tar_nlmixr_multimodel works for within-list model piping (#19), direct testing", {

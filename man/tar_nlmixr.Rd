@@ -117,6 +117,17 @@ in the model; \code{est = "vae"} additionally searches subject-constant data
 columns during its automated covariate selection, so those candidate
 columns are kept, too (see \code{nlmixr_data_simplify()}).  Changes to any kept
 column invalidate the cached fit; changes to dropped columns do not.
+
+\code{table} does two jobs: \code{table$keep} names data columns to carry through to
+the simplified data, and a non-default \code{tableControl()} is handed to
+\code{\link[nlmixr2est:nlmixr]{nlmixr2est::nlmixr()}} so the residual/table step honors it.  Left at its
+default, \code{table} is omitted from the generated command entirely.  That
+keeps the command byte-identical to what earlier versions produced, so
+upgrading does not re-run cached fits, and it preserves nlmixr2est's merge
+of the table settings carried on \code{ui$meta} (\code{addDosing}, \code{subsetNonmem},
+\code{cores}, \code{keep}, \code{drop}), which happens only when its own \code{table} argument
+is missing.  Supplying any other \code{tableControl()} changes the command and
+re-runs the fit, as a changed \code{control} would.
 }
 \section{Functions}{
 \itemize{
