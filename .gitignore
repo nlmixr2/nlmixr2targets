@@ -4,3 +4,7 @@ docs
 _targets.R
 _targets
 inst/doc
+*.Rcheck/
+*.tar.gz
+.RData
+.Ruserdata
