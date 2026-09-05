@@ -123,10 +123,10 @@ the simplified data, and a non-default \code{tableControl()} is handed to
 \code{\link[nlmixr2est:nlmixr]{nlmixr2est::nlmixr()}} so the residual/table step honors it.  Left at its
 default, \code{table} is omitted from the generated command entirely.  That
 keeps the command byte-identical to what earlier versions produced, so
-upgrading does not re-run cached fits, and it preserves nlmixr2est's merge
-of the table settings carried on \code{ui$meta} (\code{addDosing}, \code{subsetNonmem},
-\code{cores}, \code{keep}, \code{drop}), which happens only when its own \code{table} argument
-is missing.  Supplying any other \code{tableControl()} changes the command and
+upgrading does not re-run cached fits, and it preserves the merge
+\code{\link[nlmixr2est:nlmixr]{nlmixr2est::nlmixr()}} performs of the table settings carried on \code{ui$meta}
+(\code{addDosing}, \code{subsetNonmem}, \code{cores}, \code{keep}, \code{drop}), which happens only
+when its own \code{table} argument is missing.  Supplying any other \code{tableControl()} changes the command and
 re-runs the fit, as a changed \code{control} would.
 }
 \section{Functions}{

@@ -22,10 +22,10 @@
 #' [nlmixr2est::nlmixr()] so the residual/table step honors it.  Left at its
 #' default, `table` is omitted from the generated command entirely.  That
 #' keeps the command byte-identical to what earlier versions produced, so
-#' upgrading does not re-run cached fits, and it preserves nlmixr2est's merge
-#' of the table settings carried on `ui$meta` (`addDosing`, `subsetNonmem`,
-#' `cores`, `keep`, `drop`), which happens only when its own `table` argument
-#' is missing.  Supplying any other `tableControl()` changes the command and
+#' upgrading does not re-run cached fits, and it preserves the merge
+#' [nlmixr2est::nlmixr()] performs of the table settings carried on `ui$meta`
+#' (`addDosing`, `subsetNonmem`, `cores`, `keep`, `drop`), which happens only
+#' when its own `table` argument is missing.  Supplying any other `tableControl()` changes the command and
 #' re-runs the fit, as a changed `control` would.
 #'
 #' @section Arguments not forwarded to nlmixr2est::nlmixr():
