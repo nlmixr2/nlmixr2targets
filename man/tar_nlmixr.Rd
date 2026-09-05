@@ -134,6 +134,31 @@ re-runs the fit, as a changed \code{control} would.
 \item \code{tar_nlmixr_raw()}: An internal function to generate the targets
 
 }}
+\section{Arguments not forwarded to nlmixr2est}{
+:nlmixr():
+The generated estimation target calls \code{\link[nlmixr2est:nlmixr]{nlmixr2est::nlmixr()}} with
+\code{object}, \code{data}, \code{est}, \code{control}, and -- when you supply one -- \code{table}.
+Its three remaining arguments are deliberately left out:
+
+\itemize{
+\item \code{...} is inert.  Each \code{nlmixr2est::nlmixr()} method captures it
+with \code{match.call(expand.dots = TRUE)} and then dispatches to
+\code{nlmixr2Est0()} without it, so nothing passed through \code{...} reaches an
+estimator.  There is nothing to forward.
+\item \code{save} is accepted by those methods but not acted on by any of
+them.  Even if it were, it writes an RDS copy of the fit to the working
+directory; the \code{targets} store already persists every fit, so the copy
+would be a duplicate produced as an untracked side effect of a target.
+\item \code{envir} is the environment \code{nlmixr2est} passes to
+\code{rxode2::.udfEnvSet()} to resolve R user-defined functions, and uses to
+evaluate back-transformation expressions.  \code{nlmixr2targets} leaves it at
+its default, which resolves to a \code{nlmixr2targets} internal frame --
+objects defined in your \verb{_targets.R} are not visible from there.  A
+model that calls an R user-defined function may therefore fail to
+resolve it; please report it if you hit this.
+}
+}
+
 \section{Side effects}{
 
 When the user's model function body contains \code{cmt(0) <- value} inside a

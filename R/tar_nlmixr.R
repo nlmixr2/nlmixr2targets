@@ -28,6 +28,29 @@
 #' is missing.  Supplying any other `tableControl()` changes the command and
 #' re-runs the fit, as a changed `control` would.
 #'
+#' @section Arguments not forwarded to nlmixr2est::nlmixr():
+#' The generated estimation target calls [nlmixr2est::nlmixr()] with
+#' `object`, `data`, `est`, `control`, and -- when you supply one -- `table`.
+#' Its three remaining arguments are deliberately left out:
+#'
+#' \itemize{
+#'   \item `...` is inert.  Each `nlmixr2est::nlmixr()` method captures it
+#'   with `match.call(expand.dots = TRUE)` and then dispatches to
+#'   `nlmixr2Est0()` without it, so nothing passed through `...` reaches an
+#'   estimator.  There is nothing to forward.
+#'   \item `save` is accepted by those methods but not acted on by any of
+#'   them.  Even if it were, it writes an RDS copy of the fit to the working
+#'   directory; the `targets` store already persists every fit, so the copy
+#'   would be a duplicate produced as an untracked side effect of a target.
+#'   \item `envir` is the environment `nlmixr2est` passes to
+#'   `rxode2::.udfEnvSet()` to resolve R user-defined functions, and uses to
+#'   evaluate back-transformation expressions.  `nlmixr2targets` leaves it at
+#'   its default, which resolves to a `nlmixr2targets` internal frame --
+#'   objects defined in your `_targets.R` are not visible from there.  A
+#'   model that calls an R user-defined function may therefore fail to
+#'   resolve it; please report it if you hit this.
+#' }
+#'
 #' @section Side effects:
 #' When the user's model function body contains `cmt(0) <- value` inside a
 #' `model({...})` block, `tar_nlmixr()` rewrites those lines to
