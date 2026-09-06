@@ -12,6 +12,7 @@ nlmixr2_indirect(
   data,
   est,
   control,
+  table,
   directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"),
   error = c("stop", "continue"),
   description = NULL
@@ -37,6 +38,10 @@ nlmixr2_indirect(
 
   The estimation control object. These are expected to be different for
   each type of estimation method
+
+- table:
+
+  The output table control object (like \`tableControl()\`)
 
 - directory:
 
@@ -86,7 +91,11 @@ and stored as the `object_simple` target in the pipeline.
 `nlmixr2targets` indirect cache (under `<targets store>/user/nlmixr2/`)
 and passes it to
 [`nlmixr2est::nlmixr()`](https://nlmixr2.github.io/nlmixr2est/reference/nlmixr2.html)
-along with `data`, `est`, and `control`.
+along with `data`, `est`, `control`, and – when the caller supplied one
+– `table`. An omitted `table` is passed on as omitted rather than as
+[`nlmixr2est::tableControl()`](https://nlmixr2.github.io/nlmixr2est/reference/tableControl.html),
+because nlmixr2est merges the table settings carried on `ui$meta` into
+the table control only when its own `table` argument is missing.
 
 Routing the simplified ui through a small character-hash target rather
 than a target whose value is the ui object keeps the dependency hash for

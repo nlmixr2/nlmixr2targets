@@ -141,9 +141,49 @@ candidate columns are kept, too (see
 Changes to any kept column invalidate the cached fit; changes to dropped
 columns do not.
 
+`table` does two jobs: `table$keep` names data columns to carry through
+to the simplified data, and a non-default `tableControl()` is handed to
+[`nlmixr2est::nlmixr()`](https://nlmixr2.github.io/nlmixr2est/reference/nlmixr2.html)
+so the residual/table step honors it. Left at its default, `table` is
+omitted from the generated command entirely. That keeps the command
+byte-identical to what earlier versions produced, so upgrading does not
+re-run cached fits, and it preserves the merge
+[`nlmixr2est::nlmixr()`](https://nlmixr2.github.io/nlmixr2est/reference/nlmixr2.html)
+performs of the table settings carried on `ui$meta` (`addDosing`,
+`subsetNonmem`, `cores`, `keep`, `drop`), which happens only when its
+own `table` argument is missing. Supplying any other `tableControl()`
+changes the command and re-runs the fit, as a changed `control` would.
+
 ## Functions
 
 - `tar_nlmixr_raw()`: An internal function to generate the targets
+
+## Arguments not forwarded to nlmixr2est
+
+:nlmixr(): The generated estimation target calls
+[`nlmixr2est::nlmixr()`](https://nlmixr2.github.io/nlmixr2est/reference/nlmixr2.html)
+with `object`, `data`, `est`, `control`, and – when you supply one –
+`table`. Its three remaining arguments are deliberately left out:
+
+- `...` is inert. Each
+  [`nlmixr2est::nlmixr()`](https://nlmixr2.github.io/nlmixr2est/reference/nlmixr2.html)
+  method captures it with `match.call(expand.dots = TRUE)` and then
+  dispatches to `nlmixr2Est0()` without it, so nothing passed through
+  `...` reaches an estimator. There is nothing to forward.
+
+- `save` is accepted by those methods but not acted on by any of them.
+  Even if it were, it writes an RDS copy of the fit to the working
+  directory; the `targets` store already persists every fit, so the copy
+  would be a duplicate produced as an untracked side effect of a target.
+
+- `envir` is the environment `nlmixr2est` passes to
+  [`rxode2::.udfEnvSet()`](https://nlmixr2.github.io/rxode2/reference/dot-udfEnvSet.html)
+  to resolve R user-defined functions, and uses to evaluate
+  back-transformation expressions. `nlmixr2targets` leaves it at its
+  default, which resolves to a `nlmixr2targets` internal frame – objects
+  defined in your `_targets.R` are not visible from there. A model that
+  calls an R user-defined function may therefore fail to resolve it;
+  please report it if you hit this.
 
 ## Side effects
 

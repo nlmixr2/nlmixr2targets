@@ -185,11 +185,43 @@ in the model; <code>est = "vae"</code> additionally searches subject-constant da
 columns during its automated covariate selection, so those candidate
 columns are kept, too (see <code><a href="nlmixr_data_simplify.html">nlmixr_data_simplify()</a></code>).  Changes to any kept
 column invalidate the cached fit; changes to dropped columns do not.</p>
+<p><code>table</code> does two jobs: <code>table$keep</code> names data columns to carry through to
+the simplified data, and a non-default <code>tableControl()</code> is handed to
+<code><a href="https://nlmixr2.github.io/nlmixr2est/reference/nlmixr2.html" class="external-link">nlmixr2est::nlmixr()</a></code> so the residual/table step honors it.  Left at its
+default, <code>table</code> is omitted from the generated command entirely.  That
+keeps the command byte-identical to what earlier versions produced, so
+upgrading does not re-run cached fits, and it preserves the merge
+<code><a href="https://nlmixr2.github.io/nlmixr2est/reference/nlmixr2.html" class="external-link">nlmixr2est::nlmixr()</a></code> performs of the table settings carried on <code>ui$meta</code>
+(<code>addDosing</code>, <code>subsetNonmem</code>, <code>cores</code>, <code>keep</code>, <code>drop</code>), which happens only
+when its own <code>table</code> argument is missing.  Supplying any other <code>tableControl()</code> changes the command and
+re-runs the fit, as a changed <code>control</code> would.</p>
     </div>
     <div class="section level2">
     <h2 id="functions">Functions<a class="anchor" aria-label="anchor" href="#functions"></a></h2>
 
 <ul><li><p><code>tar_nlmixr_raw()</code>: An internal function to generate the targets</p></li>
+</ul></div>
+    <div class="section level2">
+    <h2 id="arguments-not-forwarded-to-nlmixr-est">Arguments not forwarded to nlmixr2est<a class="anchor" aria-label="anchor" href="#arguments-not-forwarded-to-nlmixr-est"></a></h2>
+    <p>:nlmixr():
+The generated estimation target calls <code><a href="https://nlmixr2.github.io/nlmixr2est/reference/nlmixr2.html" class="external-link">nlmixr2est::nlmixr()</a></code> with
+<code>object</code>, <code>data</code>, <code>est</code>, <code>control</code>, and – when you supply one – <code>table</code>.
+Its three remaining arguments are deliberately left out:</p>
+<ul><li><p><code>...</code> is inert.  Each <code><a href="https://nlmixr2.github.io/nlmixr2est/reference/nlmixr2.html" class="external-link">nlmixr2est::nlmixr()</a></code> method captures it
+with <code>match.call(expand.dots = TRUE)</code> and then dispatches to
+<code>nlmixr2Est0()</code> without it, so nothing passed through <code>...</code> reaches an
+estimator.  There is nothing to forward.</p></li>
+<li><p><code>save</code> is accepted by those methods but not acted on by any of
+them.  Even if it were, it writes an RDS copy of the fit to the working
+directory; the <code>targets</code> store already persists every fit, so the copy
+would be a duplicate produced as an untracked side effect of a target.</p></li>
+<li><p><code>envir</code> is the environment <code>nlmixr2est</code> passes to
+<code><a href="https://nlmixr2.github.io/rxode2/reference/dot-udfEnvSet.html" class="external-link">rxode2::.udfEnvSet()</a></code> to resolve R user-defined functions, and uses to
+evaluate back-transformation expressions.  <code>nlmixr2targets</code> leaves it at
+its default, which resolves to a <code>nlmixr2targets</code> internal frame –
+objects defined in your <code>_targets.R</code> are not visible from there.  A
+model that calls an R user-defined function may therefore fail to
+resolve it; please report it if you hit this.</p></li>
 </ul></div>
     <div class="section level2">
     <h2 id="side-effects">Side effects<a class="anchor" aria-label="anchor" href="#side-effects"></a></h2>
