@@ -394,12 +394,23 @@ targets::tar_test("tar_nlmixr execution", {
   suppressMessages(suppressWarnings(
     targets::tar_make(callr_function = NULL)
   ))
-  # A successful model estimation step should return an nlmixr2FitCore object
-  # (testing of model results is outside the scope of nlmixr2targets)
+  # A successful model estimation step returns the full nlmixr2FitData tibble
+  # (testing of model results is outside the scope of nlmixr2targets).  The
+  # class is asserted exactly: nlmixr2est returns the bare fit environment,
+  # whose class is just "nlmixr2FitCore", when the residual/table step fails,
+  # and an `inherits(x, "nlmixr2FitCore")` check cannot tell the two apart.
+  # as.character() drops the `.foceiEnv` attribute nlmixr2est hangs on the
+  # class vector to carry the fit environment.
   expect_type(targets::tar_read(pheno_model_object_simple), "character")
   expect_s3_class(targets::tar_read(pheno_model_data_simple), class = "data.frame")
-  expect_s3_class(targets::tar_read(pheno_model_fit_simple), "nlmixr2FitCore")
-  expect_s3_class(targets::tar_read(pheno_model), "nlmixr2FitCore")
+  expect_identical(
+    as.character(class(targets::tar_read(pheno_model_fit_simple))),
+    c("nlmixr2FitData", "nlmixr2FitCore", "nlmixr2.saem", "tbl_df", "tbl", "data.frame")
+  )
+  expect_identical(
+    as.character(class(targets::tar_read(pheno_model))),
+    c("nlmixr2FitData", "nlmixr2FitCore", "nlmixr2.saem", "tbl_df", "tbl", "data.frame")
+  )
   # tar_nlmixr sets the original data back into the object (#17)
   expect_false(
     identical(
@@ -564,7 +575,10 @@ targets::tar_test("tar_nlmixr handles user-written central(0) end-to-end", {
   )
   expect_no_error(targets::tar_outdated(callr_function = NULL))
   suppressWarnings(targets::tar_make(callr_function = NULL))
-  expect_s3_class(tar_read(pheno_model), "nlmixr2FitCore")
+  expect_identical(
+    as.character(class(tar_read(pheno_model))),
+    c("nlmixr2FitData", "nlmixr2FitCore", "nlmixr2.saem", "tbl_df", "tbl", "data.frame")
+  )
 })
 
 # Pipe form: the LHS function has cmt(0) in its body AND the pipe RHS
@@ -601,7 +615,10 @@ targets::tar_test("tar_nlmixr handles central(0) on the RHS of a model pipe", {
   })
   expect_no_error(targets::tar_outdated(callr_function = NULL))
   suppressWarnings(targets::tar_make(callr_function = NULL))
-  expect_s3_class(tar_read(pheno_model), "nlmixr2FitCore")
+  expect_identical(
+    as.character(class(tar_read(pheno_model))),
+    c("nlmixr2FitData", "nlmixr2FitCore", "nlmixr2.saem", "tbl_df", "tbl", "data.frame")
+  )
 })
 
 # Documented limitation (per Option A): a function with cmt(0) declared
@@ -713,4 +730,150 @@ targets::tar_test("tar_nlmixr default (error = 'stop') still halts on an estimat
   expect_error(suppressMessages(suppressWarnings(
     targets::tar_make(callr_function = NULL)
   )))
+})
+
+# `table` reaching the estimation step: the argument was accepted, used to
+# decide which data columns survive into the simplified data, and then dropped
+# before nlmixr2est::nlmixr() ever saw it.
+
+# The `expr` slot targets stores is an expression(); the generated call is its
+# first element.
+fit_simple_call <- function(target_list) {
+  target_list$fit_simple$command$expr[[1]]
+}
+
+test_that("tar_nlmixr_raw omits the default table from the generated command", {
+  out <- tar_nlmixr_raw(
+    name = "fit_x",
+    object = quote(my_model),
+    data = quote(my_data),
+    est = "saem",
+    control = quote(list()),
+    table = quote(nlmixr2est::tableControl()),
+    object_simple_name = "fit_x_object_simple",
+    data_simple_name = "fit_x_data_simple",
+    fit_simple_name = "fit_x_fit_simple",
+    env = environment()
+  )
+  # Byte-for-byte the command earlier versions generated.  Splicing the
+  # default table in would be behaviour-neutral but would change this string
+  # and re-run every cached fit in every existing pipeline.
+  expect_identical(
+    fit_simple_call(out),
+    quote(
+      nlmixr2_indirect(
+        object = fit_x_object_simple,
+        data = fit_x_data_simple,
+        est = "saem",
+        control = list(),
+        directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"),
+        error = "stop"
+      )
+    )
+  )
+  expect_false("table" %in% names(as.list(fit_simple_call(out))))
+  # The `string` targets hashes is likewise unchanged.
+  expect_false(grepl("table", out$fit_simple$command$string, fixed = TRUE))
+})
+
+test_that("tar_nlmixr_raw forwards a non-default table to the fit_simple command", {
+  out <- tar_nlmixr_raw(
+    name = "fit_x",
+    object = quote(my_model),
+    data = quote(my_data),
+    est = "saem",
+    control = quote(list()),
+    table = quote(nlmixr2est::tableControl(keep = "WT")),
+    object_simple_name = "fit_x_object_simple",
+    data_simple_name = "fit_x_data_simple",
+    fit_simple_name = "fit_x_fit_simple",
+    env = environment()
+  )
+  cmd <- as.list(fit_simple_call(out))
+  expect_true("table" %in% names(cmd))
+  expect_identical(cmd$table, quote(nlmixr2est::tableControl(keep = "WT")))
+  # A non-default table changes what the fit computes, so it must change the
+  # hashed string and re-run the fit.
+  expect_true(
+    grepl('table = nlmixr2est::tableControl(keep = "WT")', out$fit_simple$command$string, fixed = TRUE)
+  )
+})
+
+targets::tar_test("tar_nlmixr passes table through to the estimated fit", {
+  targets::tar_script({
+    pheno <- function() {
+      ini({
+        lcl <- log(0.008)
+        lvc <- log(0.6)
+        etalcl + etalvc ~ c(1,
+                            0.01, 1)
+        cpaddSd <- 0.1
+      })
+      model({
+        cl <- exp(lcl + etalcl)
+        vc <- exp(lvc + etalvc)
+        kel <- cl/vc
+        d/dt(central) <- -kel*central
+        cp <- central/vc
+        cp ~ add(cpaddSd)
+      })
+    }
+    nlmixr2targets::tar_nlmixr(
+      name = pheno_model,
+      object = pheno,
+      data = nlmixr2data::pheno_sd,
+      est = "saem",
+      control = nlmixr2est::saemControl(nBurn = 1, nEm = 1),
+      table = nlmixr2est::tableControl(keep = "WT")
+    )
+  })
+  suppressMessages(suppressWarnings(targets::tar_make(callr_function = NULL)))
+  fit <- targets::tar_read(pheno_model)
+  # WT is not a covariate of this model, so it survives only because
+  # table$keep asked for it -- in the data *and* in the fit.
+  expect_true("WT" %in% names(targets::tar_read(pheno_model_data_simple)))
+  expect_identical(fit$env$table$keep, "WT")
+  expect_true("WT" %in% names(fit))
+  expect_identical(
+    as.character(class(fit)),
+    c("nlmixr2FitData", "nlmixr2FitCore", "nlmixr2.saem", "tbl_df", "tbl", "data.frame")
+  )
+})
+
+# calcTables = FALSE produces a fit with no tables (a bare "nlmixr2FitCore"
+# environment rather than the nlmixr2FitData tibble). The whole pipeline,
+# including the label/meta/data restore in the final target, has to keep
+# working on that shape.
+targets::tar_test("tar_nlmixr keeps working when calcTables = FALSE is requested", {
+  targets::tar_script({
+    pheno <- function() {
+      ini({
+        lcl <- log(0.008)
+        lvc <- log(0.6)
+        etalcl + etalvc ~ c(1,
+                            0.01, 1)
+        cpaddSd <- 0.1
+      })
+      model({
+        cl <- exp(lcl + etalcl)
+        vc <- exp(lvc + etalvc)
+        kel <- cl/vc
+        d/dt(central) <- -kel*central
+        cp <- central/vc
+        cp ~ add(cpaddSd)
+      })
+    }
+    nlmixr2targets::tar_nlmixr(
+      name = pheno_model,
+      object = pheno,
+      data = nlmixr2data::pheno_sd,
+      est = "saem",
+      control = nlmixr2est::saemControl(nBurn = 1, nEm = 1, calcTables = FALSE)
+    )
+  })
+  expect_no_error(
+    suppressMessages(suppressWarnings(targets::tar_make(callr_function = NULL)))
+  )
+  expect_identical(class(targets::tar_read(pheno_model_fit_simple)), "nlmixr2FitCore")
+  expect_identical(class(targets::tar_read(pheno_model)), "nlmixr2FitCore")
 })

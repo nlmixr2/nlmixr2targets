@@ -134,8 +134,12 @@ targets::tar_test("nlmixr2_indirect loads from cache and forwards to nlmixr2est:
 
   captured <- NULL
   testthat::local_mocked_bindings(
-    nlmixr = function(object, data, est, control) {
-      captured <<- list(object = object, data = data, est = est, control = control)
+    nlmixr = function(object, data, est, control, table) {
+      captured <<- list(
+        object = object, data = data, est = est, control = control,
+        tableMissing = missing(table),
+        table = if (missing(table)) NULL else table
+      )
       "fit-result"
     },
     .package = "nlmixr2est"
@@ -147,6 +151,22 @@ targets::tar_test("nlmixr2_indirect loads from cache and forwards to nlmixr2est:
   expect_identical(captured$data, mtcars)
   expect_identical(captured$est, "saem")
   expect_identical(captured$control, list(n = 1))
+  # An omitted `table` must stay omitted rather than becoming an explicit
+  # tableControl(): nlmixr2est merges ui$meta's addDosing/subsetNonmem/cores/
+  # keep/drop into the table control only when its `table` argument is
+  # missing, so supplying a default would switch that merge off.
+  expect_true(captured$tableMissing)
+
+  # A supplied table reaches nlmixr2est::nlmixr() unchanged.  Before this was
+  # fixed, tar_nlmixr()/tar_nlmixr_multimodel() accepted `table`, used it to
+  # pick the retained data columns, and then dropped it before estimation.
+  ret2 <- nlmixr2_indirect(
+    object = "hh", data = mtcars, est = "saem", control = list(n = 1),
+    table = nlmixr2est::tableControl(keep = "WT")
+  )
+  expect_identical(ret2, "fit-result")
+  expect_false(captured$tableMissing)
+  expect_identical(captured$table, nlmixr2est::tableControl(keep = "WT"))
 })
 
 # Issue #35: error = "continue" should catch an estimation failure and return
@@ -154,7 +174,7 @@ targets::tar_test("nlmixr2_indirect loads from cache and forwards to nlmixr2est:
 targets::tar_test("nlmixr2_indirect returns a failure sentinel when error = 'continue'", {
   save_nlmixr2obj_indirect(list(md5 = "hh", marker = "x"))
   testthat::local_mocked_bindings(
-    nlmixr = function(object, data, est, control) stop("synthetic estimation failure"),
+    nlmixr = function(object, data, est, control, table) stop("synthetic estimation failure"),
     .package = "nlmixr2est"
   )
 
@@ -176,7 +196,7 @@ targets::tar_test("nlmixr2_indirect returns a failure sentinel when error = 'con
 targets::tar_test("nlmixr2_indirect re-throws when error = 'stop' (the default)", {
   save_nlmixr2obj_indirect(list(md5 = "hh", marker = "x"))
   testthat::local_mocked_bindings(
-    nlmixr = function(object, data, est, control) stop("synthetic estimation failure"),
+    nlmixr = function(object, data, est, control, table) stop("synthetic estimation failure"),
     .package = "nlmixr2est"
   )
 
@@ -198,7 +218,7 @@ targets::tar_test("nlmixr2_indirect re-throws when error = 'stop' (the default)"
 targets::tar_test("nlmixr2_indirect announces the model description before estimating", {
   save_nlmixr2obj_indirect(list(md5 = "hh", marker = "x"))
   testthat::local_mocked_bindings(
-    nlmixr = function(object, data, est, control) {
+    nlmixr = function(object, data, est, control, table) {
       message("estimating")
       "fit"
     },
@@ -253,4 +273,24 @@ test_that("the failure sentinel prints its captured message", {
   invisible(capture.output(vis <- withVisible(print(sentinel))))
   expect_identical(vis$value, sentinel)
   expect_false(vis$visible)
+})
+
+# nlmixr2est returns the bare fit environment (class "nlmixr2FitCore") rather
+# than the nlmixr2FitData tibble whenever the residual/table step did not run --
+# either because calcTables = FALSE was asked for, or because addTable() failed
+# and nlmixr2est downgraded that to a warning.  Either way nlmixr2_indirect()
+# passes the estimation result through untouched; deciding what a missing table
+# step means is not this layer's job.
+targets::tar_test("nlmixr2_indirect returns a fit with no table step unchanged", {
+  save_nlmixr2obj_indirect(list(md5 = "hh", marker = "x"))
+  untabled <- new.env(parent = emptyenv())
+  untabled$control <- list(calcTables = FALSE)
+  class(untabled) <- "nlmixr2FitCore"
+  testthat::local_mocked_bindings(
+    nlmixr = function(object, data, est, control, table) untabled,
+    .package = "nlmixr2est"
+  )
+  ret <- nlmixr2_indirect(object = "hh", data = mtcars, est = "saem", control = list())
+  expect_identical(ret, untabled)
+  expect_identical(class(ret), "nlmixr2FitCore")
 })

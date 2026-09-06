@@ -10,6 +10,16 @@
 
 ## Bug fixes
 
+* `table` now reaches estimation. `tar_nlmixr()` and
+  `tar_nlmixr_multimodel()` accept a `table` (`nlmixr2est::tableControl()`)
+  argument and used it to decide which data columns survive into the
+  simplified dataset, but never passed it to `nlmixr2est::nlmixr()`, so the
+  residual/table step always ran with the defaults. `tableControl(keep =
+  ...)` columns, for example, were kept in the data and then dropped from the
+  fit. Pipelines that leave `table` at its default are unaffected and are not
+  re-run; supplying any other `tableControl()` re-runs the fit, as a changed
+  `control` would.
+
 * `tar_nlmixr_multimodel()` again accepts `data`, `control`, and `table`
   arguments that cannot be evaluated where the pipeline is defined -- most
   importantly `data = <name of an upstream target>`, which is the normal way

@@ -8,7 +8,11 @@
 #' as the `object_simple` target in the pipeline. `nlmixr2_indirect()` loads
 #' the simplified `nlmixrui` object from the `nlmixr2targets` indirect cache
 #' (under `<targets store>/user/nlmixr2/`) and passes it to
-#' [nlmixr2est::nlmixr()] along with `data`, `est`, and `control`.
+#' [nlmixr2est::nlmixr()] along with `data`, `est`, `control`, and -- when the
+#' caller supplied one -- `table`.  An omitted `table` is passed on as omitted
+#' rather than as `nlmixr2est::tableControl()`, because nlmixr2est merges the
+#' table settings carried on `ui$meta` into the table control only when its
+#' own `table` argument is missing.
 #'
 #' Routing the simplified ui through a small character-hash target rather than
 #' a target whose value is the ui object keeps the dependency hash for the
@@ -32,7 +36,7 @@
 #'   returned instead; see [tar_nlmixr()].
 #' @seealso [tar_nlmixr()], [nlmixr_object_simplify()].
 #' @export
-nlmixr2_indirect <- function(object, data, est, control,
+nlmixr2_indirect <- function(object, data, est, control, table,
                              directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"),
                              error = c("stop", "continue"), description = NULL) {
   error <- match.arg(error)
@@ -49,11 +53,29 @@ nlmixr2_indirect <- function(object, data, est, control,
   ui <- read_nlmixr2obj_indirect(hash = object, directory = directory)
   if (identical(error, "continue")) {
     tryCatch(
-      nlmixr2est::nlmixr(object = ui, data = data, est = est, control = control),
+      nlmixr2_indirect_fit(ui = ui, data = data, est = est, control = control, table = table),
       error = function(e) nlmixr2targets_error_object(e)
     )
   } else {
+    nlmixr2_indirect_fit(ui = ui, data = data, est = est, control = control, table = table)
+  }
+}
+
+# Run the estimation, forwarding an absent `table` as absent rather than as
+# `tableControl()`. The two are not equivalent: nlmixr2est merges the table
+# settings carried on `ui$meta` (`addDosing`, `subsetNonmem`, `cores`, `keep`,
+# `drop`) into the table control only when `table` is missing from the
+# `nlmixr2est::nlmixr()` call, so supplying an explicit default would silently
+# switch that merge off. R propagates missingness through an argument pass, so
+# `table` reaching here missing stays missing.
+#
+# Kept separate from nlmixr2_indirect() so the `error = "stop"` and
+# `error = "continue"` paths share one copy of that branching.
+nlmixr2_indirect_fit <- function(ui, data, est, control, table) {
+  if (missing(table)) {
     nlmixr2est::nlmixr(object = ui, data = data, est = est, control = control)
+  } else {
+    nlmixr2est::nlmixr(object = ui, data = data, est = est, control = control, table = table)
   }
 }
 
