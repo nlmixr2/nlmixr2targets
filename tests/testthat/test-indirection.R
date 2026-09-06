@@ -275,100 +275,22 @@ test_that("the failure sentinel prints its captured message", {
   expect_false(vis$visible)
 })
 
-# nlmixr2est catches a failing residual/table step, downgrades it to a
-# warning, and returns the bare fit environment (class "nlmixr2FitCore")
-# instead of the nlmixr2FitData tibble.  Under tar_make() that warning is easy
-# to miss, so the degraded fit used to flow silently through the rest of the
-# pipeline.
-
-# A stand-in for the environment nlmixr2est hands back when addTable() failed.
-degraded_fit <- function(calcTables = TRUE) {
-  fit <- new.env(parent = emptyenv())
-  fit$control <- list(calcTables = calcTables)
-  class(fit) <- "nlmixr2FitCore"
-  fit
-}
-
-targets::tar_test("nlmixr2_indirect rejects a fit whose table step silently failed", {
+# nlmixr2est returns the bare fit environment (class "nlmixr2FitCore") rather
+# than the nlmixr2FitData tibble whenever the residual/table step did not run --
+# either because calcTables = FALSE was asked for, or because addTable() failed
+# and nlmixr2est downgraded that to a warning.  Either way nlmixr2_indirect()
+# passes the estimation result through untouched; deciding what a missing table
+# step means is not this layer's job.
+targets::tar_test("nlmixr2_indirect returns a fit with no table step unchanged", {
   save_nlmixr2obj_indirect(list(md5 = "hh", marker = "x"))
+  untabled <- new.env(parent = emptyenv())
+  untabled$control <- list(calcTables = FALSE)
+  class(untabled) <- "nlmixr2FitCore"
   testthat::local_mocked_bindings(
-    nlmixr = function(object, data, est, control, table) degraded_fit(calcTables = TRUE),
-    .package = "nlmixr2est"
-  )
-  expect_error(
-    nlmixr2_indirect(object = "hh", data = mtcars, est = "saem", control = list()),
-    regexp = "without the residual/table step"
-  )
-  # The message points at the specific nlmixr2est warning and at the two
-  # commands that surface the underlying error.
-  err <- tryCatch(
-    nlmixr2_indirect(object = "hh", data = mtcars, est = "saem", control = list()),
-    error = function(e) conditionMessage(e)
-  )
-  expect_match(err, "error calculating tables, returning without table step", fixed = TRUE)
-  expect_match(err, "nlmixr2est::addTable(", fixed = TRUE)
-  expect_match(err, "calcTables = FALSE", fixed = TRUE)
-})
-
-targets::tar_test("a degraded fit becomes a sentinel when error = 'continue'", {
-  save_nlmixr2obj_indirect(list(md5 = "hh", marker = "x"))
-  testthat::local_mocked_bindings(
-    nlmixr = function(object, data, est, control, table) degraded_fit(calcTables = TRUE),
-    .package = "nlmixr2est"
-  )
-  ret <- nlmixr2_indirect(
-    object = "hh", data = mtcars, est = "saem", control = list(), error = "continue"
-  )
-  expect_s3_class(ret, "nlmixr2targetsError")
-  expect_match(as.character(ret), "without the residual/table step")
-})
-
-targets::tar_test("a fit with calcTables = FALSE is returned unchanged", {
-  save_nlmixr2obj_indirect(list(md5 = "hh", marker = "x"))
-  expected <- degraded_fit(calcTables = FALSE)
-  testthat::local_mocked_bindings(
-    nlmixr = function(object, data, est, control, table) expected,
+    nlmixr = function(object, data, est, control, table) untabled,
     .package = "nlmixr2est"
   )
   ret <- nlmixr2_indirect(object = "hh", data = mtcars, est = "saem", control = list())
-  expect_identical(ret, expected)
+  expect_identical(ret, untabled)
   expect_identical(class(ret), "nlmixr2FitCore")
-})
-
-test_that("the table-step guard passes over anything that is not a degraded fit", {
-  # A complete fit.
-  full <- structure(
-    list(a = 1),
-    class = c("nlmixr2FitData", "nlmixr2FitCore", "nlmixr2.saem", "tbl_df", "tbl", "data.frame")
-  )
-  expect_null(nlmixr2_indirect_assert_table_step(full))
-  # Not an nlmixr2 fit at all (e.g. an estimator that returns something else).
-  expect_null(nlmixr2_indirect_assert_table_step("not a fit"))
-  expect_null(nlmixr2_indirect_assert_table_step(NULL))
-  # calcTables explicitly disabled.
-  expect_null(nlmixr2_indirect_assert_table_step(degraded_fit(calcTables = FALSE)))
-  # calcTables enabled, or not determinable at all: both are failures.  A fit
-  # whose control cannot be read is reported rather than assumed benign.
-  expect_error(
-    nlmixr2_indirect_assert_table_step(degraded_fit(calcTables = TRUE)),
-    regexp = "without the residual/table step"
-  )
-  unreadable <- new.env(parent = emptyenv())
-  class(unreadable) <- "nlmixr2FitCore"
-  expect_error(
-    nlmixr2_indirect_assert_table_step(unreadable),
-    regexp = "without the residual/table step"
-  )
-})
-
-test_that("nlmixr2_indirect_calc_tables reads control from either shape", {
-  # Environment binding (a bare nlmixr2FitCore fit).
-  env_fit <- new.env(parent = emptyenv())
-  env_fit$control <- list(calcTables = FALSE)
-  expect_false(nlmixr2_indirect_calc_tables(env_fit))
-  # `$`-accessible control (a list-shaped fit).
-  expect_true(nlmixr2_indirect_calc_tables(list(control = list(calcTables = TRUE))))
-  # Nothing to read.
-  expect_null(nlmixr2_indirect_calc_tables(new.env(parent = emptyenv())))
-  expect_null(nlmixr2_indirect_calc_tables("not a fit"))
 })

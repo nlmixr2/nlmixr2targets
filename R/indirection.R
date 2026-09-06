@@ -14,15 +14,6 @@
 #' table settings carried on `ui$meta` into the table control only when its
 #' own `table` argument is missing.
 #'
-#' The estimation result is checked before it is returned: nlmixr2est
-#' downgrades a failing residual/table step to a warning and hands back the
-#' bare fit environment (class `"nlmixr2FitCore"`) instead of the usual
-#' `nlmixr2FitData` tibble, which is easy to miss inside a `tar_make()` run
-#' and produces confusing failures much further downstream. When that happens
-#' with `calcTables = TRUE`, `nlmixr2_indirect()` raises the omission as an
-#' error so it is attributed to the model that caused it. A fit that has no
-#' tables because `calcTables = FALSE` was requested is returned unchanged.
-#'
 #' Routing the simplified ui through a small character-hash target rather than
 #' a target whose value is the ui object keeps the dependency hash for the
 #' `fit_simple` target independent of large rxUi internals, so cosmetic edits
@@ -70,72 +61,22 @@ nlmixr2_indirect <- function(object, data, est, control, table,
   }
 }
 
-# Run the estimation and refuse to hand back a fit whose residual/table step
-# silently did not happen. Kept separate from nlmixr2_indirect() so that both
-# the `error = "stop"` and `error = "continue"` paths share it, which is what
-# routes the error into the nlmixr2targetsError sentinel under "continue".
+# Run the estimation, forwarding an absent `table` as absent rather than as
+# `tableControl()`. The two are not equivalent: nlmixr2est merges the table
+# settings carried on `ui$meta` (`addDosing`, `subsetNonmem`, `cores`, `keep`,
+# `drop`) into the table control only when `table` is missing from the
+# `nlmixr2est::nlmixr()` call, so supplying an explicit default would silently
+# switch that merge off. R propagates missingness through an argument pass, so
+# `table` reaching here missing stays missing.
 #
-# An absent `table` is forwarded as absent rather than as `tableControl()`.
-# The two are not equivalent: nlmixr2est merges the table settings carried on
-# `ui$meta` (`addDosing`, `subsetNonmem`, `cores`, `keep`, `drop`) into the
-# table control only when `table` is missing from the `nlmixr2est::nlmixr()`
-# call, so supplying an explicit default would silently switch that merge off.
-# R propagates missingness through an argument pass, so `table` reaching here
-# missing stays missing.
+# Kept separate from nlmixr2_indirect() so the `error = "stop"` and
+# `error = "continue"` paths share one copy of that branching.
 nlmixr2_indirect_fit <- function(ui, data, est, control, table) {
-  fit <-
-    if (missing(table)) {
-      nlmixr2est::nlmixr(object = ui, data = data, est = est, control = control)
-    } else {
-      nlmixr2est::nlmixr(object = ui, data = data, est = est, control = control, table = table)
-    }
-  nlmixr2_indirect_assert_table_step(fit)
-  fit
-}
-
-# nlmixr2est wraps its residual/table step in try() and, on failure, warns
-# ("error calculating tables, returning without table step") and returns the
-# fit environment rather than the nlmixr2FitData tibble. Under targets that
-# warning is easy to miss, and the degraded fit then flows through the rest of
-# the pipeline and into downstream packages that expect the tibble. Refuse it
-# here, at the estimation boundary, where the model responsible is still
-# identifiable. A fit with no tables because the user asked for none
-# (`calcTables = FALSE`) is legitimate and passes through.
-nlmixr2_indirect_assert_table_step <- function(fit) {
-  if (inherits(fit, "nlmixr2FitData") || !inherits(fit, "nlmixr2FitCore")) {
-    return(invisible(NULL))
+  if (missing(table)) {
+    nlmixr2est::nlmixr(object = ui, data = data, est = est, control = control)
+  } else {
+    nlmixr2est::nlmixr(object = ui, data = data, est = est, control = control, table = table)
   }
-  if (isFALSE(nlmixr2_indirect_calc_tables(fit))) {
-    return(invisible(NULL))
-  }
-  stop(
-    "estimation returned a fit without the residual/table step (class '",
-    paste(class(fit), collapse = "', '"), "' rather than 'nlmixr2FitData'), ",
-    "even though `calcTables` is TRUE. nlmixr2est downgrades a failing ",
-    "`addTable()` to the warning \"error calculating tables, returning ",
-    "without table step\"; read it back with ",
-    "`targets::tar_meta(fields = \"warnings\")`, and re-raise the underlying ",
-    "error with `nlmixr2est::addTable(targets::tar_read(<name>_fit_simple))`. ",
-    "To keep a fit without tables on purpose, set `calcTables = FALSE` in ",
-    "`control`.",
-    call. = FALSE
-  )
-}
-
-# Read `calcTables` off a fit environment. Direct env access is preferred over
-# `fit$control` because `$.nlmixr2FitCore` routes through nmObjGet(), which
-# does more work than reading a binding and can fail on a partially-built fit;
-# the `$` form is kept as a fallback for fit shapes that do not bind `control`
-# directly. Returns NULL when it cannot be determined, which the caller treats
-# as "not deliberately disabled".
-nlmixr2_indirect_calc_tables <- function(fit) {
-  control <-
-    if (is.environment(fit) && exists("control", envir = fit, inherits = FALSE)) {
-      get("control", envir = fit)
-    } else {
-      tryCatch(fit$control, error = function(e) NULL)
-    }
-  tryCatch(control$calcTables, error = function(e) NULL)
 }
 
 # Build the failure sentinel returned by nlmixr2_indirect() when

@@ -840,10 +840,10 @@ targets::tar_test("tar_nlmixr passes table through to the estimated fit", {
   )
 })
 
-# calcTables = FALSE deliberately produces a fit with no tables (a bare
-# "nlmixr2FitCore" environment). That is a legitimate request and must still
-# flow through the pipeline; only an *unrequested* missing table step is an
-# error.
+# calcTables = FALSE produces a fit with no tables (a bare "nlmixr2FitCore"
+# environment rather than the nlmixr2FitData tibble). The whole pipeline,
+# including the label/meta/data restore in the final target, has to keep
+# working on that shape.
 targets::tar_test("tar_nlmixr keeps working when calcTables = FALSE is requested", {
   targets::tar_script({
     pheno <- function() {

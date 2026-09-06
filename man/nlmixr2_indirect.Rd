@@ -70,15 +70,6 @@ rather than as \code{nlmixr2est::tableControl()}, because nlmixr2est merges the
 table settings carried on \code{ui$meta} into the table control only when its
 own \code{table} argument is missing.
 
-The estimation result is checked before it is returned: nlmixr2est
-downgrades a failing residual/table step to a warning and hands back the
-bare fit environment (class \code{"nlmixr2FitCore"}) instead of the usual
-\code{nlmixr2FitData} tibble, which is easy to miss inside a \code{tar_make()} run
-and produces confusing failures much further downstream. When that happens
-with \code{calcTables = TRUE}, \code{nlmixr2_indirect()} raises the omission as an
-error so it is attributed to the model that caused it. A fit that has no
-tables because \code{calcTables = FALSE} was requested is returned unchanged.
-
 Routing the simplified ui through a small character-hash target rather than
 a target whose value is the ui object keeps the dependency hash for the
 \code{fit_simple} target independent of large rxUi internals, so cosmetic edits
