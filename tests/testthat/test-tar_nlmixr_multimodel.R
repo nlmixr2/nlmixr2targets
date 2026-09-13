@@ -63,6 +63,57 @@ test_that("tar_nlmixr_multimodel", {
   expect_equal(collating_call[[3]], as.name(target_list[[2]][[4]]$settings$name))
 })
 
+test_that("the combining target declares its own packages", {
+  pheno <- function() {
+    ini({
+      lcl <- log(0.008)
+      lvc <- log(0.6)
+      etalcl ~ 1
+      cpaddSd <- 0.1
+    })
+    model({
+      cl <- exp(lcl + etalcl)
+      vc <- exp(lvc)
+      kel <- cl / vc
+      d / dt(central) <- -kel * central
+      cp <- central / vc
+      cp ~ add(cpaddSd)
+    })
+  }
+  old <- targets::tar_option_get("packages")
+  on.exit(targets::tar_option_set(packages = old), add = TRUE)
+
+  # The combining target only gathers already-built fits into a named list, so
+  # it must not inherit whatever happened to be attached when `_targets.R` was
+  # sourced: a worker on another machine or in a container cannot necessarily
+  # load those, and the pipeline then fails at the very last target.
+  targets::tar_option_set(packages = c("tidyverse", "somethingInstalledLocallyOnly"))
+  target_list <-
+    tar_nlmixr_multimodel(
+      name = combining_packages,
+      "only model" = pheno,
+      data = nlmixr2data::pheno_sd,
+      est = "saem"
+    )
+  combining <- target_list[[length(target_list)]]
+  expect_equal(combining$settings$name, "combining_packages")
+  expect_identical(combining$command$packages, "nlmixr2est")
+
+  # Independent of the option rather than merely different from it.
+  targets::tar_option_set(packages = "nlmixr2targets")
+  target_list2 <-
+    tar_nlmixr_multimodel(
+      name = combining_packages2,
+      "only model" = pheno,
+      data = nlmixr2data::pheno_sd,
+      est = "saem"
+    )
+  expect_identical(
+    target_list2[[length(target_list2)]]$command$packages,
+    "nlmixr2est"
+  )
+})
+
 test_that("tar_nlmixr_multimodel works with long model names", {
   pheno <- function() {
     ini({

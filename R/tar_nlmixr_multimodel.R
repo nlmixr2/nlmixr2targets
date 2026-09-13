@@ -185,7 +185,19 @@ tar_nlmixr_multimodel_parse <- function(name, data, est, control, table, model_l
     call_list[[idx + 1]] <- combined_list[[idx]]
   }
   names(call_list) <- c("", names(combined_list))
-  target_combined_list <- tar_nlmixr_target_raw(target_settings, name = name, command = call_list)
+  # This target only gathers already-built fits into a named list, so it needs
+  # nothing beyond the class methods of the objects it holds.  Declaring that
+  # explicitly, as the per-model targets do, keeps it from inheriting
+  # `tar_option_set(packages=)` -- which defaults to everything attached when
+  # `_targets.R` was sourced, and which a worker on another machine (or in a
+  # container) generally cannot load.
+  target_combined_list <-
+    tar_nlmixr_target_raw(
+      target_settings,
+      name = name,
+      command = call_list,
+      packages = "nlmixr2est"
+    )
   # Return the models to fit and the list-combining target
   append(
     target_model_fitting,

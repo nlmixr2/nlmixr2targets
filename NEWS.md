@@ -20,6 +20,16 @@
 
 ## Bug fixes
 
+* `tar_nlmixr_multimodel()`'s combining target now declares `packages =
+  "nlmixr2est"` instead of inheriting `targets::tar_option_set(packages =)`.
+  That option defaults to everything attached when `_targets.R` was sourced, so
+  sending the combining target to a worker on another machine (or in a
+  container) made `targets` try to load the whole local library there, failing
+  the pipeline at its very last target after every fit had already succeeded.
+  The target only gathers already-built fits into a named list, so it needs
+  nothing beyond the class methods of the objects it holds. The generated
+  command is unchanged, so cached fits are not re-run.
+
 * `table` now reaches estimation. `tar_nlmixr()` and
   `tar_nlmixr_multimodel()` accept a `table` (`nlmixr2est::tableControl()`)
   argument and used it to decide which data columns survive into the
