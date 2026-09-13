@@ -6,5 +6,6 @@ _targets
 inst/doc
 *.Rcheck/
 *.tar.gz
+*.tgz
 .RData
 .Ruserdata
