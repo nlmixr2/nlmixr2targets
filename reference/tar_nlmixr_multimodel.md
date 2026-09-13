@@ -14,7 +14,17 @@ tar_nlmixr_multimodel(
   control = list(),
   table = nlmixr2est::tableControl(),
   env = parent.frame(),
-  error = c("stop", "continue")
+  error = c("stop", "continue"),
+  format = targets::tar_option_get("format"),
+  repository = targets::tar_option_get("repository"),
+  library = targets::tar_option_get("library"),
+  memory = targets::tar_option_get("memory"),
+  garbage_collection = isTRUE(targets::tar_option_get("garbage_collection")),
+  deployment = targets::tar_option_get("deployment"),
+  resources = targets::tar_option_get("resources"),
+  storage = targets::tar_option_get("storage"),
+  retrieval = targets::tar_option_get("retrieval"),
+  cue = targets::tar_option_get("cue")
 )
 ```
 
@@ -88,6 +98,155 @@ tar_nlmixr_multimodel(
   does not stop the rest of the pipeline. Detect a failed fit with
   `inherits(fit, "nlmixr2targetsError")` or the broader
   `inherits(fit, "try-error")`.
+
+- format:
+
+  Optional storage format for the target's return value. With the
+  exception of `format = "file"`, each target gets a file in
+  `_targets/objects`, and each format is a different way to save and
+  load this file. See the "Storage formats" section for a detailed list
+  of possible data storage formats.
+
+- repository:
+
+  Character of length 1, remote repository for target storage. Choices:
+
+  - `"local"`: file system of the local machine.
+
+  - `"aws"`: Amazon Web Services (AWS) S3 bucket. Can be configured with
+    a non-AWS S3 bucket using the `endpoint` argument of
+    [`tar_resources_aws()`](https://docs.ropensci.org/targets/reference/tar_resources_aws.html),
+    but versioning capabilities may be lost in doing so. See the cloud
+    storage section of <https://books.ropensci.org/targets/data.html>
+    for details for instructions.
+
+  - `"gcp"`: Google Cloud Platform storage bucket. See the cloud storage
+    section of <https://books.ropensci.org/targets/data.html> for
+    details for instructions.
+
+  - A character string from
+    [`tar_repository_cas()`](https://docs.ropensci.org/targets/reference/tar_repository_cas.html)
+    for content-addressable storage.
+
+  Note: if `repository` is not `"local"` and `format` is `"file"` then
+  the target should create a single output file. That output file is
+  uploaded to the cloud and tracked for changes where it exists in the
+  cloud. As of `targets` version 1.11.0 and higher, the local file is no
+  longer deleted after the target runs.
+
+- library:
+
+  Character vector of library paths to try when loading `packages`.
+
+- memory:
+
+  Character of length 1, memory strategy. Possible values:
+
+  - `"auto"` (default): equivalent to `memory = "transient"` in almost
+    all cases. But to avoid superfluous reads from disk,
+    `memory = "auto"` is equivalent to `memory = "persistent"` for for
+    non-dynamically-branched targets that other targets dynamically
+    branch over. For example: if your pipeline has
+    `tar_target(name = y, command = x, pattern = map(x))`, then
+    `tar_target(name = x, command = f(), memory = "auto")` will use
+    persistent memory for `x` in order to avoid rereading all of `x` for
+    every branch of `y`.
+
+  - `"transient"`: the target gets unloaded after every new target
+    completes. Either way, the target gets automatically loaded into
+    memory whenever another target needs the value.
+
+  - `"persistent"`: the target stays in memory until the end of the
+    pipeline (unless `storage` is `"worker"`, in which case `targets`
+    unloads the value from memory right after storing it in order to
+    avoid sending copious data over a network).
+
+  For cloud-based file targets (e.g. `format = "file"` with
+  `repository = "aws"`), the `memory` option applies to the temporary
+  local copy of the file: `"persistent"` means it remains until the end
+  of the pipeline and is then deleted, and `"transient"` means it gets
+  deleted as soon as possible. The former conserves bandwidth, and the
+  latter conserves local storage.
+
+- garbage_collection:
+
+  Logical: `TRUE` to run [`base::gc()`](https://rdrr.io/r/base/gc.html)
+  just before the target runs, in whatever R process it is about to run
+  (which could be a parallel worker). `FALSE` to omit garbage
+  collection. Numeric values get converted to `FALSE`. The
+  `garbage_collection` option in
+  [`tar_option_set()`](https://docs.ropensci.org/targets/reference/tar_option_set.html)
+  is independent of the argument of the same name in
+  [`tar_target()`](https://docs.ropensci.org/targets/reference/tar_target.html).
+
+- deployment:
+
+  Character of length 1. If `deployment` is `"main"`, then the target
+  will run on the central controlling R process. Otherwise, if
+  `deployment` is `"worker"` and you set up the pipeline with
+  distributed/parallel computing, then the target runs on a parallel
+  worker. For more on distributed/parallel computing in `targets`,
+  please visit <https://books.ropensci.org/targets/crew.html>.
+
+- resources:
+
+  Object returned by
+  [`tar_resources()`](https://docs.ropensci.org/targets/reference/tar_resources.html)
+  with optional settings for high-performance computing functionality,
+  alternative data storage formats, and other optional capabilities of
+  `targets`. See
+  [`tar_resources()`](https://docs.ropensci.org/targets/reference/tar_resources.html)
+  for details.
+
+- storage:
+
+  Character string to control when the output of the target is saved to
+  storage. Only relevant when using `targets` with parallel workers
+  (<https://books.ropensci.org/targets/crew.html>). Must be one of the
+  following values:
+
+  - `"worker"` (default): the worker saves/uploads the value.
+
+  - `"main"`: the target's return value is sent back to the host machine
+    and saved/uploaded locally.
+
+  - `"none"`: `targets` makes no attempt to save the result of the
+    target to storage in the location where `targets` expects it to be.
+    Saving to storage is the responsibility of the user. Use with
+    caution.
+
+- retrieval:
+
+  Character string to control when the current target loads its
+  dependencies into memory before running. (Here, a "dependency" is
+  another target upstream that the current one depends on.) Only
+  relevant when using `targets` with parallel workers
+  (<https://books.ropensci.org/targets/crew.html>). Must be one of the
+  following values:
+
+  - `"auto"` (default): equivalent to `retrieval = "worker"` in almost
+    all cases. But to avoid unnecessary reads from disk,
+    `retrieval = "auto"` is equivalent to `retrieval = "main"` for
+    dynamic branches that branch over non-dynamic targets. For example:
+    if your pipeline has `tar_target(x, command = f())`, then
+    `tar_target(y, command = x, pattern = map(x), retrieval = "auto")`
+    will use `"main"` retrieval in order to avoid rereading all of `x`
+    for every branch of `y`.
+
+  - `"worker"`: the worker loads the target's dependencies.
+
+  - `"main"`: the target's dependencies are loaded on the host machine
+    and sent to the worker before the target runs.
+
+  - `"none"`: `targets` makes no attempt to load its dependencies. With
+    `retrieval = "none"`, loading dependencies is the responsibility of
+    the user. Use with caution.
+
+- cue:
+
+  An optional object from
+  [`tar_cue()`](https://docs.ropensci.org/targets/reference/tar_cue.html)
+  to customize the rules that decide whether the target is up to date.
 
 ## Value
 

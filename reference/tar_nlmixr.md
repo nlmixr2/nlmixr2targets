@@ -17,7 +17,17 @@ tar_nlmixr(
   control = list(),
   table = nlmixr2est::tableControl(),
   env = parent.frame(),
-  error = c("stop", "continue")
+  error = c("stop", "continue"),
+  format = targets::tar_option_get("format"),
+  repository = targets::tar_option_get("repository"),
+  library = targets::tar_option_get("library"),
+  memory = targets::tar_option_get("memory"),
+  garbage_collection = isTRUE(targets::tar_option_get("garbage_collection")),
+  deployment = targets::tar_option_get("deployment"),
+  resources = targets::tar_option_get("resources"),
+  storage = targets::tar_option_get("storage"),
+  retrieval = targets::tar_option_get("retrieval"),
+  cue = targets::tar_option_get("cue")
 )
 
 tar_nlmixr_raw(
@@ -32,7 +42,8 @@ tar_nlmixr_raw(
   fit_simple_name,
   env,
   error = "stop",
-  description = NULL
+  description = NULL,
+  target_settings = tar_nlmixr_collect_target_settings_default()
 )
 ```
 
@@ -107,6 +118,155 @@ tar_nlmixr_raw(
   `inherits(fit, "nlmixr2targetsError")` or the broader
   `inherits(fit, "try-error")`.
 
+- format:
+
+  Optional storage format for the target's return value. With the
+  exception of `format = "file"`, each target gets a file in
+  `_targets/objects`, and each format is a different way to save and
+  load this file. See the "Storage formats" section for a detailed list
+  of possible data storage formats.
+
+- repository:
+
+  Character of length 1, remote repository for target storage. Choices:
+
+  - `"local"`: file system of the local machine.
+
+  - `"aws"`: Amazon Web Services (AWS) S3 bucket. Can be configured with
+    a non-AWS S3 bucket using the `endpoint` argument of
+    [`tar_resources_aws()`](https://docs.ropensci.org/targets/reference/tar_resources_aws.html),
+    but versioning capabilities may be lost in doing so. See the cloud
+    storage section of <https://books.ropensci.org/targets/data.html>
+    for details for instructions.
+
+  - `"gcp"`: Google Cloud Platform storage bucket. See the cloud storage
+    section of <https://books.ropensci.org/targets/data.html> for
+    details for instructions.
+
+  - A character string from
+    [`tar_repository_cas()`](https://docs.ropensci.org/targets/reference/tar_repository_cas.html)
+    for content-addressable storage.
+
+  Note: if `repository` is not `"local"` and `format` is `"file"` then
+  the target should create a single output file. That output file is
+  uploaded to the cloud and tracked for changes where it exists in the
+  cloud. As of `targets` version 1.11.0 and higher, the local file is no
+  longer deleted after the target runs.
+
+- library:
+
+  Character vector of library paths to try when loading `packages`.
+
+- memory:
+
+  Character of length 1, memory strategy. Possible values:
+
+  - `"auto"` (default): equivalent to `memory = "transient"` in almost
+    all cases. But to avoid superfluous reads from disk,
+    `memory = "auto"` is equivalent to `memory = "persistent"` for for
+    non-dynamically-branched targets that other targets dynamically
+    branch over. For example: if your pipeline has
+    `tar_target(name = y, command = x, pattern = map(x))`, then
+    `tar_target(name = x, command = f(), memory = "auto")` will use
+    persistent memory for `x` in order to avoid rereading all of `x` for
+    every branch of `y`.
+
+  - `"transient"`: the target gets unloaded after every new target
+    completes. Either way, the target gets automatically loaded into
+    memory whenever another target needs the value.
+
+  - `"persistent"`: the target stays in memory until the end of the
+    pipeline (unless `storage` is `"worker"`, in which case `targets`
+    unloads the value from memory right after storing it in order to
+    avoid sending copious data over a network).
+
+  For cloud-based file targets (e.g. `format = "file"` with
+  `repository = "aws"`), the `memory` option applies to the temporary
+  local copy of the file: `"persistent"` means it remains until the end
+  of the pipeline and is then deleted, and `"transient"` means it gets
+  deleted as soon as possible. The former conserves bandwidth, and the
+  latter conserves local storage.
+
+- garbage_collection:
+
+  Logical: `TRUE` to run [`base::gc()`](https://rdrr.io/r/base/gc.html)
+  just before the target runs, in whatever R process it is about to run
+  (which could be a parallel worker). `FALSE` to omit garbage
+  collection. Numeric values get converted to `FALSE`. The
+  `garbage_collection` option in
+  [`tar_option_set()`](https://docs.ropensci.org/targets/reference/tar_option_set.html)
+  is independent of the argument of the same name in
+  [`tar_target()`](https://docs.ropensci.org/targets/reference/tar_target.html).
+
+- deployment:
+
+  Character of length 1. If `deployment` is `"main"`, then the target
+  will run on the central controlling R process. Otherwise, if
+  `deployment` is `"worker"` and you set up the pipeline with
+  distributed/parallel computing, then the target runs on a parallel
+  worker. For more on distributed/parallel computing in `targets`,
+  please visit <https://books.ropensci.org/targets/crew.html>.
+
+- resources:
+
+  Object returned by
+  [`tar_resources()`](https://docs.ropensci.org/targets/reference/tar_resources.html)
+  with optional settings for high-performance computing functionality,
+  alternative data storage formats, and other optional capabilities of
+  `targets`. See
+  [`tar_resources()`](https://docs.ropensci.org/targets/reference/tar_resources.html)
+  for details.
+
+- storage:
+
+  Character string to control when the output of the target is saved to
+  storage. Only relevant when using `targets` with parallel workers
+  (<https://books.ropensci.org/targets/crew.html>). Must be one of the
+  following values:
+
+  - `"worker"` (default): the worker saves/uploads the value.
+
+  - `"main"`: the target's return value is sent back to the host machine
+    and saved/uploaded locally.
+
+  - `"none"`: `targets` makes no attempt to save the result of the
+    target to storage in the location where `targets` expects it to be.
+    Saving to storage is the responsibility of the user. Use with
+    caution.
+
+- retrieval:
+
+  Character string to control when the current target loads its
+  dependencies into memory before running. (Here, a "dependency" is
+  another target upstream that the current one depends on.) Only
+  relevant when using `targets` with parallel workers
+  (<https://books.ropensci.org/targets/crew.html>). Must be one of the
+  following values:
+
+  - `"auto"` (default): equivalent to `retrieval = "worker"` in almost
+    all cases. But to avoid unnecessary reads from disk,
+    `retrieval = "auto"` is equivalent to `retrieval = "main"` for
+    dynamic branches that branch over non-dynamic targets. For example:
+    if your pipeline has `tar_target(x, command = f())`, then
+    `tar_target(y, command = x, pattern = map(x), retrieval = "auto")`
+    will use `"main"` retrieval in order to avoid rereading all of `x`
+    for every branch of `y`.
+
+  - `"worker"`: the worker loads the target's dependencies.
+
+  - `"main"`: the target's dependencies are loaded on the host machine
+    and sent to the worker before the target runs.
+
+  - `"none"`: `targets` makes no attempt to load its dependencies. With
+    `retrieval = "none"`, loading dependencies is the responsibility of
+    the user. Use with caution.
+
+- cue:
+
+  An optional object from
+  [`tar_cue()`](https://docs.ropensci.org/targets/reference/tar_cue.html)
+  to customize the rules that decide whether the target is up to date.
+
 - object_simple_name, data_simple_name, fit_simple_name:
 
   target names to use for the simplified object, simplified data, fit of
@@ -117,6 +277,15 @@ tar_nlmixr_raw(
 
   Human-readable name for the model, announced by the estimation target
   when it starts to run. `NULL` (the default) announces nothing.
+
+- target_settings:
+
+  Named list of
+  [`targets::tar_target()`](https://docs.ropensci.org/targets/reference/tar_target.html)
+  settings to apply to every generated target, as built by
+  `tar_nlmixr()` from its own arguments. Defaults to those arguments'
+  own defaults, so calling `tar_nlmixr_raw()` directly behaves the same
+  as before this argument existed.
 
 ## Value
 
@@ -184,6 +353,61 @@ with `object`, `data`, `est`, `control`, and – when you supply one –
   defined in your `_targets.R` are not visible from there. A model that
   calls an R user-defined function may therefore fail to resolve it;
   please report it if you hit this.
+
+## Arguments not forwarded to targets
+
+:tar_target(): `format`, `repository`, `library`, `memory`,
+`garbage_collection`, `deployment`, `resources`, `storage`, `retrieval`
+and `cue` are passed to every generated target, and default exactly as
+[`targets::tar_target()`](https://docs.ropensci.org/targets/reference/tar_target.html)
+defaults them, so a
+[`targets::tar_option_set()`](https://docs.ropensci.org/targets/reference/tar_option_set.html)
+earlier in `_targets.R` reaches these targets like any other. The rest
+are left out on purpose:
+
+- `command`, `deps` and `string` describe the work a target does, and
+  that is what this function exists to write. `string` in particular is
+  already used to keep a renamed model from re-running its fit.
+
+- `pattern` and `iteration` configure dynamic branching. The generated
+  targets are a fixed set of four per model, and
+  [`tar_nlmixr_multimodel()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel.md)
+  already provides the many-models case, so there is nothing to branch
+  over.
+
+- `tidy_eval` controls `!!` interpolation of a `command` written by the
+  caller. These commands are assembled with
+  [`substitute()`](https://rdrr.io/r/base/substitute.html) from
+  arguments that are already captured unevaluated, so it has nothing to
+  act on.
+
+- `packages` is chosen per generated target: the simplification targets
+  load `nlmixr2est` so that an un-namespaced `control` or `table`
+  expression evaluates, and the estimation target loads only what it
+  needs. Overriding it would break those choices silently. Use `library`
+  to point at a different package library instead.
+
+- `priority` was deprecated in `targets` 1.10.1.9013 (2025-04-08); its
+  scheduler no longer honours user priorities, so forwarding it would
+  only produce a deprecation warning per generated target.
+
+- `error` and `description` are already taken by arguments of this
+  function that mean something else. `error` here decides whether a
+  failed fit becomes a sentinel rather than how `targets` treats a
+  failed target, and `description` names the model in the message the
+  estimation target prints. Set the `targets` versions with
+  [`targets::tar_option_set()`](https://docs.ropensci.org/targets/reference/tar_option_set.html).
+
+## Running the generated targets on a remote worker
+
+The simplified model is written to
+`file.path(tar_config_get("store"), "user/nlmixr2")` by the
+`object_simple` target and read back from there by the estimation
+target. That is a path, not a value passed between targets, so the two
+must agree on it: sending only the estimation target to a worker whose
+filesystem does not carry the same store leaves it unable to find the
+model. Either give the whole set the same `resources` and `deployment`
+so they run together, or put the store somewhere both reach.
 
 ## Side effects
 

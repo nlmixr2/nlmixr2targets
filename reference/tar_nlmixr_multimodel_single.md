@@ -14,7 +14,8 @@ tar_nlmixr_multimodel_single(
   table,
   env,
   error = "stop",
-  description = NULL
+  description = NULL,
+  target_settings = tar_nlmixr_collect_target_settings_default()
 )
 ```
 
@@ -93,3 +94,14 @@ tar_nlmixr_multimodel_single(
 
   Human-readable name for the model, announced by the estimation target
   when it starts to run. `NULL` (the default) announces nothing.
+
+- target_settings:
+
+  Named list of
+  [`targets::tar_target()`](https://docs.ropensci.org/targets/reference/tar_target.html)
+  settings to apply to every generated target, as built by
+  [`tar_nlmixr()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
+  from its own arguments. Defaults to those arguments' own defaults, so
+  calling
+  [`tar_nlmixr_raw()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
+  directly behaves the same as before this argument existed.

@@ -4,6 +4,22 @@
 
 ### New features
 
+- [`tar_nlmixr()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md),
+  [`tar_nlmixr_raw()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
+  and
+  [`tar_nlmixr_multimodel()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel.md)
+  now forward `format`, `repository`, `library`, `memory`,
+  `garbage_collection`, `deployment`, `resources`, `storage`,
+  `retrieval` and `cue` to every target they generate, defaulting each
+  exactly as
+  [`targets::tar_target()`](https://docs.ropensci.org/targets/reference/tar_target.html)
+  does. `resources` is what lets a fit run on a `crew` controller.
+  [`?tar_nlmixr`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
+  documents the arguments that are deliberately not forwarded, and the
+  shared cache directory the generated targets need when they run on a
+  remote worker. Adding these does not change any generated command, so
+  cached fits are not re-run.
+
 - [`tar_nlmixr_multimodel()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel.md)
   estimation targets now announce themselves with
   `Model description: <list name>` before estimation starts, so

@@ -14,7 +14,8 @@ tar_nlmixr_multimodel_parse(
   table,
   model_list,
   env,
-  error = "stop"
+  error = "stop",
+  target_settings = tar_nlmixr_collect_target_settings_default()
 )
 ```
 
@@ -88,3 +89,14 @@ tar_nlmixr_multimodel_parse(
   does not stop the rest of the pipeline. Detect a failed fit with
   `inherits(fit, "nlmixr2targetsError")` or the broader
   `inherits(fit, "try-error")`.
+
+- target_settings:
+
+  Named list of
+  [`targets::tar_target()`](https://docs.ropensci.org/targets/reference/tar_target.html)
+  settings to apply to every generated target, as built by
+  [`tar_nlmixr()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
+  from its own arguments. Defaults to those arguments' own defaults, so
+  calling
+  [`tar_nlmixr_raw()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
+  directly behaves the same as before this argument existed.
