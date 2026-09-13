@@ -13,7 +13,17 @@ tar_nlmixr(
   control = list(),
   table = nlmixr2est::tableControl(),
   env = parent.frame(),
-  error = c("stop", "continue")
+  error = c("stop", "continue"),
+  format = targets::tar_option_get("format"),
+  repository = targets::tar_option_get("repository"),
+  library = targets::tar_option_get("library"),
+  memory = targets::tar_option_get("memory"),
+  garbage_collection = isTRUE(targets::tar_option_get("garbage_collection")),
+  deployment = targets::tar_option_get("deployment"),
+  resources = targets::tar_option_get("resources"),
+  storage = targets::tar_option_get("storage"),
+  retrieval = targets::tar_option_get("retrieval"),
+  cue = targets::tar_option_get("cue")
 )
 
 tar_nlmixr_raw(
@@ -28,7 +38,8 @@ tar_nlmixr_raw(
   fit_simple_name,
   env,
   error = "stop",
-  description = NULL
+  description = NULL,
+  target_settings = tar_nlmixr_collect_target_settings_default()
 )
 }
 \arguments{
@@ -86,6 +97,136 @@ failed model does not stop the rest of the pipeline. Detect a failed fit
 with \code{inherits(fit, "nlmixr2targetsError")} or the broader
 \code{inherits(fit, "try-error")}.}
 
+\item{format}{Optional storage format for the target's return value.
+With the exception of \code{format = "file"}, each target
+gets a file in \verb{_targets/objects}, and each format is a different
+way to save and load this file. See the "Storage formats" section
+for a detailed list of possible data storage formats.}
+
+\item{repository}{Character of length 1, remote repository for target
+storage. Choices:
+\itemize{
+\item \code{"local"}: file system of the local machine.
+\item \code{"aws"}: Amazon Web Services (AWS) S3 bucket. Can be configured
+with a non-AWS S3 bucket using the \code{endpoint} argument of
+\code{\link[targets:tar_resources_aws]{tar_resources_aws()}}, but versioning capabilities may be lost
+in doing so.
+See the cloud storage section of
+\url{https://books.ropensci.org/targets/data.html}
+for details for instructions.
+\item \code{"gcp"}: Google Cloud Platform storage bucket.
+See the cloud storage section of
+\url{https://books.ropensci.org/targets/data.html}
+for details for instructions.
+\item A character string from \code{\link[targets:tar_repository_cas]{tar_repository_cas()}} for content-addressable
+storage.
+}
+
+Note: if \code{repository} is not \code{"local"} and \code{format} is \code{"file"}
+then the target should create a single output file.
+That output file is uploaded to the cloud and tracked for changes
+where it exists in the cloud. As of \code{targets} version 1.11.0 and higher,
+the local file is no longer deleted after the target runs.}
+
+\item{library}{Character vector of library paths to try
+when loading \code{packages}.}
+
+\item{memory}{Character of length 1, memory strategy. Possible values:
+\itemize{
+\item \code{"auto"} (default): equivalent to \code{memory = "transient"} in almost
+all cases. But to avoid superfluous reads from disk,
+\code{memory = "auto"} is equivalent to \code{memory = "persistent"} for
+for non-dynamically-branched targets that other targets
+dynamically branch over. For example: if your pipeline has
+\code{tar_target(name = y, command = x, pattern = map(x))},
+then \code{tar_target(name = x, command = f(), memory = "auto")}
+will use persistent memory for \code{x}
+in order to avoid rereading all of \code{x}
+for every branch of \code{y}.
+\item \code{"transient"}: the target gets unloaded
+after every new target completes.
+Either way, the target gets automatically loaded into memory
+whenever another target needs the value.
+\item \code{"persistent"}: the target stays in memory
+until the end of the pipeline (unless \code{storage} is \code{"worker"},
+in which case \code{targets} unloads the value from memory
+right after storing it in order to avoid sending
+copious data over a network).
+}
+
+For cloud-based file targets
+(e.g. \code{format = "file"} with \code{repository = "aws"}),
+the \code{memory} option applies to the
+temporary local copy of the file:
+\code{"persistent"} means it remains until the end of the pipeline
+and is then deleted,
+and \code{"transient"} means it gets deleted as soon as possible.
+The former conserves bandwidth,
+and the latter conserves local storage.}
+
+\item{garbage_collection}{Logical: \code{TRUE} to run \code{base::gc()}
+just before the target runs, in whatever R process it is about to run
+(which could be a parallel worker).
+\code{FALSE} to omit garbage collection.
+Numeric values get converted to \code{FALSE}.
+The \code{garbage_collection} option in \code{\link[targets:tar_option_set]{tar_option_set()}}
+is independent of the
+argument of the same name in \code{\link[targets:tar_target]{tar_target()}}.}
+
+\item{deployment}{Character of length 1. If \code{deployment} is
+\code{"main"}, then the target will run on the central controlling R process.
+Otherwise, if \code{deployment} is \code{"worker"} and you set up the pipeline
+with distributed/parallel computing, then
+the target runs on a parallel worker. For more on distributed/parallel
+computing in \code{targets}, please visit
+\url{https://books.ropensci.org/targets/crew.html}.}
+
+\item{resources}{Object returned by \code{tar_resources()}
+with optional settings for high-performance computing
+functionality, alternative data storage formats,
+and other optional capabilities of \code{targets}.
+See \code{tar_resources()} for details.}
+
+\item{storage}{Character string to control when the output of the target
+is saved to storage. Only relevant when using \code{targets}
+with parallel workers (\url{https://books.ropensci.org/targets/crew.html}).
+Must be one of the following values:
+\itemize{
+\item \code{"worker"} (default): the worker saves/uploads the value.
+\item \code{"main"}: the target's return value is sent back to the
+host machine and saved/uploaded locally.
+\item \code{"none"}: \code{targets} makes no attempt to save the result
+of the target to storage in the location where \code{targets}
+expects it to be. Saving to storage is the responsibility
+of the user. Use with caution.
+}}
+
+\item{retrieval}{Character string to control when the current target
+loads its dependencies into memory before running.
+(Here, a "dependency" is another target upstream that the current one
+depends on.) Only relevant when using \code{targets}
+with parallel workers (\url{https://books.ropensci.org/targets/crew.html}).
+Must be one of the following values:
+\itemize{
+\item \code{"auto"} (default): equivalent to \code{retrieval = "worker"} in almost all
+cases. But to avoid unnecessary reads from disk, \code{retrieval = "auto"}
+is equivalent to \code{retrieval = "main"} for dynamic branches that
+branch over non-dynamic targets. For example: if your pipeline has
+\code{tar_target(x, command = f())}, then
+\code{tar_target(y, command = x, pattern = map(x), retrieval = "auto")}
+will use \code{"main"} retrieval in order to avoid rereading all of \code{x}
+for every branch of \code{y}.
+\item \code{"worker"}: the worker loads the target's dependencies.
+\item \code{"main"}: the target's dependencies are loaded on the host machine
+and sent to the worker before the target runs.
+\item \code{"none"}: \code{targets} makes no attempt to load its
+dependencies. With \code{retrieval = "none"}, loading dependencies
+is the responsibility of the user. Use with caution.
+}}
+
+\item{cue}{An optional object from \code{tar_cue()} to customize the
+rules that decide whether the target is up to date.}
+
 \item{object_simple_name, data_simple_name, fit_simple_name}{target names to
 use for the simplified object, simplified data, fit of the simplified
 object with the simplified data, and fit with the original data
@@ -94,6 +235,12 @@ re-inserted.}
 \item{description}{Human-readable name for the model, announced by the
 estimation target when it starts to run.  \code{NULL} (the default) announces
 nothing.}
+
+\item{target_settings}{Named list of \code{\link[targets:tar_target]{targets::tar_target()}} settings to
+apply to every generated target, as built by \code{tar_nlmixr()} from its own
+arguments.  Defaults to those arguments' own defaults, so calling
+\code{tar_nlmixr_raw()} directly behaves the same as before this argument
+existed.}
 }
 \value{
 A list of targets for the model simplification, data simplification,
@@ -157,6 +304,53 @@ objects defined in your \verb{_targets.R} are not visible from there.  A
 model that calls an R user-defined function may therefore fail to
 resolve it; please report it if you hit this.
 }
+}
+
+\section{Arguments not forwarded to targets}{
+:tar_target():
+\code{format}, \code{repository}, \code{library}, \code{memory}, \code{garbage_collection},
+\code{deployment}, \code{resources}, \code{storage}, \code{retrieval} and \code{cue} are
+passed to every generated target, and default exactly as
+\code{\link[targets:tar_target]{targets::tar_target()}} defaults them, so a \code{targets::tar_option_set()}
+earlier in \verb{_targets.R} reaches these targets like any other.  The rest are
+left out on purpose:
+
+\itemize{
+\item \code{command}, \code{deps} and \code{string} describe the work a target does, and
+that is what this function exists to write.  \code{string} in particular is
+already used to keep a renamed model from re-running its fit.
+\item \code{pattern} and \code{iteration} configure dynamic branching.  The
+generated targets are a fixed set of four per model, and
+\code{\link[=tar_nlmixr_multimodel]{tar_nlmixr_multimodel()}} already provides the many-models case, so there
+is nothing to branch over.
+\item \code{tidy_eval} controls \verb{!!} interpolation of a \code{command} written by
+the caller.  These commands are assembled with \code{substitute()} from
+arguments that are already captured unevaluated, so it has nothing to act
+on.
+\item \code{packages} is chosen per generated target: the simplification
+targets load \code{nlmixr2est} so that an un-namespaced \code{control} or \code{table}
+expression evaluates, and the estimation target loads only what it needs.
+Overriding it would break those choices silently.  Use \code{library} to point
+at a different package library instead.
+\item \code{priority} was deprecated in \code{targets} 1.10.1.9013 (2025-04-08);
+its scheduler no longer honours user priorities, so forwarding it would
+only produce a deprecation warning per generated target.
+\item \code{error} and \code{description} are already taken by arguments of this
+function that mean something else.  \code{error} here decides whether a failed
+fit becomes a sentinel rather than how \code{targets} treats a failed target,
+and \code{description} names the model in the message the estimation target
+prints.  Set the \code{targets} versions with \code{targets::tar_option_set()}.
+}
+}
+
+\section{Running the generated targets on a remote worker}{
+
+The simplified model is written to \code{file.path(tar_config_get("store"), "user/nlmixr2")} by the \code{object_simple} target and read back from there by
+the estimation target.  That is a path, not a value passed between targets,
+so the two must agree on it: sending only the estimation target to a worker
+whose filesystem does not carry the same store leaves it unable to find the
+model.  Either give the whole set the same \code{resources} and \code{deployment} so
+they run together, or put the store somewhere both reach.
 }
 
 \section{Side effects}{

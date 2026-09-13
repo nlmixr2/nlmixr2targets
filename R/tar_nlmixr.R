@@ -51,6 +51,50 @@
 #'   resolve it; please report it if you hit this.
 #' }
 #'
+#' @section Arguments not forwarded to targets::tar_target():
+#' `format`, `repository`, `library`, `memory`, `garbage_collection`,
+#' `deployment`, `resources`, `storage`, `retrieval` and `cue` are
+#' passed to every generated target, and default exactly as
+#' [targets::tar_target()] defaults them, so a `targets::tar_option_set()`
+#' earlier in `_targets.R` reaches these targets like any other.  The rest are
+#' left out on purpose:
+#'
+#' \itemize{
+#'   \item `command`, `deps` and `string` describe the work a target does, and
+#'   that is what this function exists to write.  `string` in particular is
+#'   already used to keep a renamed model from re-running its fit.
+#'   \item `pattern` and `iteration` configure dynamic branching.  The
+#'   generated targets are a fixed set of four per model, and
+#'   [tar_nlmixr_multimodel()] already provides the many-models case, so there
+#'   is nothing to branch over.
+#'   \item `tidy_eval` controls `!!` interpolation of a `command` written by
+#'   the caller.  These commands are assembled with `substitute()` from
+#'   arguments that are already captured unevaluated, so it has nothing to act
+#'   on.
+#'   \item `packages` is chosen per generated target: the simplification
+#'   targets load `nlmixr2est` so that an un-namespaced `control` or `table`
+#'   expression evaluates, and the estimation target loads only what it needs.
+#'   Overriding it would break those choices silently.  Use `library` to point
+#'   at a different package library instead.
+#'   \item `priority` was deprecated in `targets` 1.10.1.9013 (2025-04-08);
+#'   its scheduler no longer honours user priorities, so forwarding it would
+#'   only produce a deprecation warning per generated target.
+#'   \item `error` and `description` are already taken by arguments of this
+#'   function that mean something else.  `error` here decides whether a failed
+#'   fit becomes a sentinel rather than how `targets` treats a failed target,
+#'   and `description` names the model in the message the estimation target
+#'   prints.  Set the `targets` versions with `targets::tar_option_set()`.
+#' }
+#'
+#' @section Running the generated targets on a remote worker:
+#' The simplified model is written to `file.path(tar_config_get("store"),
+#' "user/nlmixr2")` by the `object_simple` target and read back from there by
+#' the estimation target.  That is a path, not a value passed between targets,
+#' so the two must agree on it: sending only the estimation target to a worker
+#' whose filesystem does not carry the same store leaves it unable to find the
+#' model.  Either give the whole set the same `resources` and `deployment` so
+#' they run together, or put the store somewhere both reach.
+#'
 #' @section Side effects:
 #' When the user's model function body contains `cmt(0) <- value` inside a
 #' `model({...})` block, `tar_nlmixr()` rewrites those lines to
@@ -118,7 +162,17 @@
 #' @export
 tar_nlmixr <- function(name, object, data, est = NULL, control = list(),
                        table = nlmixr2est::tableControl(), env = parent.frame(),
-                       error = c("stop", "continue")) {
+                       error = c("stop", "continue"),
+                       format = targets::tar_option_get("format"),
+                       repository = targets::tar_option_get("repository"),
+                       library = targets::tar_option_get("library"),
+                       memory = targets::tar_option_get("memory"),
+                       garbage_collection = isTRUE(targets::tar_option_get("garbage_collection")),
+                       deployment = targets::tar_option_get("deployment"),
+                       resources = targets::tar_option_get("resources"),
+                       storage = targets::tar_option_get("storage"),
+                       retrieval = targets::tar_option_get("retrieval"),
+                       cue = targets::tar_option_get("cue")) {
   if (is.null(est)) {
     stop("'est' must not be null")
   }
@@ -136,7 +190,8 @@ tar_nlmixr <- function(name, object, data, est = NULL, control = list(),
     data_simple_name = paste(name_parsed, "data_simple", sep = "_"),
     fit_simple_name = paste(name_parsed, "fit_simple", sep = "_"),
     env = env,
-    error = error
+    error = error,
+    target_settings = tar_nlmixr_collect_target_settings()
   )
 }
 
@@ -148,10 +203,16 @@ tar_nlmixr <- function(name, object, data, est = NULL, control = list(),
 #' @param description Human-readable name for the model, announced by the
 #'   estimation target when it starts to run.  `NULL` (the default) announces
 #'   nothing.
+#' @param target_settings Named list of [targets::tar_target()] settings to
+#'   apply to every generated target, as built by `tar_nlmixr()` from its own
+#'   arguments.  Defaults to those arguments' own defaults, so calling
+#'   `tar_nlmixr_raw()` directly behaves the same as before this argument
+#'   existed.
 #' @export
 tar_nlmixr_raw <- function(name, object, data, est, control, table,
                            object_simple_name, data_simple_name, fit_simple_name, env,
-                           error = "stop", description = NULL) {
+                           error = "stop", description = NULL,
+                           target_settings = tar_nlmixr_collect_target_settings_default()) {
   checkmate::assert_character(name, len = 1, min.chars = 1, any.missing = FALSE)
   checkmate::assert_character(object_simple_name, len = 1, min.chars = 1, any.missing = FALSE)
   checkmate::assert_character(data_simple_name, len = 1, min.chars = 1, any.missing = FALSE)
@@ -204,9 +265,12 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table,
     fit_simple_command$description <- description
   }
 
+  checkmate::assert_list(target_settings, names = "unique")
+
   list(
     object_simple =
-      targets::tar_target_raw(
+      tar_nlmixr_target_raw(
+        target_settings,
         name = object_simple_name,
         command = substitute(
           nlmixr_object_simplify(object = object, directory = directory),
@@ -215,7 +279,8 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table,
         packages = c("nlmixr2targets", "nlmixr2est")
       ),
     data_simple =
-      targets::tar_target_raw(
+      tar_nlmixr_target_raw(
+        target_settings,
         name = data_simple_name,
         command = substitute(
           nlmixr_data_simplify(
@@ -237,14 +302,16 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table,
         packages = c("nlmixr2targets", "nlmixr2est")
       ),
     fit_simple =
-      targets::tar_target_raw(
+      tar_nlmixr_target_raw(
+        target_settings,
         name = fit_simple_name,
         command = fit_simple_command,
         string = fit_simple_string,
         packages = "nlmixr2est"
       ),
     fit =
-      targets::tar_target_raw(
+      tar_nlmixr_target_raw(
+        target_settings,
         name = name,
         command = substitute(
           nlmixr_object_complicate(fit = fit, object = object, data = data),

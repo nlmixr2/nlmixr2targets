@@ -58,7 +58,17 @@
 #' @export
 tar_nlmixr_multimodel <- function(name, ..., data, est, control = list(),
                                   table = nlmixr2est::tableControl(), env = parent.frame(),
-                                  error = c("stop", "continue")) {
+                                  error = c("stop", "continue"),
+                                  format = targets::tar_option_get("format"),
+                                  repository = targets::tar_option_get("repository"),
+                                  library = targets::tar_option_get("library"),
+                                  memory = targets::tar_option_get("memory"),
+                                  garbage_collection = isTRUE(targets::tar_option_get("garbage_collection")),
+                                  deployment = targets::tar_option_get("deployment"),
+                                  resources = targets::tar_option_get("resources"),
+                                  storage = targets::tar_option_get("storage"),
+                                  retrieval = targets::tar_option_get("retrieval"),
+                                  cue = targets::tar_option_get("cue")) {
   error <- match.arg(error)
   tar_nlmixr_multimodel_parse(
     name = targets::tar_deparse_language(substitute(name)),
@@ -70,7 +80,8 @@ tar_nlmixr_multimodel <- function(name, ..., data, est, control = list(),
     # https://stackoverflow.com/questions/55019441/deparse-substitute-with-three-dots-arguments
     model_list = match.call(expand.dots = FALSE)$...,
     env = env,
-    error = error
+    error = error,
+    target_settings = tar_nlmixr_collect_target_settings()
   )
 }
 
@@ -79,9 +90,11 @@ tar_nlmixr_multimodel <- function(name, ..., data, est, control = list(),
 #'
 #' @inheritParams tar_nlmixr_multimodel
 #' @inheritParams tar_nlmixr
+#' @inheritParams tar_nlmixr_raw
 #' @param model_list A named list of calls for model targets to be created
 #' @keywords Internal
-tar_nlmixr_multimodel_parse <- function(name, data, est, control, table, model_list, env, error = "stop") {
+tar_nlmixr_multimodel_parse <- function(name, data, est, control, table, model_list, env, error = "stop",
+                                        target_settings = tar_nlmixr_collect_target_settings_default()) {
   checkmate::assert_string(name, min.chars = 1)
   checkmate::assert_named(model_list, type = "unique")
   checkmate::assert_environment(env)
@@ -95,7 +108,8 @@ tar_nlmixr_multimodel_parse <- function(name, data, est, control, table, model_l
       control = control,
       table = table,
       env = env,
-      error = error
+      error = error,
+      target_settings = target_settings
     )
   # Within-list piping (e.g. `models[["A"]] |> ini(...)` referenced from
   # another list entry) is resolved iteratively: each pass rewrites
@@ -145,7 +159,8 @@ tar_nlmixr_multimodel_parse <- function(name, data, est, control, table, model_l
         control = control,
         table = table,
         env = env,
-        error = error
+        error = error,
+        target_settings = target_settings
       )
 
     mask_self_referential <- tar_nlmixr_multimodel_has_self_reference(model_list = model_list, name = name)
@@ -170,7 +185,7 @@ tar_nlmixr_multimodel_parse <- function(name, data, est, control, table, model_l
     call_list[[idx + 1]] <- combined_list[[idx]]
   }
   names(call_list) <- c("", names(combined_list))
-  target_combined_list <- targets::tar_target_raw(name = name, command = call_list)
+  target_combined_list <- tar_nlmixr_target_raw(target_settings, name = name, command = call_list)
   # Return the models to fit and the list-combining target
   append(
     target_model_fitting,
@@ -263,7 +278,8 @@ tar_nlmixr_multimodel_remove_self_reference_single <- function(model, name_map) 
 #'
 #' @inheritParams tar_nlmixr_multimodel_parse
 #' @keywords Internal
-tar_nlmixr_multimodel_prep <- function(model_list, name, data, est, control, table, env, error = "stop") {
+tar_nlmixr_multimodel_prep <- function(model_list, name, data, est, control, table, env, error = "stop",
+                                       target_settings = tar_nlmixr_collect_target_settings_default()) {
   ret <- stats::setNames(vector(mode = "list", length = length(model_list)), names(model_list))
   for (idx in seq_along(model_list)) {
     ret[[idx]] <-
@@ -276,7 +292,8 @@ tar_nlmixr_multimodel_prep <- function(model_list, name, data, est, control, tab
         control = control,
         table = table,
         env = env,
-        error = error
+        error = error,
+        target_settings = target_settings
       )
   }
   ret
@@ -289,7 +306,8 @@ tar_nlmixr_multimodel_prep <- function(model_list, name, data, est, control, tab
 #' @inheritParams tar_nlmixr_raw
 #' @keywords Internal
 tar_nlmixr_multimodel_single <- function(object, name, data, est, control, table, env, error = "stop",
-                                         description = NULL) {
+                                         description = NULL,
+                                         target_settings = tar_nlmixr_collect_target_settings_default()) {
   # Trade-off: Running digest() on the call (object) will rerun the model if the
   # function name changes even if the underlying model does not change.  Running
   # digest on the evaluated call (eval(object, envir = env)) will not rerun if
@@ -315,7 +333,8 @@ tar_nlmixr_multimodel_single <- function(object, name, data, est, control, table
       fit_simple_name = paste0(name_hash, "_fit_simple"),
       env = env,
       error = error,
-      description = description
+      description = description,
+      target_settings = target_settings
     )
   list(
     target = tar_prep,
