@@ -2,6 +2,16 @@
 
 ## New features
 
+* `tar_nlmixr()`, `tar_nlmixr_raw()` and `tar_nlmixr_multimodel()` now forward
+  `format`, `repository`, `library`, `memory`, `garbage_collection`,
+  `deployment`, `resources`, `storage`, `retrieval` and `cue` to every target
+  they generate, defaulting each exactly as `targets::tar_target()` does.
+  `resources` is what lets a fit run on a `crew` controller. `?tar_nlmixr`
+  documents the arguments that are deliberately not forwarded, and the shared
+  cache directory the generated targets need when they run on a remote worker.
+  Adding these does not change any generated command, so cached fits are not
+  re-run.
+
 * `tar_nlmixr_multimodel()` estimation targets now announce themselves with
   `Model description: <list name>` before estimation starts, so `tar_make()`
   output identifies which model is running (the targets themselves are named

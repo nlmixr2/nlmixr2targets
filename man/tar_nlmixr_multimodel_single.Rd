@@ -13,7 +13,8 @@ tar_nlmixr_multimodel_single(
   table,
   env,
   error = "stop",
-  description = NULL
+  description = NULL,
+  target_settings = tar_nlmixr_collect_target_settings_default()
 )
 }
 \arguments{
@@ -74,6 +75,12 @@ with \code{inherits(fit, "nlmixr2targetsError")} or the broader
 \item{description}{Human-readable name for the model, announced by the
 estimation target when it starts to run.  \code{NULL} (the default) announces
 nothing.}
+
+\item{target_settings}{Named list of \code{\link[targets:tar_target]{targets::tar_target()}} settings to
+apply to every generated target, as built by \code{tar_nlmixr()} from its own
+arguments.  Defaults to those arguments' own defaults, so calling
+\code{tar_nlmixr_raw()} directly behaves the same as before this argument
+existed.}
 }
 \description{
 Generate a single nlmixr multimodel target set for one model

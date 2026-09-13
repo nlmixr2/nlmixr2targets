@@ -12,7 +12,8 @@ tar_nlmixr_multimodel_prep(
   control,
   table,
   env,
-  error = "stop"
+  error = "stop",
+  target_settings = tar_nlmixr_collect_target_settings_default()
 )
 }
 \arguments{
@@ -69,6 +70,12 @@ inherits from \code{"try-error"}) carrying the error message, so a single
 failed model does not stop the rest of the pipeline. Detect a failed fit
 with \code{inherits(fit, "nlmixr2targetsError")} or the broader
 \code{inherits(fit, "try-error")}.}
+
+\item{target_settings}{Named list of \code{\link[targets:tar_target]{targets::tar_target()}} settings to
+apply to every generated target, as built by \code{tar_nlmixr()} from its own
+arguments.  Defaults to those arguments' own defaults, so calling
+\code{tar_nlmixr_raw()} directly behaves the same as before this argument
+existed.}
 }
 \description{
 The name of each \code{model_list} element becomes that model's description, so
