@@ -255,7 +255,9 @@ test_that("tar_nlmixr_raw keeps the description out of the fit_simple hash", {
   expect_identical(first$command$hash, none$command$hash)
   expect_identical(renamed$command$hash, none$command$hash)
   # The undescribed hash must match what targets computes on its own, so
-  # upgrading does not invalidate existing pipelines.
+  # upgrading does not invalidate existing pipelines.  The reference declares
+  # different `packages` on purpose: targets hashes only the command, so the
+  # package declaration cannot re-run a cached fit.
   expect_identical(
     none$command$hash,
     targets::tar_target_raw(
@@ -324,6 +326,69 @@ test_that("tar_nlmixr_raw threads est and control into the data_simple command",
   # functions (vaeControl(), tableControl()), so the target must load
   # nlmixr2est like the fit_simple target does
   expect_true("nlmixr2est" %in% out$data_simple$command$packages)
+})
+
+# The package-declaration test below is only as good as these helpers, so they
+# are pinned on hand-built commands first.
+test_that("command_bare_calls lists only un-namespaced calls outside quote()", {
+  expect_identical(
+    command_bare_calls(quote(a::b(c(1), d:::e(f(x)), quote(g(2)), h()(i)))),
+    c("c", "f", "h")
+  )
+  expect_identical(command_bare_calls(quote(x)), character())
+  expect_identical(command_bare_calls(quote(pkg::fun)), character())
+})
+
+test_that("command_unresolved_calls reports calls the target's packages do not provide", {
+  undeclared <-
+    targets::tar_target_raw("t", quote(nlmixr2_indirect(object = x)), packages = "nlmixr2est")
+  expect_identical(command_unresolved_calls(undeclared), "nlmixr2_indirect")
+  declared <-
+    targets::tar_target_raw(
+      "t", quote(nlmixr2_indirect(object = x)),
+      packages = c("nlmixr2targets", "nlmixr2est")
+    )
+  expect_identical(command_unresolved_calls(declared), character())
+  # R's default packages are attached on every worker
+  base_only <-
+    targets::tar_target_raw("t", quote(list(stats::setNames(file.path("a"), "b"))), packages = character(0))
+  expect_identical(command_unresolved_calls(base_only), character())
+})
+
+# A worker attaches only a target's own `packages`, so each generated command
+# must declare every package whose functions it calls un-namespaced.  The user
+# expressions put an un-namespaced nlmixr2est function in every slot that
+# reaches a command: `ini()` in `object`, `saemControl()` in `control` and
+# `tableControl()` in `table`.
+test_that("every tar_nlmixr_raw target declares the packages its command calls", {
+  out <- tar_nlmixr_raw(
+    name = "fit_x",
+    object = quote(my_model |> ini(lcl = log(0.01))),
+    data = quote(nlmixr2data::pheno_sd),
+    est = "saem",
+    control = quote(saemControl(nBurn = 1, nEm = 1)),
+    table = quote(tableControl(keep = "WT")),
+    object_simple_name = "fit_x_object_simple",
+    data_simple_name = "fit_x_data_simple",
+    fit_simple_name = "fit_x_fit_simple",
+    env = environment()
+  )
+  # The calls that need a package must be visible to the check, or passing it
+  # proves nothing.
+  bare_calls <- lapply(out, \(x) command_bare_calls(x$command$expr[[1L]]))
+  expect_setequal(bare_calls$object_simple, c("nlmixr_object_simplify", "ini", "log", "file.path"))
+  expect_setequal(
+    bare_calls$data_simple,
+    c("nlmixr_data_simplify", "tableControl", "saemControl", "file.path")
+  )
+  expect_setequal(
+    bare_calls$fit_simple,
+    c("nlmixr2_indirect", "saemControl", "tableControl", "file.path")
+  )
+  expect_setequal(bare_calls$fit, c("nlmixr_object_complicate", "ini", "log"))
+  for (nm in names(out)) {
+    expect_identical(command_unresolved_calls(out[[nm]]), character(), label = nm)
+  }
 })
 
 test_that("tar_nlmixr rejects an unknown error mode", {
