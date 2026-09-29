@@ -185,7 +185,11 @@ tar_nlmixr_multimodel_parse <- function(name, data, est, control, table, model_l
     call_list[[idx + 1]] <- combined_list[[idx]]
   }
   names(call_list) <- c("", names(combined_list))
-  target_combined_list <- tar_nlmixr_target_raw(target_settings, name = name, command = call_list)
+  # `list()` needs no package.  Left unset, `packages` would default to
+  # `tar_option_get("packages")` -- every package attached when `_targets.R` is
+  # sourced -- and a worker missing any one of them would fail this target.
+  target_combined_list <-
+    tar_nlmixr_target_raw(target_settings, name = name, command = call_list, packages = character(0))
   # Return the models to fit and the list-combining target
   append(
     target_model_fitting,

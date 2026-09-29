@@ -327,11 +327,18 @@ is nothing to branch over.
 the caller.  These commands are assembled with \code{substitute()} from
 arguments that are already captured unevaluated, so it has nothing to act
 on.
-\item \code{packages} is chosen per generated target: the simplification
-targets load \code{nlmixr2est} so that an un-namespaced \code{control} or \code{table}
-expression evaluates, and the estimation target loads only what it needs.
-Overriding it would break those choices silently.  Use \code{library} to point
-at a different package library instead.
+\item \code{packages} is chosen by the generator.  Each of the four targets
+per model loads \code{nlmixr2targets}, whose functions its command calls, and
+\code{nlmixr2est}, so that un-namespaced functions in \code{object}, \code{control} or
+\code{table} (such as \code{ini()}, \code{saemControl()} or \code{tableControl()}) evaluate
+on a worker that has attached nothing else.  The combined list target of
+\code{\link[=tar_nlmixr_multimodel]{tar_nlmixr_multimodel()}} loads no package.  Overriding \code{packages} would
+break those choices silently.  Use \code{library} to point at a different
+package library instead.  Any other package that \code{object}, \code{data},
+\code{control} or \code{table} needs, such as one set with
+\code{targets::tar_option_set(packages = )}, is not declared for these
+targets, so a worker does not load it; call its functions with
+\code{pkg::fun()}.
 \item \code{priority} was deprecated in \code{targets} 1.10.1.9013 (2025-04-08);
 its scheduler no longer honours user priorities, so forwarding it would
 only produce a deprecation warning per generated target.

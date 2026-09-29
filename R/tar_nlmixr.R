@@ -71,11 +71,18 @@
 #'   the caller.  These commands are assembled with `substitute()` from
 #'   arguments that are already captured unevaluated, so it has nothing to act
 #'   on.
-#'   \item `packages` is chosen per generated target: the simplification
-#'   targets load `nlmixr2est` so that an un-namespaced `control` or `table`
-#'   expression evaluates, and the estimation target loads only what it needs.
-#'   Overriding it would break those choices silently.  Use `library` to point
-#'   at a different package library instead.
+#'   \item `packages` is chosen by the generator.  Each of the four targets
+#'   per model loads `nlmixr2targets`, whose functions its command calls, and
+#'   `nlmixr2est`, so that un-namespaced functions in `object`, `control` or
+#'   `table` (such as `ini()`, `saemControl()` or `tableControl()`) evaluate
+#'   on a worker that has attached nothing else.  The combined list target of
+#'   [tar_nlmixr_multimodel()] loads no package.  Overriding `packages` would
+#'   break those choices silently.  Use `library` to point at a different
+#'   package library instead.  Any other package that `object`, `data`,
+#'   `control` or `table` needs, such as one set with
+#'   `targets::tar_option_set(packages = )`, is not declared for these
+#'   targets, so a worker does not load it; call its functions with
+#'   `pkg::fun()`.
 #'   \item `priority` was deprecated in `targets` 1.10.1.9013 (2025-04-08);
 #'   its scheduler no longer honours user priorities, so forwarding it would
 #'   only produce a deprecation warning per generated target.
@@ -267,6 +274,15 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table,
 
   checkmate::assert_list(target_settings, names = "unique")
 
+  # A worker attaches exactly a target's `packages` before running its command
+  # (a local `tar_make()` also attaches the packages of every upstream target it
+  # reads, which hides an omission here).  Every command below calls an
+  # un-namespaced nlmixr2targets function, and each one evaluates user
+  # expressions -- `object`, `data`, `control`, `table` -- that may call
+  # un-namespaced nlmixr2est functions such as `ini()`, `saemControl()` or
+  # `tableControl()`.
+  packages <- c("nlmixr2targets", "nlmixr2est")
+
   list(
     object_simple =
       tar_nlmixr_target_raw(
@@ -276,7 +292,7 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table,
           nlmixr_object_simplify(object = object, directory = directory),
           list(object = object, directory = directory_expr)
         ),
-        packages = c("nlmixr2targets", "nlmixr2est")
+        packages = packages
       ),
     data_simple =
       tar_nlmixr_target_raw(
@@ -296,10 +312,7 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table,
             control = control
           )
         ),
-        # nlmixr2est so that un-namespaced `control`/`table` expressions
-        # (e.g. `vaeControl(...)`, `tableControl(...)`) evaluate in the
-        # target's session, as they already do in the fit_simple target.
-        packages = c("nlmixr2targets", "nlmixr2est")
+        packages = packages
       ),
     fit_simple =
       tar_nlmixr_target_raw(
@@ -307,7 +320,7 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table,
         name = fit_simple_name,
         command = fit_simple_command,
         string = fit_simple_string,
-        packages = "nlmixr2est"
+        packages = packages
       ),
     fit =
       tar_nlmixr_target_raw(
@@ -321,7 +334,7 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table,
             data = data
           )
         ),
-        packages = "nlmixr2targets"
+        packages = packages
       )
   )
 }

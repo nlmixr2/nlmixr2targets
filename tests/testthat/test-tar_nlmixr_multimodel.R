@@ -63,6 +63,60 @@ test_that("tar_nlmixr_multimodel", {
   expect_equal(collating_call[[3]], as.name(target_list[[2]][[4]]$settings$name))
 })
 
+test_that("the combining and per-model targets declare their own packages", {
+  pheno <- function() {
+    ini({
+      lcl <- log(0.008)
+      lvc <- log(0.6)
+      etalcl ~ 1
+      cpaddSd <- 0.1
+    })
+    model({
+      cl <- exp(lcl + etalcl)
+      vc <- exp(lvc)
+      kel <- cl / vc
+      d / dt(central) <- -kel * central
+      cp <- central / vc
+      cp ~ add(cpaddSd)
+    })
+  }
+  old <- targets::tar_option_get("packages")
+  on.exit(targets::tar_option_set(packages = old), add = TRUE)
+
+  # The combining target only gathers already-built fits into a named list, so
+  # it must not inherit whatever happened to be attached when `_targets.R` was
+  # sourced: a worker on another machine or in a container cannot necessarily
+  # load those, and the pipeline then fails at the very last target.
+  targets::tar_option_set(packages = c("tidyverse", "somethingInstalledLocallyOnly"))
+  target_list <-
+    tar_nlmixr_multimodel(
+      name = combining_packages,
+      "only model" = pheno,
+      data = nlmixr2data::pheno_sd,
+      est = "saem"
+    )
+  combining <- target_list[[length(target_list)]]
+  expect_equal(combining$settings$name, "combining_packages")
+  expect_identical(combining$command$packages, character())
+  for (target in target_list[[1L]]) {
+    expect_identical(target$command$packages, c("nlmixr2targets", "nlmixr2est"))
+  }
+
+  # Independent of the option rather than merely different from it.
+  targets::tar_option_set(packages = "nlmixr2targets")
+  target_list2 <-
+    tar_nlmixr_multimodel(
+      name = combining_packages2,
+      "only model" = pheno,
+      data = nlmixr2data::pheno_sd,
+      est = "saem"
+    )
+  expect_identical(
+    target_list2[[length(target_list2)]]$command$packages,
+    character()
+  )
+})
+
 test_that("tar_nlmixr_multimodel works with long model names", {
   pheno <- function() {
     ini({
@@ -685,6 +739,34 @@ test_that("tar_nlmixr_multimodel threads the error mode into every model's fit_s
   cmd2 <- paste(deparse(continue_list[[2]]$fit_simple$command$expr), collapse = " ")
   expect_match(cmd1, 'error = "continue"', fixed = TRUE)
   expect_match(cmd2, 'error = "continue"', fixed = TRUE)
+})
+
+# A worker attaches only a target's own `packages`.  The combined list target
+# calls nothing but `list()`; left to default, its `packages` would be every
+# package attached when `_targets.R` is sourced, and a worker missing any one
+# of them would fail it.
+test_that("tar_nlmixr_multimodel targets declare the packages their commands call", {
+  target_list <-
+    tar_nlmixr_multimodel(
+      name = pkg_models, data = nlmixr2data::pheno_sd, est = "saem",
+      control = saemControl(nBurn = 1, nEm = 1),
+      "base" = my_model,
+      "shifted" = pkg_models[["base"]] |> ini(lcl = log(0.01))
+    )
+  expect_length(target_list, 3L)
+  combined <- target_list[[3L]]
+  expect_identical(combined$command$packages, character())
+  expect_identical(command_bare_calls(combined$command$expr[[1L]]), "list")
+
+  # The within-list reference is rewritten to the upstream fit, and the
+  # un-namespaced `ini()` it is piped into must still resolve.
+  expect_setequal(
+    command_bare_calls(target_list[[2L]]$fit$command$expr[[1L]]),
+    c("nlmixr_object_complicate", "ini", "log")
+  )
+  for (target in c(target_list[[1L]], target_list[[2L]], list(combined))) {
+    expect_identical(command_unresolved_calls(target), character(), label = target$settings$name)
+  }
 })
 
 test_that("tar_nlmixr_multimodel rejects an unknown error mode", {

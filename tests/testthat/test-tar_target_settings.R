@@ -96,10 +96,9 @@ test_that("the per-target packages choices survive forwarding", {
       est = "saem",
       resources = targets::tar_resources(crew = targets::tar_resources_crew(controller = "remote"))
     )
-  expect_setequal(targets_out$object_simple$command$packages, c("nlmixr2targets", "nlmixr2est"))
-  expect_setequal(targets_out$data_simple$command$packages, c("nlmixr2targets", "nlmixr2est"))
-  expect_identical(targets_out$fit_simple$command$packages, "nlmixr2est")
-  expect_identical(targets_out$fit$command$packages, "nlmixr2targets")
+  for (target in targets_out) {
+    expect_identical(target$command$packages, c("nlmixr2targets", "nlmixr2est"))
+  }
 })
 
 test_that("forwarding does not change the estimation command, so cached fits stand", {
