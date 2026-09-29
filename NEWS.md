@@ -28,8 +28,10 @@
   model expression (e.g. `pheno |> ini(...)`) without `nlmixr2est`, so `ini()`
   was not found. All four targets per model now load `nlmixr2targets` and
   `nlmixr2est`. The combined list target of `tar_nlmixr_multimodel()` loads no
-  package; before, it loaded every package attached in `_targets.R` and failed
-  on a worker missing any of them. A local `tar_make()` hid the problem,
+  package; before, it inherited `targets::tar_option_set(packages = )`, which
+  defaults to every package attached when `_targets.R` is sourced, so on a
+  worker missing any of them the pipeline failed at its last target, after
+  every fit had already succeeded. A local `tar_make()` hid the problem,
   because reading an upstream target's value attaches that target's packages.
   The generated commands are unchanged, so cached fits are not re-run.
 
