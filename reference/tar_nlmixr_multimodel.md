@@ -404,6 +404,7 @@ tar_nlmixr_multimodel(
 #>     command: TRUE
 #>     mode: thorough 
 #>   packages:
+#>     nlmixr2targets
 #>     nlmixr2est 
 #>   library:
 #>     NULL
@@ -435,7 +436,8 @@ tar_nlmixr_multimodel(
 #>     command: TRUE
 #>     mode: thorough 
 #>   packages:
-#>     nlmixr2targets 
+#>     nlmixr2targets
+#>     nlmixr2est 
 #>   library:
 #>     NULL
 #> 
@@ -536,6 +538,7 @@ tar_nlmixr_multimodel(
 #>     command: TRUE
 #>     mode: thorough 
 #>   packages:
+#>     nlmixr2targets
 #>     nlmixr2est 
 #>   library:
 #>     NULL
@@ -567,7 +570,8 @@ tar_nlmixr_multimodel(
 #>     command: TRUE
 #>     mode: thorough 
 #>   packages:
-#>     nlmixr2targets 
+#>     nlmixr2targets
+#>     nlmixr2est 
 #>   library:
 #>     NULL
 #> 
@@ -598,14 +602,7 @@ tar_nlmixr_multimodel(
 #>     command: TRUE
 #>     mode: thorough 
 #>   packages:
-#>     nlmixr2targets
-#>     stats
-#>     graphics
-#>     grDevices
-#>     utils
-#>     datasets
-#>     methods
-#>     base 
+#>     character(0) 
 #>   library:
 #>     NULL
 ```

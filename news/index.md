@@ -30,6 +30,27 @@
 
 ### Bug fixes
 
+- The generated targets now run on a worker that has attached nothing
+  but the target’s own `packages`, such as a `crew` worker on another
+  machine or in a fresh container. The estimation (`_fit_simple`) target
+  called
+  [`nlmixr2_indirect()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr2_indirect.md)
+  while declaring only `nlmixr2est`, and failed with
+  `could not find function "nlmixr2_indirect"`. The final target
+  evaluated the model expression (e.g. `pheno |> ini(...)`) without
+  `nlmixr2est`, so `ini()` was not found. All four targets per model now
+  load `nlmixr2targets` and `nlmixr2est`. The combined list target of
+  [`tar_nlmixr_multimodel()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel.md)
+  loads no package; before, it inherited
+  `targets::tar_option_set(packages = )`, which defaults to every
+  package attached when `_targets.R` is sourced, so on a worker missing
+  any of them the pipeline failed at its last target, after every fit
+  had already succeeded. A local
+  [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+  hid the problem, because reading an upstream target’s value attaches
+  that target’s packages. The generated commands are unchanged, so
+  cached fits are not re-run.
+
 - `table` now reaches estimation.
   [`tar_nlmixr()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
   and

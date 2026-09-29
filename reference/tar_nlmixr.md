@@ -381,11 +381,19 @@ are left out on purpose:
   arguments that are already captured unevaluated, so it has nothing to
   act on.
 
-- `packages` is chosen per generated target: the simplification targets
-  load `nlmixr2est` so that an un-namespaced `control` or `table`
-  expression evaluates, and the estimation target loads only what it
-  needs. Overriding it would break those choices silently. Use `library`
-  to point at a different package library instead.
+- `packages` is chosen by the generator. Each of the four targets per
+  model loads `nlmixr2targets`, whose functions its command calls, and
+  `nlmixr2est`, so that un-namespaced functions in `object`, `control`
+  or `table` (such as `ini()`, `saemControl()` or `tableControl()`)
+  evaluate on a worker that has attached nothing else. The combined list
+  target of
+  [`tar_nlmixr_multimodel()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel.md)
+  loads no package. Overriding `packages` would break those choices
+  silently. Use `library` to point at a different package library
+  instead. Any other package that `object`, `data`, `control` or `table`
+  needs, such as one set with `targets::tar_option_set(packages = )`, is
+  not declared for these targets, so a worker does not load it; call its
+  functions with `pkg::fun()`.
 
 - `priority` was deprecated in `targets` 1.10.1.9013 (2025-04-08); its
   scheduler no longer honours user priorities, so forwarding it would
@@ -562,6 +570,7 @@ tar_nlmixr(
 #>     command: TRUE
 #>     mode: thorough 
 #>   packages:
+#>     nlmixr2targets
 #>     nlmixr2est 
 #>   library:
 #>     NULL
@@ -593,7 +602,8 @@ tar_nlmixr(
 #>     command: TRUE
 #>     mode: thorough 
 #>   packages:
-#>     nlmixr2targets 
+#>     nlmixr2targets
+#>     nlmixr2est 
 #>   library:
 #>     NULL
 ```

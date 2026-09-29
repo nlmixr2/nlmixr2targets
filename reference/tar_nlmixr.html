@@ -400,11 +400,18 @@ is nothing to branch over.</p></li>
 the caller.  These commands are assembled with <code><a href="https://rdrr.io/r/base/substitute.html" class="external-link">substitute()</a></code> from
 arguments that are already captured unevaluated, so it has nothing to act
 on.</p></li>
-<li><p><code>packages</code> is chosen per generated target: the simplification
-targets load <code>nlmixr2est</code> so that an un-namespaced <code>control</code> or <code>table</code>
-expression evaluates, and the estimation target loads only what it needs.
-Overriding it would break those choices silently.  Use <code>library</code> to point
-at a different package library instead.</p></li>
+<li><p><code>packages</code> is chosen by the generator.  Each of the four targets
+per model loads <code>nlmixr2targets</code>, whose functions its command calls, and
+<code>nlmixr2est</code>, so that un-namespaced functions in <code>object</code>, <code>control</code> or
+<code>table</code> (such as <code>ini()</code>, <code>saemControl()</code> or <code>tableControl()</code>) evaluate
+on a worker that has attached nothing else.  The combined list target of
+<code><a href="tar_nlmixr_multimodel.html">tar_nlmixr_multimodel()</a></code> loads no package.  Overriding <code>packages</code> would
+break those choices silently.  Use <code>library</code> to point at a different
+package library instead.  Any other package that <code>object</code>, <code>data</code>,
+<code>control</code> or <code>table</code> needs, such as one set with
+<code>targets::tar_option_set(packages = )</code>, is not declared for these
+targets, so a worker does not load it; call its functions with
+<code>pkg::fun()</code>.</p></li>
 <li><p><code>priority</code> was deprecated in <code>targets</code> 1.10.1.9013 (2025-04-08);
 its scheduler no longer honours user priorities, so forwarding it would
 only produce a deprecation warning per generated target.</p></li>
@@ -578,6 +585,7 @@ dataset.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     command: TRUE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     mode: thorough </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   packages:</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr2targets</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr2est </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   library:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     NULL</span>
@@ -609,7 +617,8 @@ dataset.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     command: TRUE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     mode: thorough </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   packages:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr2targets </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr2targets</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr2est </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   library:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     NULL</span>
 </code></pre></div>
