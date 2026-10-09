@@ -1,0 +1,233 @@
+---
+title: "Events for loggers"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Events for loggers}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+has_bus <- exists("rxEventListen", asNamespace("rxode2"))
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = has_bus
+)
+```
+
+```{r, include = FALSE, eval = TRUE}
+note <- if (has_bus) {
+  ""
+} else {
+  paste0(
+    "> **Note:** the installed rxode2 has no event bus, so the code in this ",
+    "vignette is shown but not run."
+  )
+}
+```
+
+`r note`
+
+```{r setup}
+library(nlmixr2targets)
+```
+
+# The rxode2 event bus
+
+rxode2 has a small publish/subscribe event bus (see `?rxode2::rxEventListen`).
+Packages in the nlmixr2 ecosystem emit an event when a user-facing operation
+finishes (a fit, a simulation, a result), and any package can register a
+listener to be told about it.  The main listener is
+[nlmixr2log](https://github.com/nlmixr2/nlmixr2log), which records each fit
+as a run, but you can write your own.
+
+Events are delivered only from the outermost operation: while any operation
+is running (an rxode2 "scope" is open), nested work emits nothing.  The
+scope depth is mirrored in the `RXODE2_EVENT_DEPTH` environment variable,
+so worker processes started inside an operation stay silent too.
+
+`nlmixr2targets` emits events only when rxode2 has the bus; with an older
+rxode2, and when nobody listens, nothing changes.
+
+# What a `tar_nlmixr()` pipeline emits
+
+`tar_nlmixr(name = <name>, ...)` generates four targets (see
+`vignette("caching")`).  Two of them produce events:
+
+| Target | Event | Emitted by |
+| ------ | ----- | ---------- |
+| `<name>_fit_simple` | `fitComplete` | nlmixr2est, from the `nlmixr2()` call that estimates the simplified model |
+| `<name>` | `fitUpdate`, then `assign` | nlmixr2targets, after restoring the labels and the original data |
+
+The `fitComplete` event comes from nlmixr2est itself (when its version has
+the event hooks); `nlmixr2targets` only makes sure that a logger is running
+in the process that estimates the model (see below).  The final `<name>`
+target then reports the finished fit.
+
+## `fitUpdate`
+
+The final target restores parameter labels and the original data onto the
+estimated fit in place.  It reports that change as a new version of the same
+run:
+
+| Field | Value |
+| ----- | ----- |
+| `fit` | the final fit (labels and original data restored) |
+| `original` | the same fit (`original = fit`), so a logger treats it as the same run |
+| `name` | `NULL` |
+| `what` | `"ui"` |
+| `inPlace` | `TRUE` |
+
+## `assign`
+
+Right after `fitUpdate`, the final target reports the name the fit is known
+by, which is the target name:
+
+| Field | Value |
+| ----- | ----- |
+| `name` | `targets::tar_name()`, i.e. `"<name>"` |
+| `value` | the final fit |
+| `call` | `NULL` |
+| `envir` | `NULL` |
+| `cached` | `FALSE` |
+
+## One run per model
+
+Taken together, a logger such as nlmixr2log sees, for each `tar_nlmixr()`
+model:
+
+1. `fitComplete` when `<name>_fit_simple` estimates the model (a new run),
+2. `fitUpdate` with `inPlace = TRUE` and `original = fit` (a new version of
+   that same run, not a new run), and
+3. `assign` with the target name (the run is named `<name>`).
+
+So each `tar_nlmixr()` model is stored as one run, named after its target,
+rather than as one run for the simplified fit and another for the final fit.
+For `tar_nlmixr_multimodel()`, each model's final target is named
+`<name>_<hash>`, and that is the name the `assign` event carries.
+
+## What is not emitted
+
+* **Nothing from the other targets.**  `<name>_object_simple` and
+  `<name>_data_simple` do no fitting and emit nothing.
+* **No `assign` outside a pipeline.**  `assign` is emitted only while a
+  target is running (`targets::tar_active()`).  Calling
+  `nlmixr_object_complicate()` by hand emits only `fitUpdate`.
+* **Nothing for failed fits.**  With `error = "continue"`, a failed
+  estimation stores an `nlmixr2targetsError` object instead of a fit, and
+  the final target emits nothing for it.
+* **No `fitComplete` for a cached fit.**  When only cosmetic parts of the
+  model change (such as parameter labels), `<name>_fit_simple` is not rerun
+  (see `vignette("caching")`), so only the final target's `fitUpdate` and
+  `assign` are emitted.
+  When nothing changes, `tar_make()` runs no target and emits nothing.
+* **Nothing nested.**  Work done inside the fit (solves, inner fits) is
+  silenced by the bus depth rule.
+
+# Logging on target workers
+
+The commands that `tar_nlmixr()` generates load only `nlmixr2targets` and
+`nlmixr2est`, so a fresh worker (for example with `tar_make()` running
+targets in a `callr` process, or with `crew` workers) would never load a
+logger, and its fits would go unrecorded.
+
+To handle this, the estimating target and the final target load
+`nlmixr2log` when the project has an nlmixr2log configuration, that is when
+either
+
+* the `NLMIXR2LOG_CONFIG` environment variable is set, or
+* a `_nlmixr2log.rds` file exists in the project directory (the working
+  directory of the target).
+
+Save that configuration once with `nlmixr2log::nlmixr2logSaveConfig()`;
+loading nlmixr2log on a worker then starts the configured loggers before
+the fit, so it is logged on any worker.  Without a configuration, or when
+nlmixr2log is not installed, nothing is loaded and nothing happens.
+nlmixr2log is not a dependency of `nlmixr2targets`.
+
+```{r, eval = FALSE}
+# once, in the project directory
+library(nlmixr2log)
+# ... configure the loggers you want, then:
+nlmixr2logSaveConfig()   # writes _nlmixr2log.rds
+
+# afterwards, every tar_make() logs each tar_nlmixr() model as one run
+targets::tar_make()
+```
+
+# Listening yourself
+
+A listener is a function `function(event, ...)` that receives the event
+name and the payload fields as named arguments.  This listener records what
+it is told:
+
+```{r listen}
+recorded <- list()
+rxode2::rxEventListen("demo", function(event, ...) {
+  p <- list(...)
+  recorded[[length(recorded) + 1L]] <<- list(
+    event = event,
+    name = p$name,
+    what = p$what,
+    inPlace = p$inPlace
+  )
+})
+```
+
+Run a small pipeline in a temporary directory.  `callr_function = NULL` runs
+the targets in this R session, so the listener above hears them (a separate
+worker process would need its own listener, which is what the nlmixr2log
+configuration above provides).
+
+```{r pipeline, message = FALSE, warning = FALSE, results = "hide"}
+targets::tar_dir({
+  targets::tar_script({
+    library(nlmixr2targets)
+    pheno <- function() {
+      ini({
+        lcl <- log(0.008); label("Typical value of clearance")
+        lvc <- log(0.6); label("Typical value of volume of distribution")
+        etalcl ~ 1
+        cpaddSd <- 0.1
+      })
+      model({
+        cl <- exp(lcl + etalcl)
+        vc <- exp(lvc)
+        kel <- cl / vc
+        d / dt(central) <- -kel * central
+        cp <- central / vc
+        cp ~ add(cpaddSd)
+      })
+    }
+    list(
+      tar_nlmixr(
+        name = pheno_model,
+        object = pheno,
+        data = nlmixr2data::pheno_sd,
+        est = "posthoc"
+      )
+    )
+  }, ask = FALSE)
+  targets::tar_make(callr_function = NULL, reporter = "silent")
+})
+```
+
+```{r show}
+str(recorded)
+```
+
+With an nlmixr2est that has the event hooks, the list starts with a
+`fitComplete` event from the `pheno_model_fit_simple` target; it always ends
+with the `fitUpdate` (`what = "ui"`, `inPlace = TRUE`) and `assign`
+(`name = "pheno_model"`) events from the final target.
+
+Remove the listener when you are done:
+
+```{r unlisten}
+rxode2::rxEventUnlisten("demo")
+```
+
+For full logging (run storage, versions, names, and the files a run
+produces), use [nlmixr2log](https://github.com/nlmixr2/nlmixr2log) instead of
+writing your own listener.
