@@ -2,7 +2,7 @@
 
 ## New features
 
-* The `*_fit` target of `tar_nlmixr()` now emits `fitUpdate` (the restored
+* The final `<name>` target of `tar_nlmixr()` now emits `fitUpdate` (the restored
   labels and data) and `assign` (the target name) on the rxode2 event bus
   when rxode2 has one, so loggers such as nlmixr2log store one run per
   model, named after the target.  Nothing changes without a listener.
