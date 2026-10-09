@@ -166,7 +166,10 @@ nlmixr_object_complicate <- function(fit, object, data) {
 
   # Finally swap in the original data, reusing the existing helper for
   # validation and in-place mutation of fit$env$origData.
-  assign_origData(fit = fit, data = data)
+  fit <- assign_origData(fit = fit, data = data)
+  # Tell loggers (e.g. nlmixr2log) about the final fit; see rxEvents.R
+  nlmixr2targets_event_fit(fit)
+  fit
 }
 
 #' Assign a field on an rxUi-shaped object, bypassing S3 method dispatch
