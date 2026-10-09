@@ -6,6 +6,9 @@
   labels and data) and `assign` (the target name) on the rxode2 event bus
   when rxode2 has one, so loggers such as nlmixr2log store one run per
   model, named after the target.  Nothing changes without a listener.
+  When the project has an nlmixr2log configuration
+  (`nlmixr2log::nlmixr2logSaveConfig()`), the estimation target loads
+  nlmixr2log so that the fit is logged on any worker.
 
 * `tar_nlmixr()`, `tar_nlmixr_raw()` and `tar_nlmixr_multimodel()` now forward
   `format`, `repository`, `library`, `memory`, `garbage_collection`,

@@ -62,3 +62,13 @@ test_that("outside a target only fitUpdate is emitted", {
   nlmixr2targets_event_fit(list(env = new.env()))
   expect_identical(.rec$ev, "fitUpdate")
 })
+
+test_that("the logger is loaded only when the project configured one", {
+  withr::local_dir(withr::local_tempdir())
+  withr::local_envvar(NLMIXR2LOG_CONFIG = "")
+  expect_false(nlmixr2targets_event_load_logger())
+  file.create("_nlmixr2log.rds")
+  ## TRUE only if nlmixr2log is installed; never an error either way
+  expect_identical(nlmixr2targets_event_load_logger(),
+                   requireNamespace("nlmixr2log", quietly = TRUE))
+})
