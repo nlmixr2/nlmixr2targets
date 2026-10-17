@@ -89,4 +89,5 @@ original data on the final fit.
 
 Other Simplifiers:
 [`nlmixr_data_simplify()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_data_simplify.md),
-[`nlmixr_object_complicate()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_object_complicate.md)
+[`nlmixr_object_complicate()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_object_complicate.md),
+[`nlmixr_object_covariates()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_object_covariates.md)

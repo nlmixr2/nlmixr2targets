@@ -78,7 +78,7 @@ caches every target keyed by a hash of its command, its dependencies,
 and its inputs. When you call <code><a href="https://docs.ropensci.org/targets/reference/tar_make.html" class="external-link">tar_make()</a></code>, only targets
 whose hash has changed (directly or transitively) are rebuilt.</p>
 <p>For a single <code>tar_nlmixr(name = &lt;name&gt;, ...)</code> call,
-the four targets generated are:</p>
+the five targets generated are:</p>
 <table class="table">
 <colgroup>
 <col width="24%">
@@ -97,15 +97,20 @@ the four targets generated are:</p>
 <td>the captured <code>object</code> expression</td>
 </tr>
 <tr class="even">
+<td><code>&lt;name&gt;_covariates</code></td>
+<td>sorted names of the covariates the model reads</td>
+<td><code>&lt;name&gt;_object_simple</code></td>
+</tr>
+<tr class="odd">
 <td><code>&lt;name&gt;_data_simple</code></td>
 <td>simplified data frame</td>
 <td>
-<code>&lt;name&gt;_object_simple</code>, the captured
-<code>data</code> expression, the <code>table$keep</code> columns, and
+<code>&lt;name&gt;_covariates</code>, the captured <code>data</code>
+expression, the <code>table$keep</code> columns, and
 <code>est</code>/<code>control</code> (methods like
 <code>est = "vae"</code> also keep their covariate-search columns)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>&lt;name&gt;_fit_simple</code></td>
 <td>fitted nlmixr2 object</td>
 <td>
@@ -114,7 +119,7 @@ the four targets generated are:</p>
 <code>control</code>
 </td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>&lt;name&gt;</code></td>
 <td>final fit, with labels and metadata restored</td>
 <td>
@@ -130,6 +135,10 @@ the four targets generated are:</p>
 <code><a href="../reference/nlmixr_object_simplify.html">nlmixr_object_simplify()</a></code> strips parameter labels and the
 model’s metadata environment before caching, so cosmetic edits to either
 do not invalidate the expensive estimation step.</p>
+<p>The simplified data, in turn, depend on the model only through
+<code>&lt;name&gt;_covariates</code>. A model edit re-runs the cheap
+<code>_covariates</code> target, and when the covariate names come out
+the same, <code>_data_simple</code> is skipped rather than rebuilt.</p>
 </div>
 <div class="section level2">
 <h2 id="examples-of-common-edits">Examples of common edits<a class="anchor" aria-label="anchor" href="#examples-of-common-edits"></a>
@@ -140,12 +149,18 @@ do not invalidate the expensive estimation step.</p>
 <span><span class="co">#   (the relabel/meta-restore step). The expensive `_fit_simple` is reused.</span></span>
 <span></span>
 <span><span class="co"># Changing initial values (`ini({...})`) or the model structure</span></span>
-<span><span class="co"># (`model({...})`):</span></span>
-<span><span class="co">#   re-runs everything from `_object_simple` onward.</span></span>
+<span><span class="co"># (`model({...})`) without changing which covariates it reads:</span></span>
+<span><span class="co">#   re-runs `_object_simple`, `_covariates`, `_fit_simple` and the final</span></span>
+<span><span class="co">#   target. `_covariates` returns the same names, so `_data_simple` is</span></span>
+<span><span class="co">#   skipped.</span></span>
 <span></span>
-<span><span class="co"># Adding/removing a covariate column from the dataset:</span></span>
-<span><span class="co">#   re-runs `_data_simple` and `_fit_simple`. `_object_simple` is reused</span></span>
-<span><span class="co">#   if the model didn't change.</span></span>
+<span><span class="co"># Adding a covariate to the model, or removing one:</span></span>
+<span><span class="co">#   re-runs everything from `_object_simple` onward, including</span></span>
+<span><span class="co">#   `_data_simple`.</span></span>
+<span></span>
+<span><span class="co"># Changing the values in a covariate column of the dataset:</span></span>
+<span><span class="co">#   re-runs `_data_simple` and `_fit_simple`. `_object_simple` and</span></span>
+<span><span class="co">#   `_covariates` are reused if the model didn't change.</span></span>
 <span></span>
 <span><span class="co"># Editing a subject-constant column that the model does not use:</span></span>
 <span><span class="co">#   for most `est` methods nothing re-fits (`_data_simple` re-executes,</span></span>
@@ -202,9 +217,12 @@ change is, run</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">targets</span><span class="fu">::</span><span class="fu"><a href="https://docs.ropensci.org/targets/reference/tar_outdated.html" class="external-link">tar_outdated</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p>after the edit but before <code><a href="https://docs.ropensci.org/targets/reference/tar_make.html" class="external-link">tar_make()</a></code>. The list of
-outdated targets is exactly the set that would re-execute. Three or four
-entries means <code>_fit_simple</code> is in play; one or two usually
-means only the cheap relabel/restore step is.</p>
+outdated targets is every target that may re-execute.
+<code><a href="https://docs.ropensci.org/targets/reference/tar_make.html" class="external-link">tar_make()</a></code> can still skip one whose upstream values turn
+out unchanged: after an edit that leaves the model’s covariates alone,
+<code>_data_simple</code> is listed but skipped. If
+<code>_fit_simple</code> is not in the list, the fit is reused; one or
+two entries usually means only the cheap relabel/restore step runs.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

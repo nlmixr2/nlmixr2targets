@@ -21,7 +21,8 @@ tar_nlmixr_multimodel(
   memory = targets::tar_option_get("memory"),
   garbage_collection = isTRUE(targets::tar_option_get("garbage_collection")),
   deployment = targets::tar_option_get("deployment"),
-  resources = targets::tar_option_get("resources"),
+  resources_data = targets::tar_option_get("resources"),
+  resources_fit = targets::tar_option_get("resources"),
   storage = targets::tar_option_get("storage"),
   retrieval = targets::tar_option_get("retrieval"),
   cue = targets::tar_option_get("cue")
@@ -188,15 +189,17 @@ tar_nlmixr_multimodel(
   worker. For more on distributed/parallel computing in `targets`,
   please visit <https://books.ropensci.org/targets/crew.html>.
 
-- resources:
+- resources_data, resources_fit:
 
   Object returned by
-  [`tar_resources()`](https://docs.ropensci.org/targets/reference/tar_resources.html)
-  with optional settings for high-performance computing functionality,
-  alternative data storage formats, and other optional capabilities of
-  `targets`. See
-  [`tar_resources()`](https://docs.ropensci.org/targets/reference/tar_resources.html)
-  for details.
+  [`targets::tar_resources()`](https://docs.ropensci.org/targets/reference/tar_resources.html),
+  as for `resources` in
+  [`targets::tar_target()`](https://docs.ropensci.org/targets/reference/tar_target.html).
+  `resources_data` applies to the `_data_simple` target. `resources_fit`
+  applies to every other generated target: the `_object_simple`,
+  `_covariates` and `_fit_simple` targets, the final fit, and the
+  combined list target of `tar_nlmixr_multimodel()`. See "Running the
+  generated targets on a remote worker".
 
 - storage:
 
@@ -340,14 +343,45 @@ tar_nlmixr_multimodel(
 #>     nlmixr2est 
 #>   library:
 #>     NULL
+#> [[1]]$covariates
+#> <tar_stem> 
+#>   name: all_models_8ae20c5c_covariates 
+#>   description:  
+#>   command:
+#>     nlmixr_object_covariates(object = all_models_8ae20c5c_object_simple, 
+#>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) 
+#>   format: rds 
+#>   repository: local 
+#>   iteration method: vector 
+#>   error mode: stop 
+#>   memory mode: auto 
+#>   storage mode: worker 
+#>   retrieval mode: auto 
+#>   deployment mode: worker 
+#>   priority: 0 
+#>   resources:
+#>     list() 
+#>   cue:
+#>     seed: TRUE
+#>     file: TRUE
+#>     iteration: TRUE
+#>     repository: TRUE
+#>     format: TRUE
+#>     depend: TRUE
+#>     command: TRUE
+#>     mode: thorough 
+#>   packages:
+#>     nlmixr2targets
+#>     nlmixr2est 
+#>   library:
+#>     NULL
 #> [[1]]$data_simple
 #> <tar_stem> 
 #>   name: all_models_8ae20c5c_data_simple 
 #>   description:  
 #>   command:
-#>     nlmixr_data_simplify(object = all_models_8ae20c5c_object_simple, 
-#>         data = nlmixr2data::pheno_sd, table = nlmixr2est::tableControl(), 
-#>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"), 
+#>     nlmixr_data_simplify(data = nlmixr2data::pheno_sd, 
+#>         covariates = all_models_8ae20c5c_covariates, table = nlmixr2est::tableControl(), 
 #>         est = "saem", control = list()) 
 #>   format: rds 
 #>   repository: local 
@@ -474,14 +508,45 @@ tar_nlmixr_multimodel(
 #>     nlmixr2est 
 #>   library:
 #>     NULL
+#> [[2]]$covariates
+#> <tar_stem> 
+#>   name: all_models_b0a374c4_covariates 
+#>   description:  
+#>   command:
+#>     nlmixr_object_covariates(object = all_models_b0a374c4_object_simple, 
+#>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) 
+#>   format: rds 
+#>   repository: local 
+#>   iteration method: vector 
+#>   error mode: stop 
+#>   memory mode: auto 
+#>   storage mode: worker 
+#>   retrieval mode: auto 
+#>   deployment mode: worker 
+#>   priority: 0 
+#>   resources:
+#>     list() 
+#>   cue:
+#>     seed: TRUE
+#>     file: TRUE
+#>     iteration: TRUE
+#>     repository: TRUE
+#>     format: TRUE
+#>     depend: TRUE
+#>     command: TRUE
+#>     mode: thorough 
+#>   packages:
+#>     nlmixr2targets
+#>     nlmixr2est 
+#>   library:
+#>     NULL
 #> [[2]]$data_simple
 #> <tar_stem> 
 #>   name: all_models_b0a374c4_data_simple 
 #>   description:  
 #>   command:
-#>     nlmixr_data_simplify(object = all_models_b0a374c4_object_simple, 
-#>         data = nlmixr2data::pheno_sd, table = nlmixr2est::tableControl(), 
-#>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"), 
+#>     nlmixr_data_simplify(data = nlmixr2data::pheno_sd, 
+#>         covariates = all_models_b0a374c4_covariates, table = nlmixr2est::tableControl(), 
 #>         est = "saem", control = list()) 
 #>   format: rds 
 #>   repository: local 

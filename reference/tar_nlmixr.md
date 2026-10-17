@@ -2,9 +2,12 @@
 
 The targets generated will include the `name` as the final estimation
 step, `paste(name, "object_simple", sep = "_")` (e.g.
-`"pheno_object_simple"`) as the simplified model object, and
+`"pheno_object_simple"`) as the simplified model object,
+`paste(name, "covariates", sep = "_")` (e.g. `"pheno_covariates"`) as
+the names of the covariates the model reads,
 `paste(name, "data_simple", sep = "_")` (e.g. `"pheno_data_simple"`) as
-the simplified data object.
+the simplified data object, and `paste(name, "fit_simple", sep = "_")`
+as the fit of the simplified model to the simplified data.
 
 ## Usage
 
@@ -24,7 +27,8 @@ tar_nlmixr(
   memory = targets::tar_option_get("memory"),
   garbage_collection = isTRUE(targets::tar_option_get("garbage_collection")),
   deployment = targets::tar_option_get("deployment"),
-  resources = targets::tar_option_get("resources"),
+  resources_data = targets::tar_option_get("resources"),
+  resources_fit = targets::tar_option_get("resources"),
   storage = targets::tar_option_get("storage"),
   retrieval = targets::tar_option_get("retrieval"),
   cue = targets::tar_option_get("cue")
@@ -43,7 +47,8 @@ tar_nlmixr_raw(
   env,
   error = "stop",
   description = NULL,
-  target_settings = tar_nlmixr_collect_target_settings_default()
+  target_settings = tar_nlmixr_collect_target_settings_default(),
+  covariates_name = paste(name, "covariates", sep = "_")
 )
 ```
 
@@ -207,15 +212,18 @@ tar_nlmixr_raw(
   worker. For more on distributed/parallel computing in `targets`,
   please visit <https://books.ropensci.org/targets/crew.html>.
 
-- resources:
+- resources_data, resources_fit:
 
   Object returned by
-  [`tar_resources()`](https://docs.ropensci.org/targets/reference/tar_resources.html)
-  with optional settings for high-performance computing functionality,
-  alternative data storage formats, and other optional capabilities of
-  `targets`. See
-  [`tar_resources()`](https://docs.ropensci.org/targets/reference/tar_resources.html)
-  for details.
+  [`targets::tar_resources()`](https://docs.ropensci.org/targets/reference/tar_resources.html),
+  as for `resources` in
+  [`targets::tar_target()`](https://docs.ropensci.org/targets/reference/tar_target.html).
+  `resources_data` applies to the `_data_simple` target. `resources_fit`
+  applies to every other generated target: the `_object_simple`,
+  `_covariates` and `_fit_simple` targets, the final fit, and the
+  combined list target of
+  [`tar_nlmixr_multimodel()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel.md).
+  See "Running the generated targets on a remote worker".
 
 - storage:
 
@@ -280,12 +288,19 @@ tar_nlmixr_raw(
 
 - target_settings:
 
-  Named list of
+  Named list of the
   [`targets::tar_target()`](https://docs.ropensci.org/targets/reference/tar_target.html)
-  settings to apply to every generated target, as built by
-  `tar_nlmixr()` from its own arguments. Defaults to those arguments'
-  own defaults, so calling `tar_nlmixr_raw()` directly behaves the same
-  as before this argument existed.
+  settings `tar_nlmixr()` forwards, as built by `tar_nlmixr()` from its
+  own arguments: one element per forwarded argument, with
+  `resources_data` and `resources_fit` in place of `resources`. Defaults
+  to those arguments' own defaults, so calling `tar_nlmixr_raw()`
+  directly behaves the same as before this argument existed.
+
+- covariates_name:
+
+  target name to use for the names of the covariates the simplified
+  object reads. Defaults to `paste(name, "covariates", sep = "_")`,
+  which is the name `tar_nlmixr()` uses.
 
 ## Value
 
@@ -308,7 +323,9 @@ data columns during its automated covariate selection, so those
 candidate columns are kept, too (see
 [`nlmixr_data_simplify()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_data_simplify.md)).
 Changes to any kept column invalidate the cached fit; changes to dropped
-columns do not.
+columns do not. The simplified data depend on the model only through the
+`_covariates` target, so an edit to the model that leaves its covariates
+unchanged does not rebuild them.
 
 `table` does two jobs: `table$keep` names data columns to carry through
 to the simplified data, and a non-default `tableControl()` is handed to
@@ -357,10 +374,13 @@ with `object`, `data`, `est`, `control`, and – when you supply one –
 ## Arguments not forwarded to targets
 
 :tar_target(): `format`, `repository`, `library`, `memory`,
-`garbage_collection`, `deployment`, `resources`, `storage`, `retrieval`
-and `cue` are passed to every generated target, and default exactly as
+`garbage_collection`, `deployment`, `storage`, `retrieval` and `cue` are
+passed to every generated target. `resources` is split in two:
+`resources_data` goes to the `_data_simple` target and `resources_fit`
+to every other target. All of them default exactly as
 [`targets::tar_target()`](https://docs.ropensci.org/targets/reference/tar_target.html)
-defaults them, so a
+defaults them (both `resources_*` to
+`targets::tar_option_get("resources")`), so a
 [`targets::tar_option_set()`](https://docs.ropensci.org/targets/reference/tar_option_set.html)
 earlier in `_targets.R` reaches these targets like any other. The rest
 are left out on purpose:
@@ -370,7 +390,7 @@ are left out on purpose:
   already used to keep a renamed model from re-running its fit.
 
 - `pattern` and `iteration` configure dynamic branching. The generated
-  targets are a fixed set of four per model, and
+  targets are a fixed set of five per model, and
   [`tar_nlmixr_multimodel()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel.md)
   already provides the many-models case, so there is nothing to branch
   over.
@@ -381,7 +401,7 @@ are left out on purpose:
   arguments that are already captured unevaluated, so it has nothing to
   act on.
 
-- `packages` is chosen by the generator. Each of the four targets per
+- `packages` is chosen by the generator. Each of the five targets per
   model loads `nlmixr2targets`, whose functions its command calls, and
   `nlmixr2est`, so that un-namespaced functions in `object`, `control`
   or `table` (such as `ini()`, `saemControl()` or `tableControl()`)
@@ -410,12 +430,20 @@ are left out on purpose:
 
 The simplified model is written to
 `file.path(tar_config_get("store"), "user/nlmixr2")` by the
-`object_simple` target and read back from there by the estimation
-target. That is a path, not a value passed between targets, so the two
-must agree on it: sending only the estimation target to a worker whose
-filesystem does not carry the same store leaves it unable to find the
-model. Either give the whole set the same `resources` and `deployment`
-so they run together, or put the store somewhere both reach.
+`_object_simple` target and read back from there by the `_covariates`
+and estimation (`_fit_simple`) targets. That is a path, not a value
+passed between targets, so the three must agree on it: sending only the
+estimation target to a worker whose filesystem does not carry the same
+store leaves it unable to find the model. `resources_fit` covers all
+three, so leave it as one set of resources that runs them together, or
+put the store somewhere every worker reaches.
+
+The `_data_simple` target reads neither that directory nor the model: it
+receives the covariate names as the value of the `_covariates` target.
+It can therefore run anywhere that can evaluate `data`, which is what
+`resources_data` is for – for example, preparing the data on a small
+local controller while the fits run on a larger one. `deployment` is not
+split, so it still applies to every generated target.
 
 ## Side effects
 
@@ -462,7 +490,7 @@ pheno <- function() {
   })
 }
 
-# Build the four targets that estimate `pheno`. `data` and `est` are
+# Build the five targets that estimate `pheno`. `data` and `est` are
 # captured as expressions, so this just returns the target list; the
 # estimation step runs only when you call `targets::tar_make()` from a
 # project whose targets store you have configured (for example, with
@@ -506,14 +534,45 @@ tar_nlmixr(
 #>     nlmixr2est 
 #>   library:
 #>     NULL
+#> $covariates
+#> <tar_stem> 
+#>   name: pheno_model_covariates 
+#>   description:  
+#>   command:
+#>     nlmixr_object_covariates(object = pheno_model_object_simple, 
+#>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) 
+#>   format: rds 
+#>   repository: local 
+#>   iteration method: vector 
+#>   error mode: stop 
+#>   memory mode: auto 
+#>   storage mode: worker 
+#>   retrieval mode: auto 
+#>   deployment mode: worker 
+#>   priority: 0 
+#>   resources:
+#>     list() 
+#>   cue:
+#>     seed: TRUE
+#>     file: TRUE
+#>     iteration: TRUE
+#>     repository: TRUE
+#>     format: TRUE
+#>     depend: TRUE
+#>     command: TRUE
+#>     mode: thorough 
+#>   packages:
+#>     nlmixr2targets
+#>     nlmixr2est 
+#>   library:
+#>     NULL
 #> $data_simple
 #> <tar_stem> 
 #>   name: pheno_model_data_simple 
 #>   description:  
 #>   command:
-#>     nlmixr_data_simplify(object = pheno_model_object_simple, 
-#>         data = nlmixr2data::pheno_sd, table = nlmixr2est::tableControl(), 
-#>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"), 
+#>     nlmixr_data_simplify(data = nlmixr2data::pheno_sd, 
+#>         covariates = pheno_model_covariates, table = nlmixr2est::tableControl(), 
 #>         est = "saem", control = list()) 
 #>   format: rds 
 #>   repository: local 

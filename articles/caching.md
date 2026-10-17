@@ -13,13 +13,14 @@ a hash of its command, its dependencies, and its inputs. When you call
 only targets whose hash has changed (directly or transitively) are
 rebuilt.
 
-For a single `tar_nlmixr(name = <name>, ...)` call, the four targets
+For a single `tar_nlmixr(name = <name>, ...)` call, the five targets
 generated are:
 
 | Target | Stores | Hashed inputs |
 |----|----|----|
 | `<name>_object_simple` | md5 string identifying the simplified ui in the indirect cache | the captured `object` expression |
-| `<name>_data_simple` | simplified data frame | `<name>_object_simple`, the captured `data` expression, the `table$keep` columns, and `est`/`control` (methods like `est = "vae"` also keep their covariate-search columns) |
+| `<name>_covariates` | sorted names of the covariates the model reads | `<name>_object_simple` |
+| `<name>_data_simple` | simplified data frame | `<name>_covariates`, the captured `data` expression, the `table$keep` columns, and `est`/`control` (methods like `est = "vae"` also keep their covariate-search columns) |
 | `<name>_fit_simple` | fitted nlmixr2 object | `<name>_object_simple`, `<name>_data_simple`, `est`, `control` |
 | `<name>` | final fit, with labels and metadata restored | `<name>_fit_simple`, the captured `object` (re-read for labels), `data` |
 
@@ -31,6 +32,11 @@ strips parameter labels and the model’s metadata environment before
 caching, so cosmetic edits to either do not invalidate the expensive
 estimation step.
 
+The simplified data, in turn, depend on the model only through
+`<name>_covariates`. A model edit re-runs the cheap `_covariates`
+target, and when the covariate names come out the same, `_data_simple`
+is skipped rather than rebuilt.
+
 ## Examples of common edits
 
 ``` r
@@ -40,12 +46,18 @@ estimation step.
 #   (the relabel/meta-restore step). The expensive `_fit_simple` is reused.
 
 # Changing initial values (`ini({...})`) or the model structure
-# (`model({...})`):
-#   re-runs everything from `_object_simple` onward.
+# (`model({...})`) without changing which covariates it reads:
+#   re-runs `_object_simple`, `_covariates`, `_fit_simple` and the final
+#   target. `_covariates` returns the same names, so `_data_simple` is
+#   skipped.
 
-# Adding/removing a covariate column from the dataset:
-#   re-runs `_data_simple` and `_fit_simple`. `_object_simple` is reused
-#   if the model didn't change.
+# Adding a covariate to the model, or removing one:
+#   re-runs everything from `_object_simple` onward, including
+#   `_data_simple`.
+
+# Changing the values in a covariate column of the dataset:
+#   re-runs `_data_simple` and `_fit_simple`. `_object_simple` and
+#   `_covariates` are reused if the model didn't change.
 
 # Editing a subject-constant column that the model does not use:
 #   for most `est` methods nothing re-fits (`_data_simple` re-executes,
@@ -108,6 +120,9 @@ targets::tar_outdated()
 
 after the edit but before
 [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html).
-The list of outdated targets is exactly the set that would re-execute.
-Three or four entries means `_fit_simple` is in play; one or two usually
-means only the cheap relabel/restore step is.
+The list of outdated targets is every target that may re-execute.
+[`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+can still skip one whose upstream values turn out unchanged: after an
+edit that leaves the model’s covariates alone, `_data_simple` is listed
+but skipped. If `_fit_simple` is not in the list, the fit is reused; one
+or two entries usually means only the cheap relabel/restore step runs.

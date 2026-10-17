@@ -92,12 +92,15 @@ tar_nlmixr_multimodel_prep(
 
 - target_settings:
 
-  Named list of
+  Named list of the
   [`targets::tar_target()`](https://docs.ropensci.org/targets/reference/tar_target.html)
-  settings to apply to every generated target, as built by
+  settings
   [`tar_nlmixr()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
-  from its own arguments. Defaults to those arguments' own defaults, so
-  calling
+  forwards, as built by
+  [`tar_nlmixr()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
+  from its own arguments: one element per forwarded argument, with
+  `resources_data` and `resources_fit` in place of `resources`. Defaults
+  to those arguments' own defaults, so calling
   [`tar_nlmixr_raw()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
   directly behaves the same as before this argument existed.
 

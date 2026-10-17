@@ -26,6 +26,9 @@
 - [`nlmixr_object_complicate()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_object_complicate.md)
   : Re-attach labels, metadata, and original data to a simplified fit
 
+- [`nlmixr_object_covariates()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_object_covariates.md)
+  : The covariate columns a simplified model reads from the data
+
 - [`nlmixr_object_simplify()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_object_simplify.md)
   : Simplify an nlmixr object
 
