@@ -19,7 +19,8 @@ tar_nlmixr_multimodel(
   memory = targets::tar_option_get("memory"),
   garbage_collection = isTRUE(targets::tar_option_get("garbage_collection")),
   deployment = targets::tar_option_get("deployment"),
-  resources = targets::tar_option_get("resources"),
+  resources_data = targets::tar_option_get("resources"),
+  resources_fit = targets::tar_option_get("resources"),
   storage = targets::tar_option_get("storage"),
   retrieval = targets::tar_option_get("retrieval"),
   cue = targets::tar_option_get("cue")
@@ -164,11 +165,13 @@ the target runs on a parallel worker. For more on distributed/parallel
 computing in \code{targets}, please visit
 \url{https://books.ropensci.org/targets/crew.html}.}
 
-\item{resources}{Object returned by \code{tar_resources()}
-with optional settings for high-performance computing
-functionality, alternative data storage formats,
-and other optional capabilities of \code{targets}.
-See \code{tar_resources()} for details.}
+\item{resources_data, resources_fit}{Object returned by
+\code{\link[targets:tar_resources]{targets::tar_resources()}}, as for \code{resources} in
+\code{\link[targets:tar_target]{targets::tar_target()}}.  \code{resources_data} applies to the \verb{_data_simple}
+target.  \code{resources_fit} applies to every other generated target: the
+\verb{_object_simple}, \verb{_covariates} and \verb{_fit_simple} targets, the final fit,
+and the combined list target of \code{\link[=tar_nlmixr_multimodel]{tar_nlmixr_multimodel()}}.  See "Running
+the generated targets on a remote worker".}
 
 \item{storage}{Character string to control when the output of the target
 is saved to storage. Only relevant when using \code{targets}

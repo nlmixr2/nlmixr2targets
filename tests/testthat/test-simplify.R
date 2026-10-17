@@ -103,6 +103,98 @@ test_that("nlmixr_data_simplify expected errors", {
   )
 })
 
+test_that("nlmixr_object_covariates reads the covariates from a cache hash or a ui", {
+  expect_identical(
+    nlmixr_object_covariates(model_simple, directory = .simplify_cache_dir),
+    "WT"
+  )
+  ui <- read_nlmixr2obj_indirect(model_simple, directory = .simplify_cache_dir)
+  expect_identical(nlmixr_object_covariates(ui), "WT")
+  # the `$ui` slot of a fit-shaped object is preferred over its own all.covs
+  expect_identical(nlmixr_object_covariates(list(ui = ui, all.covs = "OTHER")), "WT")
+})
+
+test_that("nlmixr_object_covariates sorts in the C locale and de-duplicates", {
+  expect_identical(
+    nlmixr_object_covariates(list(all.covs = c("b", "WT", "a", "WT", "APGR"))),
+    c("APGR", "WT", "a", "b")
+  )
+})
+
+test_that("nlmixr_object_covariates returns character(0) for a model without covariates", {
+  expect_identical(nlmixr_object_covariates(list(all.covs = NULL)), character(0))
+  expect_identical(nlmixr_object_covariates(list(all.covs = character(0))), character(0))
+})
+
+test_that("nlmixr_object_covariates rejects an object it cannot read covariates from", {
+  expect_error(
+    nlmixr_object_covariates(42),
+    regexp = "got object of class 'numeric'",
+    fixed = TRUE
+  )
+  expect_error(
+    nlmixr_object_covariates(c("a", "b")),
+    regexp = "Must have length 1"
+  )
+})
+
+test_that("nlmixr_data_simplify gives the same data from covariates as from the object", {
+  for (table in list(list(), nlmixr2est::tableControl(keep = "APGR"))) {
+    expect_identical(
+      nlmixr_data_simplify(data = nlmixr2data::pheno_sd, covariates = "WT", table = table),
+      nlmixr_data_simplify(
+        data = nlmixr2data::pheno_sd, object = model_simple, table = table,
+        directory = .simplify_cache_dir
+      )
+    )
+  }
+  # Covariates arriving out of order give the same column order.
+  expect_identical(
+    nlmixr_data_simplify(data = nlmixr2data::pheno_sd, covariates = c("WT", "APGR")),
+    nlmixr_data_simplify(data = nlmixr2data::pheno_sd, covariates = c("APGR", "WT"))
+  )
+  expect_named(
+    nlmixr_data_simplify(data = nlmixr2data::pheno_sd, covariates = character(0)),
+    c("id", "time", "amt", "dv", "mdv", "evid")
+  )
+})
+
+test_that("nlmixr_data_simplify takes exactly one of object and covariates", {
+  expect_error(
+    nlmixr_data_simplify(data = nlmixr2data::pheno_sd),
+    regexp = "Supply exactly one of `object` and `covariates`",
+    fixed = TRUE
+  )
+  expect_error(
+    nlmixr_data_simplify(
+      data = nlmixr2data::pheno_sd, object = model_simple, covariates = "WT",
+      directory = .simplify_cache_dir
+    ),
+    regexp = "Supply exactly one of `object` and `covariates`",
+    fixed = TRUE
+  )
+})
+
+test_that("nlmixr_data_simplify validates covariates", {
+  expect_error(
+    nlmixr_data_simplify(data = nlmixr2data::pheno_sd, covariates = c("WT", "WT")),
+    regexp = "Contains duplicated values"
+  )
+  expect_error(
+    nlmixr_data_simplify(data = nlmixr2data::pheno_sd, covariates = NA_character_),
+    regexp = "Contains missing values"
+  )
+  expect_error(
+    nlmixr_data_simplify(data = nlmixr2data::pheno_sd, covariates = 1),
+    regexp = "Must be of type 'character'"
+  )
+  expect_error(
+    nlmixr_data_simplify(data = nlmixr2data::pheno_sd, covariates = "NOPE"),
+    regexp = "The following covariate column(s) are missing from the data: 'NOPE'",
+    fixed = TRUE
+  )
+})
+
 # est = "vae" searches subject-constant data columns beyond the model's own
 # covariates during its automated covariate selection, so the simplified data
 # must keep those candidate columns or the covariate search runs on a reduced

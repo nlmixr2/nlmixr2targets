@@ -20,7 +20,8 @@ tar_nlmixr(
   memory = targets::tar_option_get("memory"),
   garbage_collection = isTRUE(targets::tar_option_get("garbage_collection")),
   deployment = targets::tar_option_get("deployment"),
-  resources = targets::tar_option_get("resources"),
+  resources_data = targets::tar_option_get("resources"),
+  resources_fit = targets::tar_option_get("resources"),
   storage = targets::tar_option_get("storage"),
   retrieval = targets::tar_option_get("retrieval"),
   cue = targets::tar_option_get("cue")
@@ -39,7 +40,8 @@ tar_nlmixr_raw(
   env,
   error = "stop",
   description = NULL,
-  target_settings = tar_nlmixr_collect_target_settings_default()
+  target_settings = tar_nlmixr_collect_target_settings_default(),
+  covariates_name = paste(name, "covariates", sep = "_")
 )
 }
 \arguments{
@@ -181,11 +183,13 @@ the target runs on a parallel worker. For more on distributed/parallel
 computing in \code{targets}, please visit
 \url{https://books.ropensci.org/targets/crew.html}.}
 
-\item{resources}{Object returned by \code{tar_resources()}
-with optional settings for high-performance computing
-functionality, alternative data storage formats,
-and other optional capabilities of \code{targets}.
-See \code{tar_resources()} for details.}
+\item{resources_data, resources_fit}{Object returned by
+\code{\link[targets:tar_resources]{targets::tar_resources()}}, as for \code{resources} in
+\code{\link[targets:tar_target]{targets::tar_target()}}.  \code{resources_data} applies to the \verb{_data_simple}
+target.  \code{resources_fit} applies to every other generated target: the
+\verb{_object_simple}, \verb{_covariates} and \verb{_fit_simple} targets, the final fit,
+and the combined list target of \code{\link[=tar_nlmixr_multimodel]{tar_nlmixr_multimodel()}}.  See "Running
+the generated targets on a remote worker".}
 
 \item{storage}{Character string to control when the output of the target
 is saved to storage. Only relevant when using \code{targets}
@@ -236,11 +240,15 @@ re-inserted.}
 estimation target when it starts to run.  \code{NULL} (the default) announces
 nothing.}
 
-\item{target_settings}{Named list of \code{\link[targets:tar_target]{targets::tar_target()}} settings to
-apply to every generated target, as built by \code{tar_nlmixr()} from its own
-arguments.  Defaults to those arguments' own defaults, so calling
-\code{tar_nlmixr_raw()} directly behaves the same as before this argument
-existed.}
+\item{target_settings}{Named list of the \code{\link[targets:tar_target]{targets::tar_target()}} settings
+\code{tar_nlmixr()} forwards, as built by \code{tar_nlmixr()} from its own arguments:
+one element per forwarded argument, with \code{resources_data} and
+\code{resources_fit} in place of \code{resources}.  Defaults to those arguments' own
+defaults, so calling \code{tar_nlmixr_raw()} directly behaves the same as
+before this argument existed.}
+
+\item{covariates_name}{target name to use for the names of the covariates
+the simplified object reads.  Defaults to \code{paste(name, "covariates", sep = "_")}, which is the name \code{tar_nlmixr()} uses.}
 }
 \value{
 A list of targets for the model simplification, data simplification,
@@ -249,9 +257,12 @@ and model estimation.
 \description{
 The targets generated will include the \code{name} as the final estimation step,
 \code{paste(name, "object_simple", sep = "_")} (e.g.
-\code{"pheno_object_simple"}) as the simplified model object, and
+\code{"pheno_object_simple"}) as the simplified model object,
+\code{paste(name, "covariates", sep = "_")} (e.g. \code{"pheno_covariates"}) as the
+names of the covariates the model reads,
 \code{paste(name, "data_simple", sep = "_")} (e.g. \code{"pheno_data_simple"}) as
-the simplified data object.
+the simplified data object, and \code{paste(name, "fit_simple", sep = "_")} as
+the fit of the simplified model to the simplified data.
 }
 \details{
 For the way that the objects are simplified, see \code{nlmixr_object_simplify()}
@@ -263,7 +274,10 @@ most methods that is the standard event columns plus the covariates named
 in the model; \code{est = "vae"} additionally searches subject-constant data
 columns during its automated covariate selection, so those candidate
 columns are kept, too (see \code{nlmixr_data_simplify()}).  Changes to any kept
-column invalidate the cached fit; changes to dropped columns do not.
+column invalidate the cached fit; changes to dropped columns do not.  The
+simplified data depend on the model only through the \verb{_covariates} target,
+so an edit to the model that leaves its covariates unchanged does not
+rebuild them.
 
 \code{table} does two jobs: \code{table$keep} names data columns to carry through to
 the simplified data, and a non-default \code{tableControl()} is handed to
@@ -309,25 +323,27 @@ resolve it; please report it if you hit this.
 \section{Arguments not forwarded to targets}{
 :tar_target():
 \code{format}, \code{repository}, \code{library}, \code{memory}, \code{garbage_collection},
-\code{deployment}, \code{resources}, \code{storage}, \code{retrieval} and \code{cue} are
-passed to every generated target, and default exactly as
-\code{\link[targets:tar_target]{targets::tar_target()}} defaults them, so a \code{targets::tar_option_set()}
-earlier in \verb{_targets.R} reaches these targets like any other.  The rest are
-left out on purpose:
+\code{deployment}, \code{storage}, \code{retrieval} and \code{cue} are passed to every
+generated target.  \code{resources} is split in two: \code{resources_data} goes to
+the \verb{_data_simple} target and \code{resources_fit} to every other target.  All
+of them default exactly as \code{\link[targets:tar_target]{targets::tar_target()}} defaults them (both
+\verb{resources_*} to \code{targets::tar_option_get("resources")}), so a
+\code{targets::tar_option_set()} earlier in \verb{_targets.R} reaches these targets
+like any other.  The rest are left out on purpose:
 
 \itemize{
 \item \code{command}, \code{deps} and \code{string} describe the work a target does, and
 that is what this function exists to write.  \code{string} in particular is
 already used to keep a renamed model from re-running its fit.
 \item \code{pattern} and \code{iteration} configure dynamic branching.  The
-generated targets are a fixed set of four per model, and
+generated targets are a fixed set of five per model, and
 \code{\link[=tar_nlmixr_multimodel]{tar_nlmixr_multimodel()}} already provides the many-models case, so there
 is nothing to branch over.
 \item \code{tidy_eval} controls \verb{!!} interpolation of a \code{command} written by
 the caller.  These commands are assembled with \code{substitute()} from
 arguments that are already captured unevaluated, so it has nothing to act
 on.
-\item \code{packages} is chosen by the generator.  Each of the four targets
+\item \code{packages} is chosen by the generator.  Each of the five targets
 per model loads \code{nlmixr2targets}, whose functions its command calls, and
 \code{nlmixr2est}, so that un-namespaced functions in \code{object}, \code{control} or
 \code{table} (such as \code{ini()}, \code{saemControl()} or \code{tableControl()}) evaluate
@@ -352,12 +368,20 @@ prints.  Set the \code{targets} versions with \code{targets::tar_option_set()}.
 
 \section{Running the generated targets on a remote worker}{
 
-The simplified model is written to \code{file.path(tar_config_get("store"), "user/nlmixr2")} by the \code{object_simple} target and read back from there by
-the estimation target.  That is a path, not a value passed between targets,
-so the two must agree on it: sending only the estimation target to a worker
-whose filesystem does not carry the same store leaves it unable to find the
-model.  Either give the whole set the same \code{resources} and \code{deployment} so
-they run together, or put the store somewhere both reach.
+The simplified model is written to \code{file.path(tar_config_get("store"), "user/nlmixr2")} by the \verb{_object_simple} target and read back from there by
+the \verb{_covariates} and estimation (\verb{_fit_simple}) targets.  That is a path,
+not a value passed between targets, so the three must agree on it: sending
+only the estimation target to a worker whose filesystem does not carry the
+same store leaves it unable to find the model.  \code{resources_fit} covers all
+three, so leave it as one set of resources that runs them together, or put
+the store somewhere every worker reaches.
+
+The \verb{_data_simple} target reads neither that directory nor the model: it
+receives the covariate names as the value of the \verb{_covariates} target.  It
+can therefore run anywhere that can evaluate \code{data}, which is what
+\code{resources_data} is for -- for example, preparing the data on a small local
+controller while the fits run on a larger one.  \code{deployment} is not split,
+so it still applies to every generated target.
 }
 
 \section{Side effects}{
@@ -398,7 +422,7 @@ pheno <- function() {
   })
 }
 
-# Build the four targets that estimate `pheno`. `data` and `est` are
+# Build the five targets that estimate `pheno`. `data` and `est` are
 # captured as expressions, so this just returns the target list; the
 # estimation step runs only when you call `targets::tar_make()` from a
 # project whose targets store you have configured (for example, with

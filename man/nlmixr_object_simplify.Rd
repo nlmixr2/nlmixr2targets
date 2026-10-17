@@ -69,6 +69,7 @@ re-attaches labels, metadata, and the original data on the final fit.
 
 Other Simplifiers:
 \code{\link[=nlmixr_data_simplify]{nlmixr_data_simplify()}},
-\code{\link[=nlmixr_object_complicate]{nlmixr_object_complicate()}}
+\code{\link[=nlmixr_object_complicate]{nlmixr_object_complicate()}},
+\code{\link[=nlmixr_object_covariates]{nlmixr_object_covariates()}}
 }
 \concept{Simplifiers}

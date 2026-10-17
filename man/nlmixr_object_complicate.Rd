@@ -52,6 +52,7 @@ command for the final target produced by \code{\link[=tar_nlmixr]{tar_nlmixr()}}
 
 Other Simplifiers:
 \code{\link[=nlmixr_data_simplify]{nlmixr_data_simplify()}},
+\code{\link[=nlmixr_object_covariates]{nlmixr_object_covariates()}},
 \code{\link[=nlmixr_object_simplify]{nlmixr_object_simplify()}}
 }
 \concept{Simplifiers}

@@ -65,20 +65,30 @@ tar_nlmixr_multimodel <- function(name, ..., data, est, control = list(),
                                   memory = targets::tar_option_get("memory"),
                                   garbage_collection = isTRUE(targets::tar_option_get("garbage_collection")),
                                   deployment = targets::tar_option_get("deployment"),
-                                  resources = targets::tar_option_get("resources"),
+                                  resources_data = targets::tar_option_get("resources"),
+                                  resources_fit = targets::tar_option_get("resources"),
                                   storage = targets::tar_option_get("storage"),
                                   retrieval = targets::tar_option_get("retrieval"),
                                   cue = targets::tar_option_get("cue")) {
   error <- match.arg(error)
+  # This extracts the ... argument similarly to using `substitute()`.  From
+  # https://stackoverflow.com/questions/55019441/deparse-substitute-with-three-dots-arguments
+  model_list <- match.call(expand.dots = FALSE)$...
+  # Arguments after `...` match only by exact name, so a `resources =` meant
+  # for the targets would otherwise become a model called "resources".
+  if ("resources" %in% names(model_list)) {
+    stop(
+      "`resources` is not an argument of tar_nlmixr_multimodel(); use ",
+      "`resources_data` and `resources_fit` instead (a model cannot be named \"resources\")"
+    )
+  }
   tar_nlmixr_multimodel_parse(
     name = targets::tar_deparse_language(substitute(name)),
     data = substitute(data),
     est = substitute(est),
     control = substitute(control),
     table = substitute(table),
-    # This extracts the ... argument similarly to using `substitute()`.  From
-    # https://stackoverflow.com/questions/55019441/deparse-substitute-with-three-dots-arguments
-    model_list = match.call(expand.dots = FALSE)$...,
+    model_list = model_list,
     env = env,
     error = error,
     target_settings = tar_nlmixr_collect_target_settings()
@@ -175,7 +185,7 @@ tar_nlmixr_multimodel_parse <- function(name, data, est, control, table, model_l
     }
   }
   # Extract the targets to fit.  This will be a list of lists.  The inner list
-  # will have the three targets for fitting the model, and the outer list will
+  # will have the targets for fitting one model, and the outer list will
   # be one element per model fit.
   target_model_fitting <- lapply(X = unname(ret_prep), FUN = \(x) x[["target"]])
   # Generate the combined list with names
@@ -189,7 +199,7 @@ tar_nlmixr_multimodel_parse <- function(name, data, est, control, table, model_l
   # `tar_option_get("packages")` -- every package attached when `_targets.R` is
   # sourced -- and a worker missing any one of them would fail this target.
   target_combined_list <-
-    tar_nlmixr_target_raw(target_settings, name = name, command = call_list, packages = character(0))
+    tar_nlmixr_target_raw(target_settings, role = "fit", name = name, command = call_list, packages = character(0))
   # Return the models to fit and the list-combining target
   append(
     target_model_fitting,
@@ -338,7 +348,8 @@ tar_nlmixr_multimodel_single <- function(object, name, data, est, control, table
       env = env,
       error = error,
       description = description,
-      target_settings = target_settings
+      target_settings = target_settings,
+      covariates_name = paste0(name_hash, "_covariates")
     )
   list(
     target = tar_prep,
