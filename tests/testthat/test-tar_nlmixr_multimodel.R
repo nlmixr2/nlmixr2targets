@@ -44,10 +44,10 @@ test_that("tar_nlmixr_multimodel", {
   expect_true(inherits(target_list, "list"))
   # One for each model and then one for combining everything
   expect_length(target_list, 3)
-  # Data and object simplification, then the fitting
-  expect_length(target_list[[1]], 4)
-  # Data and object simplification, then the fitting
-  expect_length(target_list[[2]], 4)
+  # Object, covariate and data simplification, then the fitting
+  expect_length(target_list[[1]], 5)
+  # Object, covariate and data simplification, then the fitting
+  expect_length(target_list[[2]], 5)
   # Combine the fit models as a single step
   expect_s3_class(target_list[[3]], "tar_stem")
   expect_equal(target_list[[3]]$settings$name, "foo")
@@ -59,8 +59,8 @@ test_that("tar_nlmixr_multimodel", {
   expect_equal(names(collating_call), c("", "my first model", "my second model"))
 
   # Verify the targets created are the ones being collated
-  expect_equal(collating_call[[2]], as.name(target_list[[1]][[4]]$settings$name))
-  expect_equal(collating_call[[3]], as.name(target_list[[2]][[4]]$settings$name))
+  expect_equal(collating_call[[2]], as.name(target_list[[1]]$fit$settings$name))
+  expect_equal(collating_call[[3]], as.name(target_list[[2]]$fit$settings$name))
 })
 
 test_that("the combining and per-model targets declare their own packages", {
@@ -492,10 +492,10 @@ test_that("tar_nlmixr_multimodel works for within-list model piping (#19), direc
   expect_true(inherits(target_list, "list"))
   # One for each model and then one for combining everything
   expect_length(target_list, 3)
-  # Data and object simplification, then the fitting
-  expect_length(target_list[[1]], 4)
-  # Data and object simplification, then the fitting
-  expect_length(target_list[[2]], 4)
+  # Object, covariate and data simplification, then the fitting
+  expect_length(target_list[[1]], 5)
+  # Object, covariate and data simplification, then the fitting
+  expect_length(target_list[[2]], 5)
   # Combine the fit models as a single step
   expect_s3_class(target_list[[3]], "tar_stem")
   expect_equal(target_list[[3]]$settings$name, "foo")
@@ -655,7 +655,11 @@ test_that("tar_nlmixr_multimodel_single returns hash-suffixed target name", {
   )
   expect_named(out, c("target", "name"))
   expect_match(out$name, "^foo_[0-9a-f]{8}$")
-  expect_named(out$target, c("object_simple", "data_simple", "fit_simple", "fit"))
+  expect_named(out$target, c("object_simple", "covariates", "data_simple", "fit_simple", "fit"))
+  expect_identical(out$target$covariates$settings$name, paste0(out$name, "_covariates"))
+  expect_true(
+    paste0(out$name, "_covariates") %in% targets::tar_deps_raw(out$target$data_simple$command$expr)
+  )
 })
 
 test_that("tar_nlmixr_multimodel_parse rejects bad name and env", {
@@ -894,7 +898,7 @@ test_that("tar_nlmixr_multimodel_prep forwards language arguments without evalua
   expect_match(ret$B$name, "^foo_[0-9a-f]{8}$")
   # Distinct models hash to distinct target names.
   expect_false(ret$A$name == ret$B$name)
-  expect_named(ret$A$target, c("object_simple", "data_simple", "fit_simple", "fit"))
+  expect_named(ret$A$target, c("object_simple", "covariates", "data_simple", "fit_simple", "fit"))
 
   data_cmd <- paste(deparse(ret$A$target$data_simple$command$expr), collapse = " ")
   expect_match(data_cmd, "data = no_such_data_target", fixed = TRUE)

@@ -2,9 +2,12 @@
 #'
 #' The targets generated will include the `name` as the final estimation step,
 #' `paste(name, "object_simple", sep = "_")` (e.g.
-#' `"pheno_object_simple"`) as the simplified model object, and
+#' `"pheno_object_simple"`) as the simplified model object,
+#' `paste(name, "covariates", sep = "_")` (e.g. `"pheno_covariates"`) as the
+#' names of the covariates the model reads,
 #' `paste(name, "data_simple", sep = "_")` (e.g. `"pheno_data_simple"`) as
-#' the simplified data object.
+#' the simplified data object, and `paste(name, "fit_simple", sep = "_")` as
+#' the fit of the simplified model to the simplified data.
 #'
 #' For the way that the objects are simplified, see `nlmixr_object_simplify()`
 #' and `nlmixr_data_simplify()`.  To see how to write initial conditions to work
@@ -15,7 +18,10 @@
 #' in the model; `est = "vae"` additionally searches subject-constant data
 #' columns during its automated covariate selection, so those candidate
 #' columns are kept, too (see `nlmixr_data_simplify()`).  Changes to any kept
-#' column invalidate the cached fit; changes to dropped columns do not.
+#' column invalidate the cached fit; changes to dropped columns do not.  The
+#' simplified data depend on the model only through the `_covariates` target,
+#' so an edit to the model that leaves its covariates unchanged does not
+#' rebuild them.
 #'
 #' `table` does two jobs: `table$keep` names data columns to carry through to
 #' the simplified data, and a non-default `tableControl()` is handed to
@@ -53,25 +59,27 @@
 #'
 #' @section Arguments not forwarded to targets::tar_target():
 #' `format`, `repository`, `library`, `memory`, `garbage_collection`,
-#' `deployment`, `resources`, `storage`, `retrieval` and `cue` are
-#' passed to every generated target, and default exactly as
-#' [targets::tar_target()] defaults them, so a `targets::tar_option_set()`
-#' earlier in `_targets.R` reaches these targets like any other.  The rest are
-#' left out on purpose:
+#' `deployment`, `storage`, `retrieval` and `cue` are passed to every
+#' generated target.  `resources` is split in two: `resources_data` goes to
+#' the `_data_simple` target and `resources_fit` to every other target.  All
+#' of them default exactly as [targets::tar_target()] defaults them (both
+#' `resources_*` to `targets::tar_option_get("resources")`), so a
+#' `targets::tar_option_set()` earlier in `_targets.R` reaches these targets
+#' like any other.  The rest are left out on purpose:
 #'
 #' \itemize{
 #'   \item `command`, `deps` and `string` describe the work a target does, and
 #'   that is what this function exists to write.  `string` in particular is
 #'   already used to keep a renamed model from re-running its fit.
 #'   \item `pattern` and `iteration` configure dynamic branching.  The
-#'   generated targets are a fixed set of four per model, and
+#'   generated targets are a fixed set of five per model, and
 #'   [tar_nlmixr_multimodel()] already provides the many-models case, so there
 #'   is nothing to branch over.
 #'   \item `tidy_eval` controls `!!` interpolation of a `command` written by
 #'   the caller.  These commands are assembled with `substitute()` from
 #'   arguments that are already captured unevaluated, so it has nothing to act
 #'   on.
-#'   \item `packages` is chosen by the generator.  Each of the four targets
+#'   \item `packages` is chosen by the generator.  Each of the five targets
 #'   per model loads `nlmixr2targets`, whose functions its command calls, and
 #'   `nlmixr2est`, so that un-namespaced functions in `object`, `control` or
 #'   `table` (such as `ini()`, `saemControl()` or `tableControl()`) evaluate
@@ -95,12 +103,20 @@
 #'
 #' @section Running the generated targets on a remote worker:
 #' The simplified model is written to `file.path(tar_config_get("store"),
-#' "user/nlmixr2")` by the `object_simple` target and read back from there by
-#' the estimation target.  That is a path, not a value passed between targets,
-#' so the two must agree on it: sending only the estimation target to a worker
-#' whose filesystem does not carry the same store leaves it unable to find the
-#' model.  Either give the whole set the same `resources` and `deployment` so
-#' they run together, or put the store somewhere both reach.
+#' "user/nlmixr2")` by the `_object_simple` target and read back from there by
+#' the `_covariates` and estimation (`_fit_simple`) targets.  That is a path,
+#' not a value passed between targets, so the three must agree on it: sending
+#' only the estimation target to a worker whose filesystem does not carry the
+#' same store leaves it unable to find the model.  `resources_fit` covers all
+#' three, so leave it as one set of resources that runs them together, or put
+#' the store somewhere every worker reaches.
+#'
+#' The `_data_simple` target reads neither that directory nor the model: it
+#' receives the covariate names as the value of the `_covariates` target.  It
+#' can therefore run anywhere that can evaluate `data`, which is what
+#' `resources_data` is for -- for example, preparing the data on a small local
+#' controller while the fits run on a larger one.  `deployment` is not split,
+#' so it still applies to every generated target.
 #'
 #' @section Side effects:
 #' When the user's model function body contains `cmt(0) <- value` inside a
@@ -131,6 +147,13 @@
 #'   failed model does not stop the rest of the pipeline. Detect a failed fit
 #'   with `inherits(fit, "nlmixr2targetsError")` or the broader
 #'   `inherits(fit, "try-error")`.
+#' @param resources_data,resources_fit Object returned by
+#'   [targets::tar_resources()], as for `resources` in
+#'   [targets::tar_target()].  `resources_data` applies to the `_data_simple`
+#'   target.  `resources_fit` applies to every other generated target: the
+#'   `_object_simple`, `_covariates` and `_fit_simple` targets, the final fit,
+#'   and the combined list target of [tar_nlmixr_multimodel()].  See "Running
+#'   the generated targets on a remote worker".
 #' @returns A list of targets for the model simplification, data simplification,
 #'   and model estimation.
 #' @seealso [tar_nlmixr_multimodel()] for fitting many models against one
@@ -154,7 +177,7 @@
 #'   })
 #' }
 #'
-#' # Build the four targets that estimate `pheno`. `data` and `est` are
+#' # Build the five targets that estimate `pheno`. `data` and `est` are
 #' # captured as expressions, so this just returns the target list; the
 #' # estimation step runs only when you call `targets::tar_make()` from a
 #' # project whose targets store you have configured (for example, with
@@ -176,7 +199,8 @@ tar_nlmixr <- function(name, object, data, est = NULL, control = list(),
                        memory = targets::tar_option_get("memory"),
                        garbage_collection = isTRUE(targets::tar_option_get("garbage_collection")),
                        deployment = targets::tar_option_get("deployment"),
-                       resources = targets::tar_option_get("resources"),
+                       resources_data = targets::tar_option_get("resources"),
+                       resources_fit = targets::tar_option_get("resources"),
                        storage = targets::tar_option_get("storage"),
                        retrieval = targets::tar_option_get("retrieval"),
                        cue = targets::tar_option_get("cue")) {
@@ -198,7 +222,8 @@ tar_nlmixr <- function(name, object, data, est = NULL, control = list(),
     fit_simple_name = paste(name_parsed, "fit_simple", sep = "_"),
     env = env,
     error = error,
-    target_settings = tar_nlmixr_collect_target_settings()
+    target_settings = tar_nlmixr_collect_target_settings(),
+    covariates_name = paste(name_parsed, "covariates", sep = "_")
   )
 }
 
@@ -207,22 +232,28 @@ tar_nlmixr <- function(name, object, data, est = NULL, control = list(),
 #'   use for the simplified object, simplified data, fit of the simplified
 #'   object with the simplified data, and fit with the original data
 #'   re-inserted.
+#' @param covariates_name target name to use for the names of the covariates
+#'   the simplified object reads.  Defaults to `paste(name, "covariates", sep =
+#'   "_")`, which is the name `tar_nlmixr()` uses.
 #' @param description Human-readable name for the model, announced by the
 #'   estimation target when it starts to run.  `NULL` (the default) announces
 #'   nothing.
-#' @param target_settings Named list of [targets::tar_target()] settings to
-#'   apply to every generated target, as built by `tar_nlmixr()` from its own
-#'   arguments.  Defaults to those arguments' own defaults, so calling
-#'   `tar_nlmixr_raw()` directly behaves the same as before this argument
-#'   existed.
+#' @param target_settings Named list of the [targets::tar_target()] settings
+#'   `tar_nlmixr()` forwards, as built by `tar_nlmixr()` from its own arguments:
+#'   one element per forwarded argument, with `resources_data` and
+#'   `resources_fit` in place of `resources`.  Defaults to those arguments' own
+#'   defaults, so calling `tar_nlmixr_raw()` directly behaves the same as
+#'   before this argument existed.
 #' @export
 tar_nlmixr_raw <- function(name, object, data, est, control, table,
                            object_simple_name, data_simple_name, fit_simple_name, env,
                            error = "stop", description = NULL,
-                           target_settings = tar_nlmixr_collect_target_settings_default()) {
+                           target_settings = tar_nlmixr_collect_target_settings_default(),
+                           covariates_name = paste(name, "covariates", sep = "_")) {
   checkmate::assert_character(name, len = 1, min.chars = 1, any.missing = FALSE)
   checkmate::assert_character(object_simple_name, len = 1, min.chars = 1, any.missing = FALSE)
   checkmate::assert_character(data_simple_name, len = 1, min.chars = 1, any.missing = FALSE)
+  checkmate::assert_character(covariates_name, len = 1, min.chars = 1, any.missing = FALSE)
   checkmate::assert_choice(error, choices = c("stop", "continue"))
   checkmate::assert_string(description, min.chars = 1, null.ok = TRUE)
 
@@ -273,6 +304,9 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table,
   }
 
   checkmate::assert_list(target_settings, names = "unique")
+  # Exactly the forwarded names, so a list carrying a plain `resources` is
+  # rejected rather than having it dropped without a word.
+  checkmate::assert_names(names(target_settings), permutation.of = tar_nlmixr_target_setting_names)
 
   # A worker attaches exactly a target's `packages` before running its command
   # (a local `tar_make()` also attaches the packages of every upstream target it
@@ -287,6 +321,7 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table,
     object_simple =
       tar_nlmixr_target_raw(
         target_settings,
+        role = "fit",
         name = object_simple_name,
         command = substitute(
           nlmixr_object_simplify(object = object, directory = directory),
@@ -294,20 +329,34 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table,
         ),
         packages = packages
       ),
+    covariates =
+      tar_nlmixr_target_raw(
+        target_settings,
+        role = "fit",
+        name = covariates_name,
+        command = substitute(
+          nlmixr_object_covariates(object = object_simple, directory = directory),
+          list(object_simple = as.name(object_simple_name), directory = directory_expr)
+        ),
+        packages = packages
+      ),
+    # The data target is handed the covariate names rather than the model hash:
+    # it is skipped when a model edit leaves them unchanged, and it never reads
+    # the indirect cache, so `resources_data` can send it to any worker.
     data_simple =
       tar_nlmixr_target_raw(
         target_settings,
+        role = "data",
         name = data_simple_name,
         command = substitute(
           nlmixr_data_simplify(
-            object = object_simple, data = data, table = table,
-            directory = directory, est = est, control = control
+            data = data, covariates = covariates, table = table,
+            est = est, control = control
           ),
           list(
-            object_simple = as.name(object_simple_name),
             data = data,
+            covariates = as.name(covariates_name),
             table = table,
-            directory = directory_expr,
             est = est,
             control = control
           )
@@ -317,6 +366,7 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table,
     fit_simple =
       tar_nlmixr_target_raw(
         target_settings,
+        role = "fit",
         name = fit_simple_name,
         command = fit_simple_command,
         string = fit_simple_string,
@@ -325,6 +375,7 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table,
     fit =
       tar_nlmixr_target_raw(
         target_settings,
+        role = "fit",
         name = name,
         command = substitute(
           nlmixr_object_complicate(fit = fit, object = object, data = data),

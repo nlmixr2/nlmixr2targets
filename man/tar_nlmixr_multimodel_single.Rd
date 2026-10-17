@@ -76,11 +76,12 @@ with \code{inherits(fit, "nlmixr2targetsError")} or the broader
 estimation target when it starts to run.  \code{NULL} (the default) announces
 nothing.}
 
-\item{target_settings}{Named list of \code{\link[targets:tar_target]{targets::tar_target()}} settings to
-apply to every generated target, as built by \code{tar_nlmixr()} from its own
-arguments.  Defaults to those arguments' own defaults, so calling
-\code{tar_nlmixr_raw()} directly behaves the same as before this argument
-existed.}
+\item{target_settings}{Named list of the \code{\link[targets:tar_target]{targets::tar_target()}} settings
+\code{tar_nlmixr()} forwards, as built by \code{tar_nlmixr()} from its own arguments:
+one element per forwarded argument, with \code{resources_data} and
+\code{resources_fit} in place of \code{resources}.  Defaults to those arguments' own
+defaults, so calling \code{tar_nlmixr_raw()} directly behaves the same as
+before this argument existed.}
 }
 \description{
 Generate a single nlmixr multimodel target set for one model

@@ -4,12 +4,27 @@
 
 * `tar_nlmixr()`, `tar_nlmixr_raw()` and `tar_nlmixr_multimodel()` now forward
   `format`, `repository`, `library`, `memory`, `garbage_collection`,
-  `deployment`, `resources`, `storage`, `retrieval` and `cue` to every target
-  they generate, defaulting each exactly as `targets::tar_target()` does.
-  `resources` is what lets a fit run on a `crew` controller. `?tar_nlmixr`
-  documents the arguments that are deliberately not forwarded, and the shared
-  cache directory the generated targets need when they run on a remote worker.
-  Adding these does not change any generated command, so cached fits are not
+  `deployment`, `storage`, `retrieval` and `cue` to every target they
+  generate, defaulting each exactly as `targets::tar_target()` does.
+  `resources`, which is what lets a fit run on a `crew` controller, is taken
+  as two arguments: `resources_data` for the `_data_simple` target and
+  `resources_fit` for every other target, so the data can be prepared on a
+  different controller from the one that fits the model. Both default to
+  `targets::tar_option_get("resources")`. `?tar_nlmixr` documents the
+  arguments that are deliberately not forwarded, and the shared cache
+  directory the model targets need when they run on a remote worker. Adding
+  these does not change any estimation command, so cached fits are not
+  re-run.
+
+* Each model now has a `<name>_covariates` target holding the sorted names of
+  the covariates it reads, and the `_data_simple` target depends on that
+  instead of on `_object_simple`. A model edit that leaves the covariates
+  unchanged (a new initial value, a structural change) no longer rebuilds the
+  simplified data, and the data target no longer reads the simplified-model
+  cache, so it can run on a worker that does not share the targets store.
+  `nlmixr_data_simplify()` gains a `covariates` argument for this, and the new
+  `nlmixr_object_covariates()` computes it. Upgrading re-runs each
+  `_data_simple` target once; its value is unchanged, so cached fits are not
   re-run.
 
 * `tar_nlmixr_multimodel()` estimation targets now announce themselves with

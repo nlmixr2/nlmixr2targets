@@ -72,11 +72,12 @@ failed model does not stop the rest of the pipeline. Detect a failed fit
 with \code{inherits(fit, "nlmixr2targetsError")} or the broader
 \code{inherits(fit, "try-error")}.}
 
-\item{target_settings}{Named list of \code{\link[targets:tar_target]{targets::tar_target()}} settings to
-apply to every generated target, as built by \code{tar_nlmixr()} from its own
-arguments.  Defaults to those arguments' own defaults, so calling
-\code{tar_nlmixr_raw()} directly behaves the same as before this argument
-existed.}
+\item{target_settings}{Named list of the \code{\link[targets:tar_target]{targets::tar_target()}} settings
+\code{tar_nlmixr()} forwards, as built by \code{tar_nlmixr()} from its own arguments:
+one element per forwarded argument, with \code{resources_data} and
+\code{resources_fit} in place of \code{resources}.  Defaults to those arguments' own
+defaults, so calling \code{tar_nlmixr_raw()} directly behaves the same as
+before this argument existed.}
 }
 \description{
 Generate nlmixr multimodel target set for all models in one call to

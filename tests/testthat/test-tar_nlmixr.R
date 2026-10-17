@@ -85,7 +85,55 @@ test_that("assign_origData rejects fits without origData", {
   )
 })
 
-test_that("tar_nlmixr_raw constructs four targets with expected names", {
+test_that("tar_nlmixr_raw constructs five targets with expected names", {
+  out <- tar_nlmixr_raw(
+    name = "fit_x",
+    object = quote(my_model),
+    data = quote(my_data),
+    est = "saem",
+    control = quote(list()),
+    table = quote(list()),
+    object_simple_name = "fit_x_object_simple",
+    data_simple_name = "fit_x_data_simple",
+    fit_simple_name = "fit_x_fit_simple",
+    env = environment(),
+    covariates_name = "fit_x_covs"
+  )
+  expect_named(out, c("object_simple", "covariates", "data_simple", "fit_simple", "fit"))
+  expect_equal(out$object_simple$settings$name, "fit_x_object_simple")
+  expect_equal(out$covariates$settings$name, "fit_x_covs")
+  expect_equal(out$data_simple$settings$name, "fit_x_data_simple")
+  expect_equal(out$fit_simple$settings$name, "fit_x_fit_simple")
+  expect_equal(out$fit$settings$name, "fit_x")
+  # Verify dependency wiring: covariates consumes object_simple, data_simple
+  # consumes covariates, fit_simple consumes object_simple and data_simple,
+  # fit consumes fit_simple.
+  expect_true("fit_x_object_simple" %in% targets::tar_deps_raw(out$covariates$command$expr))
+  expect_true("fit_x_covs" %in% targets::tar_deps_raw(out$data_simple$command$expr))
+  expect_true("fit_x_object_simple" %in% targets::tar_deps_raw(out$fit_simple$command$expr))
+  expect_true("fit_x_data_simple" %in% targets::tar_deps_raw(out$fit_simple$command$expr))
+  expect_true("fit_x_fit_simple" %in% targets::tar_deps_raw(out$fit$command$expr))
+  # The data target sees the model only through its covariate names, so it is
+  # not rebuilt for a model edit that keeps them, and it never reads the
+  # indirect cache.
+  expect_false("fit_x_object_simple" %in% targets::tar_deps_raw(out$data_simple$command$expr))
+  expect_identical(
+    out$data_simple$command$expr[[1]],
+    quote(nlmixr_data_simplify(
+      data = my_data, covariates = fit_x_covs, table = list(),
+      est = "saem", control = list()
+    ))
+  )
+  expect_identical(
+    out$covariates$command$expr[[1]],
+    quote(nlmixr_object_covariates(
+      object = fit_x_object_simple,
+      directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")
+    ))
+  )
+})
+
+test_that("tar_nlmixr_raw names the covariates target after name by default", {
   out <- tar_nlmixr_raw(
     name = "fit_x",
     object = quote(my_model),
@@ -98,17 +146,7 @@ test_that("tar_nlmixr_raw constructs four targets with expected names", {
     fit_simple_name = "fit_x_fit_simple",
     env = environment()
   )
-  expect_named(out, c("object_simple", "data_simple", "fit_simple", "fit"))
-  expect_equal(out$object_simple$settings$name, "fit_x_object_simple")
-  expect_equal(out$data_simple$settings$name, "fit_x_data_simple")
-  expect_equal(out$fit_simple$settings$name, "fit_x_fit_simple")
-  expect_equal(out$fit$settings$name, "fit_x")
-  # Verify dependency wiring: data_simple consumes object_simple,
-  # fit_simple consumes both, fit consumes fit_simple.
-  expect_true("fit_x_object_simple" %in% targets::tar_deps_raw(out$data_simple$command$expr))
-  expect_true("fit_x_object_simple" %in% targets::tar_deps_raw(out$fit_simple$command$expr))
-  expect_true("fit_x_data_simple" %in% targets::tar_deps_raw(out$fit_simple$command$expr))
-  expect_true("fit_x_fit_simple" %in% targets::tar_deps_raw(out$fit$command$expr))
+  expect_equal(out$covariates$settings$name, "fit_x_covariates")
 })
 
 test_that("tar_nlmixr_raw rejects malformed name arguments", {
@@ -143,8 +181,10 @@ test_that("tar_nlmixr_raw rejects malformed simple_name arguments", {
   )
   bad_object <- base_args; bad_object$object_simple_name <- ""
   bad_data <- base_args; bad_data$data_simple_name <- NA_character_
+  bad_covariates <- base_args; bad_covariates$covariates_name <- c("a", "b")
   expect_error(do.call(tar_nlmixr_raw, bad_object), regexp = "object_simple_name")
   expect_error(do.call(tar_nlmixr_raw, bad_data), regexp = "data_simple_name")
+  expect_error(do.call(tar_nlmixr_raw, bad_covariates), regexp = "covariates_name")
 })
 
 # Issue #35: the error mode chosen by the user must reach the generated
@@ -377,9 +417,10 @@ test_that("every tar_nlmixr_raw target declares the packages its command calls",
   # proves nothing.
   bare_calls <- lapply(out, \(x) command_bare_calls(x$command$expr[[1L]]))
   expect_setequal(bare_calls$object_simple, c("nlmixr_object_simplify", "ini", "log", "file.path"))
+  expect_setequal(bare_calls$covariates, c("nlmixr_object_covariates", "file.path"))
   expect_setequal(
     bare_calls$data_simple,
-    c("nlmixr_data_simplify", "tableControl", "saemControl", "file.path")
+    c("nlmixr_data_simplify", "tableControl", "saemControl")
   )
   expect_setequal(
     bare_calls$fit_simple,
@@ -454,7 +495,10 @@ targets::tar_test("tar_nlmixr execution", {
   })
   expect_equal(
     targets::tar_manifest()$name,
-    c("pheno_model_object_simple", "pheno_model_data_simple", "pheno_model_fit_simple", "pheno_model")
+    c(
+      "pheno_model_object_simple", "pheno_model_covariates", "pheno_model_data_simple",
+      "pheno_model_fit_simple", "pheno_model"
+    )
   )
   suppressMessages(suppressWarnings(
     targets::tar_make(callr_function = NULL)
@@ -467,6 +511,8 @@ targets::tar_test("tar_nlmixr execution", {
   # as.character() drops the `.foceiEnv` attribute nlmixr2est hangs on the
   # class vector to carry the fit environment.
   expect_type(targets::tar_read(pheno_model_object_simple), "character")
+  # this model reads no covariate
+  expect_identical(targets::tar_read(pheno_model_covariates), character(0))
   expect_s3_class(targets::tar_read(pheno_model_data_simple), class = "data.frame")
   expect_identical(
     as.character(class(targets::tar_read(pheno_model_fit_simple))),
@@ -636,7 +682,10 @@ targets::tar_test("tar_nlmixr handles user-written central(0) end-to-end", {
   })
   expect_equal(
     targets::tar_manifest()$name,
-    c("pheno_model_object_simple", "pheno_model_data_simple", "pheno_model_fit_simple", "pheno_model")
+    c(
+      "pheno_model_object_simple", "pheno_model_covariates", "pheno_model_data_simple",
+      "pheno_model_fit_simple", "pheno_model"
+    )
   )
   expect_no_error(targets::tar_outdated(callr_function = NULL))
   suppressWarnings(targets::tar_make(callr_function = NULL))
@@ -897,11 +946,98 @@ targets::tar_test("tar_nlmixr passes table through to the estimated fit", {
   # WT is not a covariate of this model, so it survives only because
   # table$keep asked for it -- in the data *and* in the fit.
   expect_true("WT" %in% names(targets::tar_read(pheno_model_data_simple)))
+  expect_identical(targets::tar_read(pheno_model_covariates), character(0))
   expect_identical(fit$env$table$keep, "WT")
   expect_true("WT" %in% names(fit))
   expect_identical(
     as.character(class(fit)),
     c("nlmixr2FitData", "nlmixr2FitCore", "nlmixr2.saem", "tbl_df", "tbl", "data.frame")
+  )
+})
+
+# Writes the model the rebuild test below sources from `_targets.R`.  The model
+# always reads WT; `lcl_init` changes only an initial value, and
+# `apgr_covariate = TRUE` makes it read APGR as well.
+write_rebuild_model <- function(lcl_init, apgr_covariate = FALSE) {
+  vc_line <-
+    if (apgr_covariate) {
+      "    vc <- exp(lvc + etalvc) * APGR / 7"
+    } else {
+      "    vc <- exp(lvc + etalvc)"
+    }
+  writeLines(
+    c(
+      "pheno <- function() {",
+      "  ini({",
+      paste0("    lcl <- ", lcl_init),
+      "    lvc <- log(0.6)",
+      "    etalcl + etalvc ~ c(1, 0.01, 1)",
+      "    cpaddSd <- 0.1",
+      "  })",
+      "  model({",
+      "    cl <- exp(lcl + etalcl) * WT / 70",
+      vc_line,
+      "    kel <- cl / vc",
+      "    d/dt(central) <- -kel * central",
+      "    cp <- central / vc",
+      "    cp ~ add(cpaddSd)",
+      "  })",
+      "}"
+    ),
+    "model.R"
+  )
+}
+
+# The progress of each target in the most recent tar_make(), by name.
+target_progress <- function() {
+  progress <- targets::tar_progress()
+  stats::setNames(progress$progress, progress$name)
+}
+
+# The data target depends on the model only through the `_covariates` target,
+# so the simplified data are rebuilt when the covariates change and not when
+# only the rest of the model does.
+targets::tar_test("a model edit rebuilds the simplified data only when it changes the covariates", {
+  targets::tar_script({
+    # local = TRUE defines `pheno` where `_targets.R` is evaluated, which is
+    # where targets looks for the functions a target depends on.
+    source("model.R", local = TRUE)
+    nlmixr2targets::tar_nlmixr(
+      name = pheno_model,
+      object = pheno,
+      data = nlmixr2data::pheno_sd,
+      est = "saem",
+      control = nlmixr2est::saemControl(nBurn = 1, nEm = 1)
+    )
+  })
+  write_rebuild_model("log(0.008)")
+  suppressMessages(suppressWarnings(targets::tar_make(callr_function = NULL)))
+  expect_identical(targets::tar_read(pheno_model_covariates), "WT")
+  expect_named(
+    targets::tar_read(pheno_model_data_simple),
+    c("id", "time", "amt", "dv", "mdv", "evid", "WT")
+  )
+
+  # An initial-value edit re-fits, but the covariates are unchanged, so the
+  # simplified data are not rebuilt.
+  write_rebuild_model("log(0.009)")
+  suppressMessages(suppressWarnings(targets::tar_make(callr_function = NULL)))
+  progress <- target_progress()
+  expect_identical(progress[["pheno_model_object_simple"]], "completed")
+  expect_identical(progress[["pheno_model_covariates"]], "completed")
+  expect_identical(progress[["pheno_model_data_simple"]], "skipped")
+  expect_identical(progress[["pheno_model_fit_simple"]], "completed")
+  expect_identical(progress[["pheno_model"]], "completed")
+
+  # A new covariate rebuilds the data, which now carry it.
+  write_rebuild_model("log(0.009)", apgr_covariate = TRUE)
+  suppressMessages(suppressWarnings(targets::tar_make(callr_function = NULL)))
+  progress <- target_progress()
+  expect_identical(progress[["pheno_model_data_simple"]], "completed")
+  expect_identical(targets::tar_read(pheno_model_covariates), c("APGR", "WT"))
+  expect_named(
+    targets::tar_read(pheno_model_data_simple),
+    c("id", "time", "amt", "dv", "mdv", "evid", "APGR", "WT")
   )
 })
 

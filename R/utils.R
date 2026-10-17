@@ -23,14 +23,18 @@
   unique(out)
 }
 
-# Settings that `tar_nlmixr()` and friends hand to every target they generate.
+# Settings that `tar_nlmixr()` and friends hand to the targets they generate.
 # The names and defaults track `targets::tar_target()` exactly, so
 # `targets::tar_option_set()` reaches the generated targets the same way it
-# reaches hand-written ones.
+# reaches hand-written ones.  The exception is `resources`, which the generators
+# take twice: `resources_data` for the `_data_simple` target and `resources_fit`
+# for every other target, so the data can be prepared somewhere other than
+# where the model is fitted.
 tar_nlmixr_target_setting_names <-
   c(
     "format", "repository", "library", "memory", "garbage_collection",
-    "deployment", "resources", "storage", "retrieval", "cue"
+    "deployment", "resources_data", "resources_fit", "storage", "retrieval",
+    "cue"
   )
 
 #' Collect the forwarded `targets::tar_target()` settings from a caller's frame
@@ -48,16 +52,26 @@ tar_nlmixr_collect_target_settings <- function(env = parent.frame()) {
 #' Build one generated target with the forwarded settings applied
 #'
 #' @param settings The list from `tar_nlmixr_collect_target_settings()`.
+#' @param role `"data"` for the `_data_simple` target, which gets
+#'   `settings$resources_data`, or `"fit"` for every other target, which gets
+#'   `settings$resources_fit`.
 #' @param ... Arguments specific to this target (`name`, `command`, and where
 #'   relevant `packages` and `string`).
 #' @returns A `tar_target` object.
 #' @noRd
-tar_nlmixr_target_raw <- function(settings, ...) {
+tar_nlmixr_target_raw <- function(settings, role, ...) {
+  checkmate::assert_choice(role, choices = c("data", "fit"))
+  resources <- switch(role, data = settings$resources_data, fit = settings$resources_fit)
+  shared <- settings[setdiff(names(settings), c("resources_data", "resources_fit"))]
   # `quote = TRUE` is load-bearing.  `command` arrives as a language object;
   # without it `do.call()` evaluates that object rather than handing it over to
   # be stored, which runs the target's own work while the pipeline is still
   # being built.
-  do.call(targets::tar_target_raw, c(list(...), settings), quote = TRUE)
+  do.call(
+    targets::tar_target_raw,
+    c(list(...), shared, list(resources = resources)),
+    quote = TRUE
+  )
 }
 
 #' The forwarded settings at their `targets::tar_target()` defaults
@@ -78,7 +92,8 @@ tar_nlmixr_collect_target_settings_default <- function() {
       memory = targets::tar_option_get("memory"),
       garbage_collection = isTRUE(targets::tar_option_get("garbage_collection")),
       deployment = targets::tar_option_get("deployment"),
-      resources = targets::tar_option_get("resources"),
+      resources_data = targets::tar_option_get("resources"),
+      resources_fit = targets::tar_option_get("resources"),
       storage = targets::tar_option_get("storage"),
       retrieval = targets::tar_option_get("retrieval"),
       cue = targets::tar_option_get("cue")
