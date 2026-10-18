@@ -4,6 +4,15 @@
 
 ### New features
 
+- The final `<name>` target of
+  [`tar_nlmixr()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
+  now emits `fitUpdate` (the restored labels and data) and `assign` (the
+  target name) on the rxode2 event bus when rxode2 has one, so loggers
+  such as nlmixr2log store one run per model, named after the target.
+  Nothing changes without a listener. When the project has an nlmixr2log
+  configuration (`nlmixr2log::nlmixr2logSaveConfig()`), the estimation
+  target loads nlmixr2log so that the fit is logged on any worker.
+
 - [`tar_nlmixr()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md),
   [`tar_nlmixr_raw()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
   and

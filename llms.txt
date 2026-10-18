@@ -140,3 +140,5 @@ targets::tar_make()
   reruns](https://nlmixr2.github.io/nlmixr2targets/articles/caching.md):
 - [Multimodel comparison
   workflows](https://nlmixr2.github.io/nlmixr2targets/articles/multimodel-comparison.md):
+- [Events for
+  loggers](https://nlmixr2.github.io/nlmixr2targets/articles/events.md):
