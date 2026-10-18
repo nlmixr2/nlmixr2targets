@@ -40,6 +40,8 @@ nlmixr2_indirect <- function(object, data, est, control, table,
                              directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"),
                              error = c("stop", "continue"), description = NULL) {
   error <- match.arg(error)
+  # start a configured logger before the fit, so it is logged (see rxEvents.R)
+  nlmixr2targets_event_load_logger()
   if (!is.null(description)) {
     # `tar_nlmixr_multimodel()` names its targets after a hash of the model, so
     # the description is the only way to tell from the console which model is
