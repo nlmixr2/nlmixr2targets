@@ -43,6 +43,16 @@
 
 ## Bug fixes
 
+* A model with an occasion-level random effect (`eta ~ var | OCC`) can now be
+  fitted. The grouping variable is read from the data but is not a covariate,
+  so it was absent from `nlmixr_object_covariates()` and the data
+  simplification dropped it, leaving the estimation to stop with
+  `IOV variable 'OCC' is not present in the data`. Every occasion grouping
+  variable is now kept, so naming it in `tableControl(keep=)` is no longer
+  needed as a workaround. A grouping variable that is missing from the data is
+  now reported when the data is simplified, naming the column, rather than at
+  estimation.
+
 * The generated targets now run on a worker that has attached nothing but the
   target's own `packages`, such as a `crew` worker on another machine or in a
   fresh container. The estimation (`_fit_simple`) target called

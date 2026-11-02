@@ -16,6 +16,45 @@ pheno <- function() {
   })
 }
 
+# An occasion-level random effect's grouping variable is read from the data but
+# is not a covariate, so it is absent from `ui$all.covs`.
+pheno_iov <- function() {
+  ini({
+    lcl <- log(0.008)
+    lvc <- log(0.6)
+    etalcl ~ 1
+    iovcl ~ 0.1 | OCC
+    cpaddSd <- 0.1
+  })
+  model({
+    cl <- exp(lcl + etalcl + iovcl)*WT/70
+    vc <- exp(lvc)
+    kel <- cl/vc
+    d/dt(central) <- -kel*central
+    cp <- central/vc
+    cp ~ add(cpaddSd)
+  })
+}
+
+pheno_iov_two <- function() {
+  ini({
+    lcl <- log(0.008)
+    lvc <- log(0.6)
+    etalcl ~ 1
+    iovcl ~ 0.1 | OCC
+    iovvc ~ 0.1 | VISIT
+    cpaddSd <- 0.1
+  })
+  model({
+    cl <- exp(lcl + etalcl + iovcl)*WT/70
+    vc <- exp(lvc + iovvc)
+    kel <- cl/vc
+    d/dt(central) <- -kel*central
+    cp <- central/vc
+    cp ~ add(cpaddSd)
+  })
+}
+
 # `nlmixr_object_simplify()` writes the simplified rxUi to disk. The
 # function's default `directory` resolves to
 # `file.path(targets::tar_config_get("store"), "user/nlmixr2")` which —
@@ -135,6 +174,65 @@ test_that("nlmixr_object_covariates rejects an object it cannot read covariates 
   expect_error(
     nlmixr_object_covariates(c("a", "b")),
     regexp = "Must have length 1"
+  )
+})
+
+test_that("nlmixr_object_covariates keeps the grouping variable of an IOV effect", {
+  ui <- suppressMessages(suppressWarnings(nlmixr2est::nlmixr(pheno_iov)))
+  expect_identical(nlmixr_object_covariates(ui), c("OCC", "WT"))
+})
+
+test_that("nlmixr_object_covariates keeps every occasion grouping variable", {
+  ui <- suppressMessages(suppressWarnings(nlmixr2est::nlmixr(pheno_iov_two)))
+  expect_identical(nlmixr_object_covariates(ui), c("OCC", "VISIT", "WT"))
+})
+
+test_that("nlmixr_object_covariates is unchanged for a model without an IOV effect", {
+  ui <- read_nlmixr2obj_indirect(model_simple, directory = .simplify_cache_dir)
+  expect_identical(nlmixr_object_covariates(ui), "WT")
+})
+
+test_that("nlmixr_object_covariates ignores the subject level and the residual", {
+  # `condition` names the grouping of a random-effect row, but it holds "id"
+  # for the subject level -- already kept as a standard column -- and the
+  # endpoint on a residual row, which is not a column at all
+  iniDf <-
+    data.frame(
+      name = c("lcl", "cpaddSd", "etalcl", "iovcl"),
+      neta1 = c(NA, NA, 1L, 2L),
+      condition = c(NA, "cp", "id", "OCC"),
+      stringsAsFactors = FALSE
+    )
+  expect_identical(
+    nlmixr_object_covariates(list(all.covs = "WT", iniDf = iniDf)),
+    c("OCC", "WT")
+  )
+})
+
+test_that("nlmixr_data_simplify keeps an IOV grouping variable", {
+  model_iov <-
+    suppressMessages(suppressWarnings(
+      nlmixr_object_simplify(pheno_iov, directory = .simplify_cache_dir)
+    ))
+  data_occ <- nlmixr2data::pheno_sd
+  data_occ$OCC <- 1
+  expect_identical(
+    names(nlmixr_data_simplify(
+      data = data_occ, object = model_iov, directory = .simplify_cache_dir
+    )),
+    c("id", "time", "amt", "dv", "mdv", "evid", "OCC", "WT")
+  )
+  # Without the column the estimation would stop with "IOV variable 'OCC' is
+  # not present in the data", so it has to fail here, where the column is
+  # named.  It is reported as a covariate because the model's covariates and
+  # its grouping variables travel together.
+  expect_error(
+    nlmixr_data_simplify(
+      data = nlmixr2data::pheno_sd, object = model_iov,
+      directory = .simplify_cache_dir
+    ),
+    regexp = "The following covariate column(s) are missing from the data: 'OCC'",
+    fixed = TRUE
   )
 })
 
