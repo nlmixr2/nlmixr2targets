@@ -583,7 +583,10 @@ targets::tar_test("tar_nlmixr_multimodel works for within-list model piping (#19
         "my second model" = foo[["my first model"]] |> rxode2::ini(lcl = log(0.01))
       )
   })
-  dependencies <- targets::tar_network()$edges
+  # callr_function = NULL builds the graph in-process, so it reflects the
+  # nlmixr2targets under test rather than the installed build the default
+  # callr subprocess would load (stale under pkgload::load_all()).
+  dependencies <- targets::tar_network(callr_function = NULL)$edges
   # There is one fit_simple object (estimated model result) that generates an
   # object_simple (prepared model) object
   expect_equal(

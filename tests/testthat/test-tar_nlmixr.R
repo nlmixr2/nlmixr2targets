@@ -18,6 +18,21 @@ test_that("tar_nlmixr object generation", {
   }
   target_list <- tar_nlmixr(name = pheno_model, object = pheno, data = nlmixr2data::pheno_sd, est = "saem")
   expect_true(inherits(target_list, "list"))
+  # Assert the generated target set directly, in-process, rather than only
+  # through `tar_manifest()`.  `tar_manifest()` sources `_targets.R` in a
+  # callr subprocess that loads the *installed* nlmixr2targets (which, under
+  # `pkgload::load_all()`, is whatever stale build is on disk), so a manifest
+  # assertion can disagree with the version under test.  Reading the names off
+  # the target objects the generator returns depends only on the code under
+  # test, so it pins the graph shape -- including the `_covariates` target --
+  # independently of the runner.
+  expect_identical(
+    unname(vapply(target_list, function(x) x$settings$name, character(1))),
+    c(
+      "pheno_model_object_simple", "pheno_model_covariates",
+      "pheno_model_data_simple", "pheno_model_fit_simple", "pheno_model"
+    )
+  )
 })
 
 test_that("tar_nlmixr expected errors", {
@@ -493,8 +508,12 @@ targets::tar_test("tar_nlmixr execution", {
       control=nlmixr2est::saemControl(nBurn=1, nEm=1)
     )
   })
+  # callr_function = NULL builds the manifest in this process, so it reflects
+  # the nlmixr2targets under test rather than whatever build the default callr
+  # subprocess would `library()` off disk (stale under pkgload::load_all()).
+  # The rest of this test already runs in-process via `callr_function = NULL`.
   expect_equal(
-    targets::tar_manifest()$name,
+    targets::tar_manifest(callr_function = NULL)$name,
     c(
       "pheno_model_object_simple", "pheno_model_covariates", "pheno_model_data_simple",
       "pheno_model_fit_simple", "pheno_model"
@@ -680,8 +699,11 @@ targets::tar_test("tar_nlmixr handles user-written central(0) end-to-end", {
       control=nlmixr2est::saemControl(nBurn=1, nEm=1)
     )
   })
+  # callr_function = NULL: build the manifest in-process, matching the
+  # tar_outdated()/tar_make() calls below, so it reflects the version under
+  # test rather than the installed build the default callr subprocess loads.
   expect_equal(
-    targets::tar_manifest()$name,
+    targets::tar_manifest(callr_function = NULL)$name,
     c(
       "pheno_model_object_simple", "pheno_model_covariates", "pheno_model_data_simple",
       "pheno_model_fit_simple", "pheno_model"
