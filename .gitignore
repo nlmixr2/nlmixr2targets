@@ -9,3 +9,4 @@ inst/doc
 *.tgz
 .RData
 .Ruserdata
+tests/testthat/testthat-problems.rds

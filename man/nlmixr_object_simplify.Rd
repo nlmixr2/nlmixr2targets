@@ -6,7 +6,8 @@
 \usage{
 nlmixr_object_simplify(
   object,
-  directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")
+  directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"),
+  error = c("stop", "continue")
 )
 }
 \arguments{
@@ -18,6 +19,18 @@ mirroring the convention used by \code{targets}' own \code{store = targets::tar_
 call time against whatever store the user has configured for the
 running \code{tar_make()} (e.g. a \code{tempdir()} location set via
 \code{targets::tar_config_set()}).}
+
+\item{error}{What should happen if any step of a model's chain throws an
+error? \code{"stop"} (the default) lets the error propagate, halting
+\code{targets::tar_make()} as usual. \code{"continue"} catches an error from any of
+the model's steps -- simplifying the object, reading its covariates,
+simplifying the data, or the estimation itself -- and stores a failure
+sentinel (an object of class \code{nlmixr2targetsError}, which also inherits
+from \code{"try-error"}) carrying the error message. The sentinel is passed
+down the model's remaining steps to its final target, so a single failed
+model does not stop the rest of the pipeline. Detect a failed model with
+\code{inherits(fit, "nlmixr2targetsError")} or the broader
+\code{inherits(fit, "try-error")}.}
 }
 \value{
 The MD5 hash used to load the simplified \code{nlmixrui} object back

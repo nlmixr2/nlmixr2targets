@@ -47,20 +47,35 @@
 #'   re-attaches labels, metadata, and the original data on the final fit.
 #' @export
 nlmixr_object_simplify <- function(object,
-                                   directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) {
-  # drop comments since they won't affect most outputs and typically change
-  # between interactive (when srcref is available) to batch (when srcref is not
-  # available) mode.
-  attr(object, "srcref") <- NULL
-  object <- nlmixr_object_simplify_zero_initial(object)
-  ret <- nlmixr2est::nlmixr(object)
-  # Strip parameter labels and the meta environment so they do not contribute
-  # to the cache hash. The rxUi's iniDf setter is an active binding, so
-  # writing NA_character_ here also refreshes ret$md5 (which is what
-  # save_nlmixr2obj_indirect() keys the cache file by).
-  ret$iniDf$label <- NA_character_
-  rm(list = ls(envir = ret$meta, all.names = TRUE), envir = ret$meta)
-  save_nlmixr2obj_indirect(ret, directory = directory)
+                                   directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"),
+                                   error = c("stop", "continue")) {
+  error <- match.arg(error)
+  # The whole block is inside the wrapper -- including the first touch of
+  # `object` -- because `object` is the captured model expression and forcing
+  # it runs user code that may itself throw (e.g. a model built from a spec the
+  # data cannot support).  Under error = "continue" that failure must become a
+  # sentinel too, not escape the wrapper.
+  nlmixr2targets_run_continue(error, {
+    # A self-referential multimodel entry can hand in an upstream fit that
+    # failed under error = "continue"; pass that sentinel straight through.
+    if (inherits(object, "nlmixr2targetsError")) {
+      object
+    } else {
+      # drop comments since they won't affect most outputs and typically change
+      # between interactive (when srcref is available) to batch (when srcref is
+      # not available) mode.
+      attr(object, "srcref") <- NULL
+      object <- nlmixr_object_simplify_zero_initial(object)
+      ret <- nlmixr2est::nlmixr(object)
+      # Strip parameter labels and the meta environment so they do not
+      # contribute to the cache hash. The rxUi's iniDf setter is an active
+      # binding, so writing NA_character_ here also refreshes ret$md5 (which is
+      # what save_nlmixr2obj_indirect() keys the cache file by).
+      ret$iniDf$label <- NA_character_
+      rm(list = ls(envir = ret$meta, all.names = TRUE), envir = ret$meta)
+      save_nlmixr2obj_indirect(ret, directory = directory)
+    }
+  })
 }
 
 #' Re-attach labels, metadata, and original data to a simplified fit
@@ -450,26 +465,33 @@ nlmixr_object_zero_initial_eval <- function(expr, envir = parent.frame()) {
 #' @family Simplifiers
 #' @export
 nlmixr_object_covariates <- function(object,
-                                     directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) {
-  # `object` is either a character md5 hash (the form used by generated
-  # targets) or an nlmixr-style ui / fit object. Tibbles are valid because
-  # nlmixr2 fits subclass tbl_df with active bindings for `$ui` etc., so a
-  # checkmate::check_list assert (class-strict) would reject them. Use
-  # base R `is.list()` (which IS TRUE for data.frames) instead.
-  if (is.character(object)) {
-    checkmate::assert_string(object, min.chars = 1)
-    # load from the hash
-    object <- read_nlmixr2obj_indirect(hash = object, directory = directory)
-  } else if (!is.list(object) && !is.environment(object)) {
-    stop(
-      "`object` must be a character md5 hash, an nlmixr ui object, ",
-      "or a list/environment that supports `$ui` / `$all.covs`; got ",
-      "object of class '", paste(class(object), collapse = "/"), "'."
-    )
-  }
-  ui <- if (!is.null(object$ui)) object$ui else object
-  covVec <- c(ui$all.covs, nlmixr_object_iov_variables(ui))
-  sort(unique(as.character(covVec)), method = "radix")
+                                     directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"),
+                                     error = c("stop", "continue")) {
+  error <- match.arg(error)
+  # Under error = "continue" the upstream object-simplification step reaches
+  # here as a sentinel in place of the model hash; pass it through.
+  if (inherits(object, "nlmixr2targetsError")) return(object)
+  nlmixr2targets_run_continue(error, {
+    # `object` is either a character md5 hash (the form used by generated
+    # targets) or an nlmixr-style ui / fit object. Tibbles are valid because
+    # nlmixr2 fits subclass tbl_df with active bindings for `$ui` etc., so a
+    # checkmate::check_list assert (class-strict) would reject them. Use
+    # base R `is.list()` (which IS TRUE for data.frames) instead.
+    if (is.character(object)) {
+      checkmate::assert_string(object, min.chars = 1)
+      # load from the hash
+      object <- read_nlmixr2obj_indirect(hash = object, directory = directory)
+    } else if (!is.list(object) && !is.environment(object)) {
+      stop(
+        "`object` must be a character md5 hash, an nlmixr ui object, ",
+        "or a list/environment that supports `$ui` / `$all.covs`; got ",
+        "object of class '", paste(class(object), collapse = "/"), "'."
+      )
+    }
+    ui <- if (!is.null(object$ui)) object$ui else object
+    covVec <- c(ui$all.covs, nlmixr_object_iov_variables(ui))
+    sort(unique(as.character(covVec)), method = "radix")
+  })
 }
 
 #' The grouping columns of a model's occasion-level random effects
@@ -541,57 +563,73 @@ nlmixr_object_iov_variables <- function(ui) {
 #' @export
 nlmixr_data_simplify <- function(data, object, table = list(),
                                  directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"),
-                                 est = NULL, control = NULL, covariates = NULL) {
-  checkmate::assert_data_frame(data)
-  checkmate::assert_list(table)
-  checkmate::assert_string(est, null.ok = TRUE)
-  # Both given would be ambiguous; neither leaves no covariates to keep.
-  if (missing(object) == is.null(covariates)) {
-    stop("Supply exactly one of `object` and `covariates`")
-  }
-  if (is.null(covariates)) {
-    covariates <- nlmixr_object_covariates(object = object, directory = directory)
-  } else {
-    checkmate::assert_character(covariates, min.chars = 1, any.missing = FALSE, unique = TRUE)
-  }
-  nlmixr_cols <-
-    c(
-      # rxode2 columns
-      c("id", "time", "amt", "rate", "dur", "evid", "cmt", "dvid", "ss", "ii", "addl"),
-      # nlmixr2 columns
-      c("dv", "mdv", "cens", "limit")
+                                 est = NULL, control = NULL, covariates = NULL,
+                                 error = c("stop", "continue")) {
+  error <- match.arg(error)
+  # Whether `object` was supplied: an explicit NULL (or a missing arg) counts
+  # as not supplied.  Read here, before the error wrapper, so `missing()` sees
+  # this frame rather than the lazily-evaluated block below.
+  object_absent <- missing(object) || is.null(object)
+  # Under error = "continue" either upstream -- the covariates target, or an
+  # object handed straight in -- may be a sentinel from a failed earlier step;
+  # pass it through.
+  if (inherits(covariates, "nlmixr2targetsError")) return(covariates)
+  if (!object_absent && inherits(object, "nlmixr2targetsError")) return(object)
+  nlmixr2targets_run_continue(error, {
+    checkmate::assert_data_frame(data)
+    checkmate::assert_list(table)
+    checkmate::assert_string(est, null.ok = TRUE)
+    # Both given would be ambiguous; neither leaves no covariates to keep. An
+    # explicit `object = NULL` counts as not supplied (object_absent above), so
+    # it gives this documented error rather than failing further in with a
+    # confusing class complaint.
+    if (object_absent == is.null(covariates)) {
+      stop("Supply exactly one of `object` and `covariates`")
+    }
+    if (is.null(covariates)) {
+      covariates <- nlmixr_object_covariates(object = object, directory = directory)
+    } else {
+      checkmate::assert_character(covariates, min.chars = 1, any.missing = FALSE, unique = TRUE)
+    }
+    nlmixr_cols <-
+      c(
+        # rxode2 columns
+        c("id", "time", "amt", "rate", "dur", "evid", "cmt", "dvid", "ss", "ii", "addl"),
+        # nlmixr2 columns
+        c("dv", "mdv", "cens", "limit")
+      )
+    # nlmixr pays attention to the columns in a case-insensitive way for the
+    # standard columns.  Verify that the data has case-insensitive column names
+    # for these columns (for example not "ADDL" and "addl").
+    mask_nlmixr_cols <- tolower(names(data)) %in% nlmixr_cols
+    nlmixr_names <- names(data)[mask_nlmixr_cols]
+    mask_duplicated <- duplicated(tolower(nlmixr_names))
+    if (any(mask_duplicated)) {
+      stop(
+        "The following column(s) are duplicated when lower case: ",
+        paste0("'", nlmixr_names[mask_duplicated], "'", collapse = ", ")
+      )
+    }
+    cov_names <- nlmixr_data_simplify_cols(data, cols = covariates, type = "covariate")
+    keep_names <- nlmixr_data_simplify_cols(data, cols = table$keep, type = "keep")
+    est_names <- nlmixr_data_simplify_est_cols(data, est = est, control = control)
+    # Simplifying the nlmixr_names column names to always be lower case ensures
+    # that upper/lower case column name changes will not affect the need to rerun.
+    # Also, standardizing the column name order to always be the same will prevent
+    # the need to rerun, so cov_names is sorted.
+
+    # Sorting so that they are in order, unique so that duplication between
+    # covariates and keep do not try to duplicate columns in the output data.
+    add_col_names <- sort(unique(c(cov_names, keep_names, est_names)))
+
+    # Drop names from nlmixr_names from the added names
+    add_col_names <- setdiff(add_col_names, nlmixr_names)
+
+    stats::setNames(
+      object = data[, c(nlmixr_names, add_col_names), drop = FALSE],
+      nm = c(tolower(nlmixr_names), add_col_names)
     )
-  # nlmixr pays attention to the columns in a case-insensitive way for the
-  # standard columns.  Verify that the data has case-insensitive column names
-  # for these columns (for example not "ADDL" and "addl").
-  mask_nlmixr_cols <- tolower(names(data)) %in% nlmixr_cols
-  nlmixr_names <- names(data)[mask_nlmixr_cols]
-  mask_duplicated <- duplicated(tolower(nlmixr_names))
-  if (any(mask_duplicated)) {
-    stop(
-      "The following column(s) are duplicated when lower case: ",
-      paste0("'", nlmixr_names[mask_duplicated], "'", collapse = ", ")
-    )
-  }
-  cov_names <- nlmixr_data_simplify_cols(data, cols = covariates, type = "covariate")
-  keep_names <- nlmixr_data_simplify_cols(data, cols = table$keep, type = "keep")
-  est_names <- nlmixr_data_simplify_est_cols(data, est = est, control = control)
-  # Simplifying the nlmixr_names column names to always be lower case ensures
-  # that upper/lower case column name changes will not affect the need to rerun.
-  # Also, standardizing the column name order to always be the same will prevent
-  # the need to rerun, so cov_names is sorted.
-
-  # Sorting so that they are in order, unique so that duplication between
-  # covariates and keep do not try to duplicate columns in the output data.
-  add_col_names <- sort(unique(c(cov_names, keep_names, est_names)))
-
-  # Drop names from nlmixr_names from the added names
-  add_col_names <- setdiff(add_col_names, nlmixr_names)
-
-  stats::setNames(
-    object = data[, c(nlmixr_names, add_col_names), drop = FALSE],
-    nm = c(tolower(nlmixr_names), add_col_names)
-  )
+  })
 }
 
 nlmixr_data_simplify_cols <- function(data, cols, type) {

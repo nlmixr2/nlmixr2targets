@@ -18,6 +18,21 @@ test_that("tar_nlmixr object generation", {
   }
   target_list <- tar_nlmixr(name = pheno_model, object = pheno, data = nlmixr2data::pheno_sd, est = "saem")
   expect_true(inherits(target_list, "list"))
+  # Assert the generated target set directly, in-process, rather than only
+  # through `tar_manifest()`.  `tar_manifest()` sources `_targets.R` in a
+  # callr subprocess that loads the *installed* nlmixr2targets (which, under
+  # `pkgload::load_all()`, is whatever stale build is on disk), so a manifest
+  # assertion can disagree with the version under test.  Reading the names off
+  # the target objects the generator returns depends only on the code under
+  # test, so it pins the graph shape -- including the `_covariates` target --
+  # independently of the runner.
+  expect_identical(
+    unname(vapply(target_list, function(x) x$settings$name, character(1))),
+    c(
+      "pheno_model_object_simple", "pheno_model_covariates",
+      "pheno_model_data_simple", "pheno_model_fit_simple", "pheno_model"
+    )
+  )
 })
 
 test_that("tar_nlmixr expected errors", {
@@ -493,8 +508,12 @@ targets::tar_test("tar_nlmixr execution", {
       control=nlmixr2est::saemControl(nBurn=1, nEm=1)
     )
   })
+  # callr_function = NULL builds the manifest in this process, so it reflects
+  # the nlmixr2targets under test rather than whatever build the default callr
+  # subprocess would `library()` off disk (stale under pkgload::load_all()).
+  # The rest of this test already runs in-process via `callr_function = NULL`.
   expect_equal(
-    targets::tar_manifest()$name,
+    targets::tar_manifest(callr_function = NULL)$name,
     c(
       "pheno_model_object_simple", "pheno_model_covariates", "pheno_model_data_simple",
       "pheno_model_fit_simple", "pheno_model"
@@ -680,8 +699,11 @@ targets::tar_test("tar_nlmixr handles user-written central(0) end-to-end", {
       control=nlmixr2est::saemControl(nBurn=1, nEm=1)
     )
   })
+  # callr_function = NULL: build the manifest in-process, matching the
+  # tar_outdated()/tar_make() calls below, so it reflects the version under
+  # test rather than the installed build the default callr subprocess loads.
   expect_equal(
-    targets::tar_manifest()$name,
+    targets::tar_manifest(callr_function = NULL)$name,
     c(
       "pheno_model_object_simple", "pheno_model_covariates", "pheno_model_data_simple",
       "pheno_model_fit_simple", "pheno_model"
@@ -811,6 +833,45 @@ targets::tar_test("tar_nlmixr(error = 'continue') records a failure sentinel wit
   expect_false(inherits(fit, "nlmixr2FitCore"))
 })
 
+# error = "continue" covers the whole per-model chain, not only the fit: a
+# failure while *building* the model (here the object expression itself throws,
+# so the object-simplification step fails before any estimation) must also
+# become a sentinel rather than halt tar_make(). The sentinel is passed through
+# every downstream target, and an unrelated target still builds, proving the
+# pipeline did not stop. No model is fitted, so this test is fast.
+targets::tar_test("tar_nlmixr(error = 'continue') records a sentinel when model construction fails", {
+  targets::tar_script({
+    library(nlmixr2targets)
+    boom <- function() stop("this structure does not apply to this dataset")
+    list(
+      nlmixr2targets::tar_nlmixr(
+        name = bad_model,
+        object = boom(),
+        data = nlmixr2data::pheno_sd,
+        est = "focei",
+        error = "continue"
+      ),
+      targets::tar_target(unrelated, 1L + 1L)
+    )
+  })
+  expect_no_error(suppressMessages(suppressWarnings(
+    targets::tar_make(callr_function = NULL)
+  )))
+  # Every target in the failed model's chain holds the sentinel.
+  for (nm in c("bad_model_object_simple", "bad_model_covariates",
+               "bad_model_data_simple", "bad_model_fit_simple", "bad_model")) {
+    expect_s3_class(targets::tar_read_raw(nm), "nlmixr2targetsError")
+  }
+  # The original error message survives on the final target's condition.
+  expect_match(
+    conditionMessage(attr(targets::tar_read(bad_model), "condition")),
+    "this structure does not apply to this dataset",
+    fixed = TRUE
+  )
+  # The pipeline did not halt: an unrelated target built to completion.
+  expect_identical(targets::tar_read(unrelated), 2L)
+})
+
 # The default (error = "stop") must still halt tar_make() on an estimation
 # failure, preserving the pre-issue-#35 behavior.
 targets::tar_test("tar_nlmixr default (error = 'stop') still halts on an estimation failure", {
@@ -911,6 +972,60 @@ test_that("tar_nlmixr_raw forwards a non-default table to the fit_simple command
   expect_true(
     grepl('table = nlmixr2est::tableControl(keep = "WT")', out$fit_simple$command$string, fixed = TRUE)
   )
+})
+
+# The generated call stored in any target slot (not only fit_simple).
+generated_call <- function(target_list, slot) {
+  target_list[[slot]]$command$expr[[1]]
+}
+
+test_that("tar_nlmixr_raw leaves error out of the simplification commands by default", {
+  out <- tar_nlmixr_raw(
+    name = "fit_x",
+    object = quote(my_model),
+    data = quote(my_data),
+    est = "saem",
+    control = quote(list()),
+    table = quote(nlmixr2est::tableControl()),
+    object_simple_name = "fit_x_object_simple",
+    data_simple_name = "fit_x_data_simple",
+    fit_simple_name = "fit_x_fit_simple",
+    env = environment()
+  )
+  # error = "stop" (the default) must not reach the object-, covariate- or
+  # data-simplification commands: keeping these byte-identical to earlier
+  # versions is what stops an upgrade from re-running every cached pipeline.
+  for (slot in c("object_simple", "covariates", "data_simple")) {
+    expect_false("error" %in% names(as.list(generated_call(out, slot))))
+  }
+  expect_identical(
+    generated_call(out, "object_simple"),
+    quote(nlmixr_object_simplify(
+      object = my_model,
+      directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")
+    ))
+  )
+})
+
+test_that("tar_nlmixr_raw threads error = 'continue' through the whole chain", {
+  out <- tar_nlmixr_raw(
+    name = "fit_x",
+    object = quote(my_model),
+    data = quote(my_data),
+    est = "saem",
+    control = quote(list()),
+    table = quote(nlmixr2est::tableControl()),
+    object_simple_name = "fit_x_object_simple",
+    data_simple_name = "fit_x_data_simple",
+    fit_simple_name = "fit_x_fit_simple",
+    env = environment(),
+    error = "continue"
+  )
+  # Every step of the chain carries error = "continue", so a failure anywhere
+  # becomes a sentinel for the model rather than halting tar_make().
+  for (slot in c("object_simple", "covariates", "data_simple", "fit_simple")) {
+    expect_identical(as.list(generated_call(out, slot))$error, "continue")
+  }
 })
 
 targets::tar_test("tar_nlmixr passes table through to the estimated fit", {
