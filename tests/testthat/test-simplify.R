@@ -271,6 +271,62 @@ test_that("nlmixr_data_simplify takes exactly one of object and covariates", {
     regexp = "Supply exactly one of `object` and `covariates`",
     fixed = TRUE
   )
+  # An explicit NULL is "not supplied" for either argument, so every spelling
+  # of "nothing supplied" gives the same documented error instead of failing
+  # further in with a class complaint about `object`.
+  expect_error(
+    nlmixr_data_simplify(data = nlmixr2data::pheno_sd, covariates = NULL),
+    regexp = "Supply exactly one of `object` and `covariates`",
+    fixed = TRUE
+  )
+  expect_error(
+    nlmixr_data_simplify(data = nlmixr2data::pheno_sd, object = NULL),
+    regexp = "Supply exactly one of `object` and `covariates`",
+    fixed = TRUE
+  )
+  expect_error(
+    nlmixr_data_simplify(data = nlmixr2data::pheno_sd, object = NULL, covariates = NULL),
+    regexp = "Supply exactly one of `object` and `covariates`",
+    fixed = TRUE
+  )
+})
+
+test_that("the simplifiers honor error = 'continue' and pass sentinels through", {
+  sentinel <- nlmixr2targets_error_object(simpleError("upstream step failed"))
+  expect_s3_class(sentinel, "nlmixr2targetsError")
+
+  # Object simplification: a model that throws while being built (here the
+  # object expression itself errors) becomes a sentinel under "continue", and
+  # still propagates under the default "stop".
+  boom <- function() stop("bad model structure")
+  res_obj <- suppressMessages(suppressWarnings(
+    nlmixr_object_simplify(object = boom(), directory = .simplify_cache_dir, error = "continue")
+  ))
+  expect_s3_class(res_obj, "nlmixr2targetsError")
+  expect_error(
+    nlmixr_object_simplify(object = boom(), directory = .simplify_cache_dir),
+    regexp = "bad model structure", fixed = TRUE
+  )
+  # A sentinel handed in as the object (a failed self-referential multimodel
+  # entry) is passed straight through, without writing to the cache.
+  expect_identical(
+    nlmixr_object_simplify(object = sentinel, directory = .simplify_cache_dir),
+    sentinel
+  )
+
+  # Covariates: a sentinel object_simple passes through without reading the
+  # cache for a bogus hash.
+  expect_identical(nlmixr_object_covariates(object = sentinel), sentinel)
+
+  # Data simplification: a sentinel reaching either upstream passes through,
+  # and a genuine failure in the step becomes a sentinel under "continue".
+  d <- data.frame(ID = 1, TIME = 0, DV = 1, EVID = 0, WT = 70)
+  expect_identical(nlmixr_data_simplify(data = d, covariates = sentinel), sentinel)
+  expect_identical(nlmixr_data_simplify(data = d, object = sentinel), sentinel)
+  expect_s3_class(
+    nlmixr_data_simplify(data = d, covariates = "NOPE", error = "continue"),
+    "nlmixr2targetsError"
+  )
 })
 
 test_that("nlmixr_data_simplify validates covariates", {

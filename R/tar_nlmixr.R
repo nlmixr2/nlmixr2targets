@@ -139,13 +139,16 @@
 #' @inheritParams targets::tar_target
 #' @param env The environment where the model is setup (not needed for typical
 #'   use)
-#' @param error What should happen if the estimation step throws an error?
-#'   `"stop"` (the default) lets the error propagate, halting
-#'   `targets::tar_make()` as usual. `"continue"` catches the error and stores
-#'   a failure sentinel (an object of class `nlmixr2targetsError`, which also
-#'   inherits from `"try-error"`) carrying the error message, so a single
-#'   failed model does not stop the rest of the pipeline. Detect a failed fit
-#'   with `inherits(fit, "nlmixr2targetsError")` or the broader
+#' @param error What should happen if any step of a model's chain throws an
+#'   error? `"stop"` (the default) lets the error propagate, halting
+#'   `targets::tar_make()` as usual. `"continue"` catches an error from any of
+#'   the model's steps -- simplifying the object, reading its covariates,
+#'   simplifying the data, or the estimation itself -- and stores a failure
+#'   sentinel (an object of class `nlmixr2targetsError`, which also inherits
+#'   from `"try-error"`) carrying the error message. The sentinel is passed
+#'   down the model's remaining steps to its final target, so a single failed
+#'   model does not stop the rest of the pipeline. Detect a failed model with
+#'   `inherits(fit, "nlmixr2targetsError")` or the broader
 #'   `inherits(fit, "try-error")`.
 #' @param resources_data,resources_fit Object returned by
 #'   [targets::tar_resources()], as for `resources` in
@@ -317,16 +320,50 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table,
   # `tableControl()`.
   packages <- c("nlmixr2targets", "nlmixr2est")
 
+  object_simple_command <-
+    substitute(
+      nlmixr_object_simplify(object = object, directory = directory),
+      list(object = object, directory = directory_expr)
+    )
+  covariates_command <-
+    substitute(
+      nlmixr_object_covariates(object = object_simple, directory = directory),
+      list(object_simple = as.name(object_simple_name), directory = directory_expr)
+    )
+  data_simple_command <-
+    substitute(
+      nlmixr_data_simplify(
+        data = data, covariates = covariates, table = table,
+        est = est, control = control
+      ),
+      list(
+        data = data,
+        covariates = as.name(covariates_name),
+        table = table,
+        est = est,
+        control = control
+      )
+    )
+  # `error = "continue"` covers the whole per-model chain, not only the fit, so
+  # a failure while simplifying the object, reading its covariates, or
+  # simplifying the data becomes a failure sentinel for that model (which the
+  # downstream steps pass through) instead of halting `tar_make()`.  The fit
+  # command already carries `error` unconditionally.  These three carry it only
+  # when it is "continue", so a default (`error = "stop"`) pipeline keeps the
+  # byte-identical commands earlier versions produced and re-runs no cached fit.
+  if (identical(error, "continue")) {
+    object_simple_command$error <- "continue"
+    covariates_command$error <- "continue"
+    data_simple_command$error <- "continue"
+  }
+
   list(
     object_simple =
       tar_nlmixr_target_raw(
         target_settings,
         role = "fit",
         name = object_simple_name,
-        command = substitute(
-          nlmixr_object_simplify(object = object, directory = directory),
-          list(object = object, directory = directory_expr)
-        ),
+        command = object_simple_command,
         packages = packages
       ),
     covariates =
@@ -334,10 +371,7 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table,
         target_settings,
         role = "fit",
         name = covariates_name,
-        command = substitute(
-          nlmixr_object_covariates(object = object_simple, directory = directory),
-          list(object_simple = as.name(object_simple_name), directory = directory_expr)
-        ),
+        command = covariates_command,
         packages = packages
       ),
     # The data target is handed the covariate names rather than the model hash:
@@ -348,19 +382,7 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table,
         target_settings,
         role = "data",
         name = data_simple_name,
-        command = substitute(
-          nlmixr_data_simplify(
-            data = data, covariates = covariates, table = table,
-            est = est, control = control
-          ),
-          list(
-            data = data,
-            covariates = as.name(covariates_name),
-            table = table,
-            est = est,
-            control = control
-          )
-        ),
+        command = data_simple_command,
         packages = packages
       ),
     fit_simple =

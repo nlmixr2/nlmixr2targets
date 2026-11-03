@@ -213,6 +213,24 @@ targets::tar_test("nlmixr2_indirect re-throws when error = 'stop' (the default)"
   )
 })
 
+# When a prior step failed under error = "continue", the sentinel reaches the
+# fit command in place of the model hash or the simplified data. It must be
+# passed straight through: the cache read would otherwise treat the sentinel as
+# a missing hash and raise an infrastructure error outside the tryCatch.
+test_that("nlmixr2_indirect passes an upstream failure sentinel through", {
+  sentinel <- nlmixr2targets_error_object(simpleError("upstream step failed"))
+  # A sentinel object short-circuits before the cache read.
+  expect_identical(
+    nlmixr2_indirect(object = sentinel, data = mtcars, est = "saem", control = list()),
+    sentinel
+  )
+  # A sentinel in the data position does the same.
+  expect_identical(
+    nlmixr2_indirect(object = "hh", data = sentinel, est = "saem", control = list()),
+    sentinel
+  )
+})
+
 # tar_nlmixr_multimodel() names its targets after a hash of the model, so the
 # announcement is the only way to tell which model tar_make() is running.
 targets::tar_test("nlmixr2_indirect announces the model description before estimating", {

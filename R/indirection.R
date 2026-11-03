@@ -40,6 +40,13 @@ nlmixr2_indirect <- function(object, data, est, control, table,
                              directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"),
                              error = c("stop", "continue"), description = NULL) {
   error <- match.arg(error)
+  # A failed upstream step (object or data simplification under
+  # error = "continue") reaches here as a sentinel in place of the model hash
+  # or the simplified data. Pass it straight through: there is nothing to fit,
+  # and the cache read below would otherwise treat the sentinel as a missing
+  # hash and raise an infrastructure error outside the tryCatch.
+  if (inherits(object, "nlmixr2targetsError")) return(object)
+  if (inherits(data, "nlmixr2targetsError")) return(data)
   # start a configured logger before the fit, so it is logged (see rxEvents.R)
   nlmixr2targets_event_load_logger()
   if (!is.null(description)) {
@@ -94,6 +101,23 @@ nlmixr2targets_error_object <- function(cond) {
     class = c("nlmixr2targetsError", "try-error"),
     condition = cond
   )
+}
+
+# Evaluate `expr`, returning its value on success. When `error == "continue"`,
+# an error thrown while evaluating `expr` is caught and turned into the failure
+# sentinel instead, so one failed model does not halt tar_make(); when
+# `error == "stop"` the error propagates as usual. `expr` is an unforced
+# promise, so it is evaluated only in the chosen branch -- callers put any
+# upstream-sentinel passthrough check before the call, where `expr` is not yet
+# touched. Shared by the object-, covariate- and data-simplification steps so
+# the whole per-model chain honors error = "continue", matching the estimation
+# step (nlmixr2_indirect()).
+nlmixr2targets_run_continue <- function(error, expr) {
+  if (identical(error, "continue")) {
+    tryCatch(expr, error = function(e) nlmixr2targets_error_object(e))
+  } else {
+    expr
+  }
 }
 
 #' Print a failed `nlmixr2targets` estimation result
