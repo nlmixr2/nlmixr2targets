@@ -58,14 +58,17 @@ nlmixr2_indirect(
 
 - error:
 
-  What should happen if the estimation step throws an error? `"stop"`
-  (the default) lets the error propagate, halting
+  What should happen if any step of a model's chain throws an error?
+  `"stop"` (the default) lets the error propagate, halting
   [`targets::tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
-  as usual. `"continue"` catches the error and stores a failure sentinel
-  (an object of class `nlmixr2targetsError`, which also inherits from
-  `"try-error"`) carrying the error message, so a single failed model
-  does not stop the rest of the pipeline. Detect a failed fit with
-  `inherits(fit, "nlmixr2targetsError")` or the broader
+  as usual. `"continue"` catches an error from any of the model's steps
+  – simplifying the object, reading its covariates, simplifying the
+  data, or the estimation itself – and stores a failure sentinel (an
+  object of class `nlmixr2targetsError`, which also inherits from
+  `"try-error"`) carrying the error message. The sentinel is passed down
+  the model's remaining steps to its final target, so a single failed
+  model does not stop the rest of the pipeline. Detect a failed model
+  with `inherits(fit, "nlmixr2targetsError")` or the broader
   `inherits(fit, "try-error")`.
 
 - description:

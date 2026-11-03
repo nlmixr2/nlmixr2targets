@@ -56,6 +56,12 @@
 
 ### Bug fixes
 
+- [`nlmixr_data_simplify()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_data_simplify.md)
+  now treats an explicit `object = NULL` as “not supplied”, like a
+  missing argument, so it gives the documented “Supply exactly one of
+  `object` and `covariates`” error instead of failing further in with a
+  class complaint about `object`.
+
 - A model with an occasion-level random effect (`eta ~ var | OCC`) can
   now be fitted. The grouping variable is read from the data but is not
   a covariate, so it was absent from
@@ -157,13 +163,17 @@
   and
   [`tar_nlmixr_multimodel()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr_multimodel.md)
   gain an `error` argument. With the default `error = "stop"`, a model
-  that fails during estimation halts
+  that fails halts
   [`targets::tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
-  exactly as before. With `error = "continue"`, the failure is caught
-  and the target stores a failure sentinel (an object of class
+  exactly as before. With `error = "continue"`, a failure in any step of
+  that model’s chain – simplifying the object, reading its covariates,
+  simplifying the data, or the estimation itself – is caught and the
+  target stores a failure sentinel (an object of class
   `nlmixr2targetsError`, which also inherits from `"try-error"`)
-  carrying the error message, so one failed model does not stop the rest
-  of the pipeline
+  carrying the error message. The sentinel is passed down the model’s
+  remaining steps to its final target, so one failed model – including
+  one whose structure the dataset cannot support, which fails before
+  estimation – does not stop the rest of the pipeline
   ([\#35](https://github.com/nlmixr2/nlmixr2targets/issues/35)).
 
 ## nlmixr2targets 0.1.0

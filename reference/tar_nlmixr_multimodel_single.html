@@ -122,13 +122,16 @@ use)</p></dd>
 
 
 <dt id="arg-error">error<a class="anchor" aria-label="anchor" href="#arg-error"></a></dt>
-<dd><p>What should happen if the estimation step throws an error?
-<code>"stop"</code> (the default) lets the error propagate, halting
-<code><a href="https://docs.ropensci.org/targets/reference/tar_make.html" class="external-link">targets::tar_make()</a></code> as usual. <code>"continue"</code> catches the error and stores
-a failure sentinel (an object of class <code>nlmixr2targetsError</code>, which also
-inherits from <code>"try-error"</code>) carrying the error message, so a single
-failed model does not stop the rest of the pipeline. Detect a failed fit
-with <code>inherits(fit, "nlmixr2targetsError")</code> or the broader
+<dd><p>What should happen if any step of a model's chain throws an
+error? <code>"stop"</code> (the default) lets the error propagate, halting
+<code><a href="https://docs.ropensci.org/targets/reference/tar_make.html" class="external-link">targets::tar_make()</a></code> as usual. <code>"continue"</code> catches an error from any of
+the model's steps – simplifying the object, reading its covariates,
+simplifying the data, or the estimation itself – and stores a failure
+sentinel (an object of class <code>nlmixr2targetsError</code>, which also inherits
+from <code>"try-error"</code>) carrying the error message. The sentinel is passed
+down the model's remaining steps to its final target, so a single failed
+model does not stop the rest of the pipeline. Detect a failed model with
+<code>inherits(fit, "nlmixr2targetsError")</code> or the broader
 <code>inherits(fit, "try-error")</code>.</p></dd>
 
 

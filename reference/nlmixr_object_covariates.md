@@ -12,7 +12,8 @@ keeps beyond the standard event columns.
 ``` r
 nlmixr_object_covariates(
   object,
-  directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")
+  directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"),
+  error = c("stop", "continue")
 )
 ```
 
@@ -38,6 +39,21 @@ nlmixr_object_covariates(
   (e.g. a [`tempdir()`](https://rdrr.io/r/base/tempfile.html) location
   set via
   [`targets::tar_config_set()`](https://docs.ropensci.org/targets/reference/tar_config_set.html)).
+
+- error:
+
+  What should happen if any step of a model's chain throws an error?
+  `"stop"` (the default) lets the error propagate, halting
+  [`targets::tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
+  as usual. `"continue"` catches an error from any of the model's steps
+  – simplifying the object, reading its covariates, simplifying the
+  data, or the estimation itself – and stores a failure sentinel (an
+  object of class `nlmixr2targetsError`, which also inherits from
+  `"try-error"`) carrying the error message. The sentinel is passed down
+  the model's remaining steps to its final target, so a single failed
+  model does not stop the rest of the pipeline. Detect a failed model
+  with `inherits(fit, "nlmixr2targetsError")` or the broader
+  `inherits(fit, "try-error")`.
 
 ## Value
 
