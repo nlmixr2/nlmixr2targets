@@ -73,6 +73,16 @@ nlmixr_object_simplify <- function(object,
       # what save_nlmixr2obj_indirect() keys the cache file by).
       ret$iniDf$label <- NA_character_
       rm(list = ls(envir = ret$meta, all.names = TRUE), envir = ret$meta)
+      # rxModelVars$timeId is as.integer(Sys.time()) at a model's first
+      # translation in a session, so an otherwise identical object serializes to
+      # different bytes in every session.  rxode2 never reads the value back and
+      # its own parse-only path writes -1L, so writing that sentinel here lets a
+      # caller hash the saved object reproducibly across sessions and machines.
+      # It does not change ret$md5, so cache files written before this keep their
+      # names.
+      model_vars <- ret$mv0
+      model_vars$timeId <- -1L
+      ret$mv0 <- model_vars
       save_nlmixr2obj_indirect(ret, directory = directory)
     }
   })

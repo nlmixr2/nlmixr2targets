@@ -1004,3 +1004,16 @@ test_that("nlmixr_object_complicate passes a failure sentinel through unchanged"
   expect_identical(out, sentinel)
   expect_s3_class(out, "nlmixr2targetsError")
 })
+
+test_that("nlmixr_object_simplify writes a session-independent object", {
+  saved <- readRDS(file.path(.simplify_cache_dir, model_simple))
+  # rxModelVars$timeId is as.integer(Sys.time()) at the model's first
+  # translation in a session.  Left in place, the same model simplified in two
+  # sessions serializes to different bytes, so a caller cannot hash the saved
+  # object to decide whether anything changed.  -1L is the value rxode2's own
+  # parse-only path writes.
+  expect_identical(saved$mv0$timeId, -1L)
+  # The cache file is still named by the model's content hash, so clearing
+  # timeId does not move existing cache entries.
+  expect_identical(saved$md5, model_simple)
+})

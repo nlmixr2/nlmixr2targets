@@ -43,6 +43,14 @@
 
 ## Bug fixes
 
+* `nlmixr_object_simplify()` now clears `rxModelVars$timeId`, the wall-clock
+  time of the model's first translation in an R session, before saving the
+  simplified object. The same model simplified in two sessions previously
+  serialized to different bytes, so anything that hashed the saved object --
+  rather than the md5 the cache is keyed by -- saw it change on every rebuild.
+  The cache file name is unchanged, so entries written by earlier versions are
+  still found.
+
 * `nlmixr_data_simplify()` now treats an explicit `object = NULL` as "not
   supplied", like a missing argument, so it gives the documented
   "Supply exactly one of `object` and `covariates`" error instead of failing
