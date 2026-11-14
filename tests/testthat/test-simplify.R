@@ -1005,15 +1005,49 @@ test_that("nlmixr_object_complicate passes a failure sentinel through unchanged"
   expect_s3_class(out, "nlmixr2targetsError")
 })
 
+# `linCmt()` keeps a second rxModelVars in the ui's `mvL`, which is where
+# clearing only `mv0` was not enough.
+pheno_linCmt <- function() {
+  ini({
+    lcl <- log(0.008)
+    lvc <- log(0.6)
+    etalcl ~ 1
+    cpaddSd <- 0.1
+  })
+  model({
+    cl <- exp(lcl + etalcl)
+    vc <- exp(lvc)
+    cp <- linCmt()
+    cp ~ add(cpaddSd)
+  })
+}
+
 test_that("nlmixr_object_simplify writes a session-independent object", {
   saved <- readRDS(file.path(.simplify_cache_dir, model_simple))
-  # rxModelVars$timeId is as.integer(Sys.time()) at the model's first
-  # translation in a session.  Left in place, the same model simplified in two
-  # sessions serializes to different bytes, so a caller cannot hash the saved
-  # object to decide whether anything changed.  -1L is the value rxode2's own
-  # parse-only path writes.
+  # timeId is the wall-clock time of the model's first translation in the
+  # session, so leaving it in makes the same model serialize to different bytes
+  # in every session.  -1L is what rxode2's own parse-only path writes.
   expect_identical(saved$mv0$timeId, -1L)
-  # The cache file is still named by the model's content hash, so clearing
-  # timeId does not move existing cache entries.
-  expect_identical(saved$md5, model_simple)
+  expect_s3_class(saved$mv0, "rxModelVars")
+
+  # Clearing it must not move the content hash the cache file is named by, or
+  # entries written by earlier versions are orphaned.
+  ui <- suppressMessages(suppressWarnings(nlmixr2est::nlmixr(pheno)))
+  md5_before <- ui$md5
+  ui$mv0 <- nlmixr_clear_time_id(ui$mv0)
+  expect_identical(ui$md5, md5_before)
+
+  # A linCmt() model has a second set of model vars with its own timestamp.
+  linCmt_md5 <-
+    suppressMessages(suppressWarnings(
+      nlmixr_object_simplify(pheno_linCmt, directory = .simplify_cache_dir)
+    ))
+  linCmt_saved <- readRDS(file.path(.simplify_cache_dir, linCmt_md5))
+  expect_false(is.null(linCmt_saved$mvL))
+  expect_identical(linCmt_saved$mv0$timeId, -1L)
+  expect_identical(linCmt_saved$mvL$timeId, -1L)
+})
+
+test_that("nlmixr_clear_time_id refuses anything but model vars", {
+  expect_error(nlmixr_clear_time_id(list(timeId = 1L)), "rxModelVars")
 })

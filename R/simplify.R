@@ -73,19 +73,26 @@ nlmixr_object_simplify <- function(object,
       # what save_nlmixr2obj_indirect() keys the cache file by).
       ret$iniDf$label <- NA_character_
       rm(list = ls(envir = ret$meta, all.names = TRUE), envir = ret$meta)
-      # rxModelVars$timeId is as.integer(Sys.time()) at a model's first
-      # translation in a session, so an otherwise identical object serializes to
-      # different bytes in every session.  rxode2 never reads the value back and
-      # its own parse-only path writes -1L, so writing that sentinel here lets a
-      # caller hash the saved object reproducibly across sessions and machines.
-      # It does not change ret$md5, so cache files written before this keep their
-      # names.
-      model_vars <- ret$mv0
-      model_vars$timeId <- -1L
-      ret$mv0 <- model_vars
+      # Two sessions serialize an identical model to different bytes unless the
+      # translation timestamps go.  A linCmt() model carries a second
+      # rxModelVars in mvL that needs the same treatment.  ret$md5 is unaffected.
+      ret$mv0 <- nlmixr_clear_time_id(ret$mv0)
+      if (!is.null(ret$mvL)) {
+        ret$mvL <- nlmixr_clear_time_id(ret$mvL)
+      }
       save_nlmixr2obj_indirect(ret, directory = directory)
     }
   })
+}
+
+# rxode2 stamps rxModelVars$timeId with as.integer(Sys.time()) the first time a
+# model is translated in a session (see rxode2:::.rxTimeId).  Nothing reads the
+# value back, and rxode2's own parse-only path writes -1L, so replacing it with
+# that sentinel makes the model vars serialize identically in every session.
+nlmixr_clear_time_id <- function(model_vars) {
+  checkmate::assert_class(model_vars, "rxModelVars")
+  model_vars$timeId <- -1L
+  model_vars
 }
 
 #' Re-attach labels, metadata, and original data to a simplified fit
