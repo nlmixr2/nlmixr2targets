@@ -67,6 +67,11 @@ nlmixr_object_simplify <- function(object,
       attr(object, "srcref") <- NULL
       object <- nlmixr_object_simplify_zero_initial(object)
       ret <- nlmixr2est::nlmixr(object)
+      # Everything below writes to the ui.  nlmixr2est::nlmixr() hands back the
+      # environment form today, but a compressed rxUi is a list whose fixed
+      # components refuse assignment, so those writes would error on one.
+      # Decompressing is a no-op on an environment and preserves md5 either way.
+      ret <- rxode2::rxUiDecompress(ret)
       # Strip parameter labels and the meta environment so they do not
       # contribute to the cache hash. The rxUi's iniDf setter is an active
       # binding, so writing NA_character_ here also refreshes ret$md5 (which is

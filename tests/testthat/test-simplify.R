@@ -1029,6 +1029,9 @@ test_that("nlmixr_object_simplify writes a session-independent object", {
   # in every session.  -1L is what rxode2's own parse-only path writes.
   expect_identical(saved$mv0$timeId, -1L)
   expect_s3_class(saved$mv0, "rxModelVars")
+  # The decompressed form is what gets saved: a compressed rxUi is a list whose
+  # fixed components cannot be written to.
+  expect_type(saved, "environment")
 
   # Clearing it must not move the content hash the cache file is named by, or
   # entries written by earlier versions are orphaned.
