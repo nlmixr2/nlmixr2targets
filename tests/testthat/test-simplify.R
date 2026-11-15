@@ -127,15 +127,13 @@ test_that("nlmixr_data_simplify expected errors", {
   )
 })
 
-test_that("nlmixr_object_covariates reads the covariates from a cache hash or a ui", {
+test_that("nlmixr_object_covariates reads the covariates from a ui", {
+  expect_identical(nlmixr_object_covariates(model_simple), "WT")
+  # the `$ui` slot of a fit-shaped object is preferred over its own all.covs
   expect_identical(
-    nlmixr_object_covariates(model_simple),
+    nlmixr_object_covariates(list(ui = model_simple, all.covs = "OTHER")),
     "WT"
   )
-  ui <- model_simple
-  expect_identical(nlmixr_object_covariates(ui), "WT")
-  # the `$ui` slot of a fit-shaped object is preferred over its own all.covs
-  expect_identical(nlmixr_object_covariates(list(ui = ui, all.covs = "OTHER")), "WT")
 })
 
 test_that("nlmixr_object_covariates sorts in the C locale and de-duplicates", {
@@ -174,8 +172,7 @@ test_that("nlmixr_object_covariates keeps every occasion grouping variable", {
 })
 
 test_that("nlmixr_object_covariates is unchanged for a model without an IOV effect", {
-  ui <- model_simple
-  expect_identical(nlmixr_object_covariates(ui), "WT")
+  expect_identical(nlmixr_object_covariates(model_simple), "WT")
 })
 
 test_that("nlmixr_object_covariates ignores the subject level and the residual", {
@@ -291,14 +288,14 @@ test_that("the simplifiers honor error = 'continue' and pass sentinels through",
     regexp = "bad model structure", fixed = TRUE
   )
   # A sentinel handed in as the object (a failed self-referential multimodel
-  # entry) is passed straight through, without writing to the cache.
+  # entry) is passed straight through rather than simplified.
   expect_identical(
     nlmixr_object_simplify(object = sentinel),
     sentinel
   )
 
-  # Covariates: a sentinel object_simple passes through without reading the
-  # cache for a bogus hash.
+  # Covariates: a sentinel object_simple passes through rather than being read
+  # as a model.
   expect_identical(nlmixr_object_covariates(object = sentinel), sentinel)
 
   # Data simplification: a sentinel reaching either upstream passes through,
@@ -713,13 +710,15 @@ test_that("re-estimating a model works with covariates (#9)", {
 
 # Tests for the strip-and-restore round trip introduced for #28.
 
-test_that("nlmixr_object_simplify writes the simplified rxUi with labels and meta stripped", {
-  cached <- model_simple
-  expect_true(all(is.na(cached$iniDf$label)))
-  expect_equal(ls(envir = cached$meta, all.names = TRUE), character(0))
+test_that("nlmixr_object_simplify strips labels, meta and the model function", {
+  expect_true(all(is.na(model_simple$iniDf$label)))
+  expect_equal(ls(envir = model_simple$meta, all.names = TRUE), character(0))
+  # The ui keeps the model function it was built from, labels and all, so a
+  # label-only edit would change the object if it were left in place.
+  expect_false(exists("model", envir = model_simple, inherits = FALSE))
 })
 
-test_that("nlmixr_object_simplify yields the same hash for models that differ only in labels (#28)", {
+test_that("models differing only in labels simplify to the same object (#28)", {
   model_with <- function() {
     ini({
       lcl <- log(0.008); label("Typical clearance")

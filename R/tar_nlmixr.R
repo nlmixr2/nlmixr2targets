@@ -102,17 +102,14 @@
 #' }
 #'
 #' @section Running the generated targets on a remote worker:
-#' The simplified model is written to `file.path(tar_config_get("store"),
-#' "user/nlmixr2")` by the `_object_simple` target and read back from there by
-#' the `_covariates` and estimation (`_fit_simple`) targets.  That is a path,
-#' not a value passed between targets, so the three must agree on it: sending
-#' only the estimation target to a worker whose filesystem does not carry the
-#' same store leaves it unable to find the model.  `resources_fit` covers all
-#' three, so leave it as one set of resources that runs them together, or put
-#' the store somewhere every worker reaches.
+#' The simplified model is the value of the `_object_simple` target, so
+#' `targets` carries it to whichever worker runs the `_covariates` and
+#' estimation (`_fit_simple`) targets.  Nothing is read from a path, so the
+#' three need not run in the same place and the workers need not share a
+#' filesystem.
 #'
-#' The `_data_simple` target reads neither that directory nor the model: it
-#' receives the covariate names as the value of the `_covariates` target.  It
+#' The `_data_simple` target does not receive the model at all: it gets the
+#' covariate names as the value of the `_covariates` target.  It
 #' can therefore run anywhere that can evaluate `data`, which is what
 #' `resources_data` is for -- for example, preparing the data on a small local
 #' controller while the fits run on a larger one.  `deployment` is not split,
@@ -365,9 +362,9 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table,
         command = covariates_command,
         packages = packages
       ),
-    # The data target is handed the covariate names rather than the model hash:
-    # it is skipped when a model edit leaves them unchanged, and it never reads
-    # the indirect cache, so `resources_data` can send it to any worker.
+    # The data target is handed the covariate names rather than the model: it is
+    # skipped when a model edit leaves them unchanged, and it does not carry the
+    # model, so `resources_data` can send it to any worker.
     data_simple =
       tar_nlmixr_target_raw(
         target_settings,

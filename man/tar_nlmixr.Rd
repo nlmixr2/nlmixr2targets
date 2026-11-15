@@ -371,16 +371,14 @@ prints.  Set the \code{targets} versions with \code{targets::tar_option_set()}.
 
 \section{Running the generated targets on a remote worker}{
 
-The simplified model is written to \code{file.path(tar_config_get("store"), "user/nlmixr2")} by the \verb{_object_simple} target and read back from there by
-the \verb{_covariates} and estimation (\verb{_fit_simple}) targets.  That is a path,
-not a value passed between targets, so the three must agree on it: sending
-only the estimation target to a worker whose filesystem does not carry the
-same store leaves it unable to find the model.  \code{resources_fit} covers all
-three, so leave it as one set of resources that runs them together, or put
-the store somewhere every worker reaches.
+The simplified model is the value of the \verb{_object_simple} target, so
+\code{targets} carries it to whichever worker runs the \verb{_covariates} and
+estimation (\verb{_fit_simple}) targets.  Nothing is read from a path, so the
+three need not run in the same place and the workers need not share a
+filesystem.
 
-The \verb{_data_simple} target reads neither that directory nor the model: it
-receives the covariate names as the value of the \verb{_covariates} target.  It
+The \verb{_data_simple} target does not receive the model at all: it gets the
+covariate names as the value of the \verb{_covariates} target.  It
 can therefore run anywhere that can evaluate \code{data}, which is what
 \code{resources_data} is for -- for example, preparing the data on a small local
 controller while the fits run on a larger one.  \code{deployment} is not split,

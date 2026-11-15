@@ -129,8 +129,7 @@ test_that("tar_nlmixr_raw constructs five targets with expected names", {
   expect_true("fit_x_data_simple" %in% targets::tar_deps_raw(out$fit_simple$command$expr))
   expect_true("fit_x_fit_simple" %in% targets::tar_deps_raw(out$fit$command$expr))
   # The data target sees the model only through its covariate names, so it is
-  # not rebuilt for a model edit that keeps them, and it never reads the
-  # indirect cache.
+  # not rebuilt for a model edit that keeps them.
   expect_false("fit_x_object_simple" %in% targets::tar_deps_raw(out$data_simple$command$expr))
   expect_identical(
     out$data_simple$command$expr[[1]],

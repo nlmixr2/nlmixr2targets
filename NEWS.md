@@ -10,6 +10,8 @@
   `nlmixr_data_simplify()` and `nlmixr_fit_simple()`, and the
   `nlmixr2targets_cache_status()` and `nlmixr2targets_cache_prune()`
   functions. Delete that directory by hand to reclaim the space.
+  `nlmixr_object_covariates()` and `nlmixr_data_simplify()` no longer accept a
+  character md5 for `object`; pass the simplified object.
 
   Every pipeline re-runs its fits once after upgrading: the `_object_simple`
   target's value changes from a string to an object, and the generated
@@ -27,8 +29,6 @@
   whose workers run on other machines cannot read back -- the reason for this
   change.
 
-## New features
-
 * `nlmixr2_indirect()` is renamed `nlmixr_fit_simple()`: nothing is indirect
   about it now, and the new name matches the `_fit_simple` target it is the
   command for, and the `nlmixr_*` family it belongs to.
@@ -37,6 +37,8 @@
   from. Nothing read it -- `$model` is derived, and estimation works without
   it -- and it held the `label()` calls, so keeping it would have made a
   label-only edit change the object.
+
+## New features
 
 * The final `<name>` target of `tar_nlmixr()` now emits `fitUpdate` (the restored
   labels and data) and `assign` (the target name) on the rxode2 event bus
@@ -55,10 +57,8 @@
   `resources_fit` for every other target, so the data can be prepared on a
   different controller from the one that fits the model. Both default to
   `targets::tar_option_get("resources")`. `?tar_nlmixr` documents the
-  arguments that are deliberately not forwarded, and the shared cache
-  directory the model targets need when they run on a remote worker. Adding
-  these does not change any estimation command, so cached fits are not
-  re-run.
+  arguments that are deliberately not forwarded. Adding these does not change
+  any estimation command, so cached fits are not re-run.
 
 * Each model now has a `<name>_covariates` target holding the sorted names of
   the covariates it reads, and the `_data_simple` target depends on that
@@ -80,14 +80,12 @@
 ## Bug fixes
 
 * `nlmixr_object_simplify()` now clears `rxModelVars$timeId`, the wall-clock
-  time of the model's first translation in an R session, before saving the
-  simplified object; a `linCmt()` model's second set of model vars (`mvL`) is
-  cleared too. The same model simplified in two sessions previously serialized
-  to different bytes, so anything that hashed the saved object -- rather than
-  the md5 the cache is keyed by -- saw it change on every rebuild. The cache
-  file name is unchanged, so entries written by earlier versions are still
-  found; such an entry keeps its old timestamp until that model is simplified
-  again.
+  time of the model's first translation in an R session; a `linCmt()` model's
+  second set of model vars (`mvL`) is cleared too. The same model simplified
+  in two sessions previously gave objects that serialized to different bytes,
+  so `targets` saw the `_object_simple` target change on every rebuild and
+  re-ran every fit below it. The model's content hash (`ui$md5`) is
+  unaffected.
 
 * `nlmixr_data_simplify()` now treats an explicit `object = NULL` as "not
   supplied", like a missing argument, so it gives the documented

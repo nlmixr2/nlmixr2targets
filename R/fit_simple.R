@@ -25,7 +25,7 @@
 #' @seealso [tar_nlmixr()], [nlmixr_object_simplify()].
 #' @export
 nlmixr_fit_simple <- function(object, data, est, control, table,
-                             error = c("stop", "continue"), description = NULL) {
+                              error = c("stop", "continue"), description = NULL) {
   error <- match.arg(error)
   # A failed upstream step (object or data simplification under
   # error = "continue") reaches here as a sentinel in place of the simplified
@@ -40,14 +40,17 @@ nlmixr_fit_simple <- function(object, data, est, control, table,
     # being estimated.
     message("Model description: ", description)
   }
-  ui <- object
   if (identical(error, "continue")) {
     tryCatch(
-      nlmixr_fit_simple_run(ui = ui, data = data, est = est, control = control, table = table),
+      nlmixr_fit_simple_run(
+        ui = object, data = data, est = est, control = control, table = table
+      ),
       error = function(e) nlmixr2targets_error_object(e)
     )
   } else {
-    nlmixr_fit_simple_run(ui = ui, data = data, est = est, control = control, table = table)
+    nlmixr_fit_simple_run(
+      ui = object, data = data, est = est, control = control, table = table
+    )
   }
 }
 

@@ -76,8 +76,12 @@ nlmixr_object_simplify <- function(object,
       rm(list = ls(envir = ret$meta, all.names = TRUE), envir = ret$meta)
       # The ui also keeps the model function it was built from, labels and all.
       # Nothing reads it -- $model is derived and a fit works without it -- so a
-      # label-only edit would otherwise change the object for no reason.
-      rm(list = "model", envir = ret)
+      # label-only edit would otherwise change the object for no reason.  rm()
+      # only warns on a missing binding, so guard it rather than warn on every
+      # build if a later rxode2 drops it; a test pins that it is gone.
+      if (exists("model", envir = ret, inherits = FALSE)) {
+        rm(list = "model", envir = ret)
+      }
       # Two sessions serialize an identical model to different bytes unless the
       # translation timestamps go.  A linCmt() model carries a second
       # rxModelVars in mvL that needs the same treatment.  ret$md5 is unaffected.
