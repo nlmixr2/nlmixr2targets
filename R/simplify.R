@@ -67,15 +67,42 @@ nlmixr_object_simplify <- function(object,
       attr(object, "srcref") <- NULL
       object <- nlmixr_object_simplify_zero_initial(object)
       ret <- nlmixr2est::nlmixr(object)
+      # Everything below writes to the ui.  nlmixr2est::nlmixr() hands back the
+      # environment form today, but a compressed rxUi is a list whose fixed
+      # components refuse assignment, so those writes would error on one.
+      # Decompressing is a no-op on an environment and preserves md5 either way.
+      ret <- rxode2::rxUiDecompress(ret)
       # Strip parameter labels and the meta environment so they do not
       # contribute to the cache hash. The rxUi's iniDf setter is an active
       # binding, so writing NA_character_ here also refreshes ret$md5 (which is
       # what save_nlmixr2obj_indirect() keys the cache file by).
       ret$iniDf$label <- NA_character_
       rm(list = ls(envir = ret$meta, all.names = TRUE), envir = ret$meta)
+      # Two sessions serialize an identical model to different bytes unless the
+      # translation timestamps go.  A linCmt() model carries a second
+      # rxModelVars in mvL that needs the same treatment.  ret$md5 is unaffected.
+      ret$mv0 <- nlmixr_clear_time_id(ret$mv0)
+      if (!is.null(ret$mvL)) {
+        ret$mvL <- nlmixr_clear_time_id(ret$mvL)
+      }
       save_nlmixr2obj_indirect(ret, directory = directory)
     }
   })
+}
+
+# rxode2 stamps rxModelVars$timeId with as.integer(Sys.time()) the first time a
+# model is translated in a session (see rxode2:::.rxTimeId).  Nothing reads the
+# value back, and rxode2's own parse-only path writes -1L, so replacing it with
+# that sentinel makes the model vars serialize identically in every session.
+nlmixr_clear_time_id <- function(model_vars) {
+  checkmate::assert_class(model_vars, "rxModelVars")
+  # Assigning unconditionally would add the field rather than clear it once
+  # rxode2 stops storing it, leaving the object carrying a slot rxode2's own
+  # model vars do not have.
+  if ("timeId" %in% names(model_vars)) {
+    model_vars$timeId <- -1L
+  }
+  model_vars
 }
 
 #' Re-attach labels, metadata, and original data to a simplified fit

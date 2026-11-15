@@ -1004,3 +1004,77 @@ test_that("nlmixr_object_complicate passes a failure sentinel through unchanged"
   expect_identical(out, sentinel)
   expect_s3_class(out, "nlmixr2targetsError")
 })
+
+# `linCmt()` keeps a second rxModelVars in the ui's `mvL`, which is where
+# clearing only `mv0` was not enough.
+pheno_linCmt <- function() {
+  ini({
+    lcl <- log(0.008)
+    lvc <- log(0.6)
+    etalcl ~ 1
+    cpaddSd <- 0.1
+  })
+  model({
+    cl <- exp(lcl + etalcl)
+    vc <- exp(lvc)
+    cp <- linCmt()
+    cp ~ add(cpaddSd)
+  })
+}
+
+# timeId is the wall-clock time of a model's first translation in the session,
+# so leaving it in makes the same model serialize to different bytes in every
+# session.  -1L is what rxode2's own parse-only path writes.  rxode2 is
+# expected to drop the field, and then there is nothing to clear and nothing
+# to assert, so say so rather than fail.
+expect_time_id_cleared <- function(model_vars) {
+  if ("timeId" %in% names(model_vars)) {
+    expect_identical(model_vars$timeId, -1L)
+  } else {
+    succeed("rxode2 no longer stores timeId")
+  }
+}
+
+test_that("nlmixr_object_simplify writes a session-independent object", {
+  saved <- readRDS(file.path(.simplify_cache_dir, model_simple))
+  expect_time_id_cleared(saved$mv0)
+  expect_s3_class(saved$mv0, "rxModelVars")
+  # The decompressed form is what gets saved: a compressed rxUi is a list whose
+  # fixed components cannot be written to.
+  expect_type(saved, "environment")
+
+  # Clearing it must not move the content hash the cache file is named by, or
+  # entries written by earlier versions are orphaned.
+  ui <- suppressMessages(suppressWarnings(nlmixr2est::nlmixr(pheno)))
+  md5_before <- ui$md5
+  ui$mv0 <- nlmixr_clear_time_id(ui$mv0)
+  expect_identical(ui$md5, md5_before)
+
+  # A linCmt() model has a second set of model vars with its own timestamp.
+  linCmt_md5 <-
+    suppressMessages(suppressWarnings(
+      nlmixr_object_simplify(pheno_linCmt, directory = .simplify_cache_dir)
+    ))
+  linCmt_saved <- readRDS(file.path(.simplify_cache_dir, linCmt_md5))
+  expect_false(is.null(linCmt_saved$mvL))
+  expect_time_id_cleared(linCmt_saved$mv0)
+  expect_time_id_cleared(linCmt_saved$mvL)
+})
+
+test_that("nlmixr_clear_time_id refuses anything but model vars", {
+  expect_error(nlmixr_clear_time_id(list(timeId = 1L)), "rxModelVars")
+})
+
+test_that("nlmixr_clear_time_id leaves model vars without a timeId alone", {
+  # rxode2 is expected to drop timeId.  Clearing it then must do nothing
+  # rather than add a slot rxode2's own model vars do not have.
+  with_id <- structure(
+    list(params = "a", timeId = 1794690000L),
+    class = "rxModelVars"
+  )
+  expect_identical(nlmixr_clear_time_id(with_id)$timeId, -1L)
+
+  without_id <- structure(list(params = "a"), class = "rxModelVars")
+  expect_identical(nlmixr_clear_time_id(without_id), without_id)
+  expect_false("timeId" %in% names(nlmixr_clear_time_id(without_id)))
+})
