@@ -7,12 +7,12 @@
 #' to a "nlmixrui" object.
 #'
 #' Object metadata (`ui$meta`) and parameter labels (`ui$iniDf$label`) are
-#' also stripped from the simplified object before it is written to the
-#' indirect cache. They do not affect estimation, and stripping them keeps
-#' the cache hash stable across edits to either, so editing only labels or
-#' metadata will not invalidate the cached fit. The stripped values are
-#' restored on the final fit by [nlmixr_object_complicate()], which reads
-#' them straight back off the original model.
+#' also stripped from the simplified object. They do not affect estimation,
+#' and stripping them keeps the simplified object unchanged across edits to
+#' either, so editing only labels or metadata will not invalidate a fit. The
+#' stripped values are restored on the final fit by
+#' [nlmixr_object_complicate()], which reads them straight back off the
+#' original model.
 #'
 #' The natural nlmixr2 DSL form for compartment initial conditions
 #' (`cmt(0) <- value` inside a `model({...})` block) trips `targets`'
@@ -33,21 +33,18 @@
 #' `tar_make()`) after `tar_nlmixr()` will see `cmt(initial)` in its
 #' body.
 #'
-#' The simplified model's `model.name` is always set to `"object"`. This keeps
-#' the simplified output stable so that the MD5 hash used by the `targets`
-#' indirect cache is independent of the symbol the caller bound the model
+#' The simplified model's `model.name` is always set to `"object"`, so the
+#' simplified output does not depend on the symbol the caller bound the model
 #' function to.
 #'
 #' @inheritParams nlmixr2est::nlmixr
-#' @inheritParams nlmixr2_indirect
-#' @returns The MD5 hash used to load the simplified `nlmixrui` object back
-#'   from the `nlmixr2targets` indirect cache.
+#' @inheritParams nlmixr_fit_simple
+#' @returns The simplified `nlmixrui` object.
 #' @family Simplifiers
 #' @seealso [nlmixr_object_complicate()] for the inverse operation that
 #'   re-attaches labels, metadata, and the original data on the final fit.
 #' @export
 nlmixr_object_simplify <- function(object,
-                                   directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"),
                                    error = c("stop", "continue")) {
   error <- match.arg(error)
   # The whole block is inside the wrapper -- including the first touch of
@@ -73,11 +70,14 @@ nlmixr_object_simplify <- function(object,
       # Decompressing is a no-op on an environment and preserves md5 either way.
       ret <- rxode2::rxUiDecompress(ret)
       # Strip parameter labels and the meta environment so they do not
-      # contribute to the cache hash. The rxUi's iniDf setter is an active
-      # binding, so writing NA_character_ here also refreshes ret$md5 (which is
-      # what save_nlmixr2obj_indirect() keys the cache file by).
+      # contribute to the hash. The rxUi's iniDf setter is an active binding,
+      # so writing NA_character_ here also refreshes ret$md5.
       ret$iniDf$label <- NA_character_
       rm(list = ls(envir = ret$meta, all.names = TRUE), envir = ret$meta)
+      # The ui also keeps the model function it was built from, labels and all.
+      # Nothing reads it -- $model is derived and a fit works without it -- so a
+      # label-only edit would otherwise change the object for no reason.
+      rm(list = "model", envir = ret)
       # Two sessions serialize an identical model to different bytes unless the
       # translation timestamps go.  A linCmt() model carries a second
       # rxModelVars in mvL that needs the same treatment.  ret$md5 is unaffected.
@@ -85,7 +85,7 @@ nlmixr_object_simplify <- function(object,
       if (!is.null(ret$mvL)) {
         ret$mvL <- nlmixr_clear_time_id(ret$mvL)
       }
-      save_nlmixr2obj_indirect(ret, directory = directory)
+      ret
     }
   })
 }
@@ -119,10 +119,9 @@ nlmixr_clear_time_id <- function(model_vars) {
 #' }
 #'
 #' This is what makes label/meta edits in the source model cheap under
-#' `targets`: the cache hash for the simplified model object is independent
-#' of labels and metadata, so `tar_make()` only re-runs this re-attachment
-#' step (and the cheap `_object_simple` step) when only labels or metadata
-#' change.
+#' `targets`: the simplified model object is independent of labels and
+#' metadata, so `tar_make()` only re-runs this re-attachment step (and the
+#' cheap `_object_simple` step) when only labels or metadata change.
 #'
 #' This function is typically not invoked directly by end users; it is the
 #' command for the final target produced by [tar_nlmixr()].
@@ -140,7 +139,7 @@ nlmixr_clear_time_id <- function(model_vars) {
 #' @export
 nlmixr_object_complicate <- function(fit, object, data) {
   # When tar_nlmixr(error = "continue") was used and the estimation step
-  # failed, `fit` is the failure sentinel produced by nlmixr2_indirect()
+  # failed, `fit` is the failure sentinel produced by nlmixr_fit_simple()
   # rather than a real nlmixr2 fit. There is nothing to re-attach (no ui, no
   # origData), so pass it straight through and let the pipeline finish with
   # the failure recorded on the final target.
@@ -477,37 +476,29 @@ nlmixr_object_zero_initial_eval <- function(expr, envir = parent.frame()) {
 #' lines of a model, or running on a worker with a different locale, does not
 #' change the value and does not rebuild the simplified data.
 #'
-#' @inheritParams nlmixr2_indirect
-#' @param object Either an `nlmixr` ui object (e.g. the output of running
-#'   \code{nlmixr(object = model)}) or a character md5 hash identifying a
-#'   simplified ui in the `nlmixr2targets` indirect cache (the form used in
-#'   targets generated by [tar_nlmixr()]).
+#' @inheritParams nlmixr_fit_simple
+#' @param object An `nlmixr` ui object (e.g. the output of running
+#'   \code{nlmixr(object = model)}).
 #' @returns A sorted character vector of the covariate names and the
 #'   occasion-level grouping variable names, possibly empty.
 #' @family Simplifiers
 #' @export
 nlmixr_object_covariates <- function(object,
-                                     directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"),
                                      error = c("stop", "continue")) {
   error <- match.arg(error)
   # Under error = "continue" the upstream object-simplification step reaches
-  # here as a sentinel in place of the model hash; pass it through.
+  # here as a sentinel in place of the simplified object; pass it through.
   if (inherits(object, "nlmixr2targetsError")) return(object)
   nlmixr2targets_run_continue(error, {
-    # `object` is either a character md5 hash (the form used by generated
-    # targets) or an nlmixr-style ui / fit object. Tibbles are valid because
+    # `object` is an nlmixr-style ui or fit object. Tibbles are valid because
     # nlmixr2 fits subclass tbl_df with active bindings for `$ui` etc., so a
     # checkmate::check_list assert (class-strict) would reject them. Use
     # base R `is.list()` (which IS TRUE for data.frames) instead.
-    if (is.character(object)) {
-      checkmate::assert_string(object, min.chars = 1)
-      # load from the hash
-      object <- read_nlmixr2obj_indirect(hash = object, directory = directory)
-    } else if (!is.list(object) && !is.environment(object)) {
+    if (!is.list(object) && !is.environment(object)) {
       stop(
-        "`object` must be a character md5 hash, an nlmixr ui object, ",
-        "or a list/environment that supports `$ui` / `$all.covs`; got ",
-        "object of class '", paste(class(object), collapse = "/"), "'."
+        "`object` must be an nlmixr ui object, or a list/environment that ",
+        "supports `$ui` / `$all.covs`; got object of class '",
+        paste(class(object), collapse = "/"), "'."
       )
     }
     ui <- if (!is.null(object$ui)) object$ui else object
@@ -572,10 +563,9 @@ nlmixr_object_iov_variables <- function(ui) {
 #' simplified data.
 #'
 #' @inheritParams nlmixr2est::nlmixr
-#' @inheritParams nlmixr2_indirect
-#' @param object The model, in either form [nlmixr_object_covariates()]
-#'   accepts: an `nlmixr` ui object, or a character md5 hash identifying a
-#'   simplified ui in the `nlmixr2targets` indirect cache.
+#' @inheritParams nlmixr_fit_simple
+#' @param object The model, in the form [nlmixr_object_covariates()]
+#'   accepts: an `nlmixr` ui object.
 #' @param covariates The model's covariate column names, as returned by
 #'   [nlmixr_object_covariates()].  Supply exactly one of `object` and
 #'   `covariates`.
@@ -584,7 +574,6 @@ nlmixr_object_iov_variables <- function(ui) {
 #' @family Simplifiers
 #' @export
 nlmixr_data_simplify <- function(data, object, table = list(),
-                                 directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"),
                                  est = NULL, control = NULL, covariates = NULL,
                                  error = c("stop", "continue")) {
   error <- match.arg(error)
@@ -609,7 +598,7 @@ nlmixr_data_simplify <- function(data, object, table = list(),
       stop("Supply exactly one of `object` and `covariates`")
     }
     if (is.null(covariates)) {
-      covariates <- nlmixr_object_covariates(object = object, directory = directory)
+      covariates <- nlmixr_object_covariates(object = object)
     } else {
       checkmate::assert_character(covariates, min.chars = 1, any.missing = FALSE, unique = TRUE)
     }
@@ -669,8 +658,8 @@ nlmixr_data_simplify_cols <- function(data, cols, type) {
 #'
 #' Most estimation methods only use the columns `nlmixr_data_simplify()`
 #' already keeps; a method that reads more of the data gets a case here so
-#' that its extra columns stay in the simplified data (and therefore in the
-#' `targets` cache hash).
+#' that its extra columns stay in the simplified data (and therefore in what
+#' `targets` hashes).
 #'
 #' @inheritParams nlmixr_data_simplify
 #' @returns Character vector of additional column names of `data` to keep

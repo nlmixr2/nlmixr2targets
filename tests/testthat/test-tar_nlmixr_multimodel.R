@@ -267,7 +267,7 @@ test_that("tar_nlmixr_multimodel wraps piped entries that reference a shared cmt
   expect_true(is_wrapped(target_list[[2]]))
 })
 
-# The `description` argument spliced into a model's nlmixr2_indirect() call,
+# The `description` argument spliced into a model's nlmixr_fit_simple() call,
 # or NULL when the model does not announce itself.
 fit_simple_description <- function(single_target) {
   single_target$fit_simple$command$expr[[1]][["description"]]
@@ -506,17 +506,12 @@ test_that("tar_nlmixr_multimodel works for within-list model piping (#19), direc
   expect_true(grepl(x = as.character(collating_call[[3]]), pattern = "^foo_[0-9a-f]{8}$"))
   expect_equal(names(collating_call), c("", "my first model", "my second model"))
 
-  # Verify the dependent target is created correctly. The substituted
-  # command now also threads `directory` through every call so the cache
-  # path resolves against the user-chosen targets store at execution time.
+  # Verify the dependent target is created correctly.
   expect_true(rxode2::.matchesLangTemplate(
     x = target_list[[2]]$object_simple$command$expr[[1]],
     template =
       str2lang(sprintf(
-        paste0(
-          "nlmixr_object_simplify(object = rxode2::ini(%s, lcl = log(0.01)), ",
-          "directory = file.path(targets::tar_config_get(\"store\"), \"user/nlmixr2\"))"
-        ),
+        "nlmixr_object_simplify(object = rxode2::ini(%s, lcl = log(0.01)))",
         target_list[[1]]$fit_simple$settings$name
       ))
   ))

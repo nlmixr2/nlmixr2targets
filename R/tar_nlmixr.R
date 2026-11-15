@@ -262,21 +262,13 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table,
 
   object <- tar_nlmixr_protect_zero_initial(object, env = env)
 
-  # Build the cache-directory expression once and splice it into each
-  # generated target command, mirroring how `targets::tar_make()` and
-  # friends default `store = targets::tar_config_get("store")`. The path
-  # resolves at target-execution time, so the cache always sits inside
-  # whatever store the user has configured for their `tar_make()` call.
-  directory_expr <- quote(file.path(targets::tar_config_get("store"), "user/nlmixr2"))
-
   fit_simple_command <-
     substitute(
-      nlmixr2_indirect(
+      nlmixr_fit_simple(
         object = object_simple_name,
         data = data_simple_name,
         est = est,
         control = control,
-        directory = directory,
         error = error
       ),
       list(
@@ -284,7 +276,6 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table,
         data_simple_name = as.name(data_simple_name),
         est = est,
         control = control,
-        directory = directory_expr,
         error = error
       )
     )
@@ -322,13 +313,13 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table,
 
   object_simple_command <-
     substitute(
-      nlmixr_object_simplify(object = object, directory = directory),
-      list(object = object, directory = directory_expr)
+      nlmixr_object_simplify(object = object),
+      list(object = object)
     )
   covariates_command <-
     substitute(
-      nlmixr_object_covariates(object = object_simple, directory = directory),
-      list(object_simple = as.name(object_simple_name), directory = directory_expr)
+      nlmixr_object_covariates(object = object_simple),
+      list(object_simple = as.name(object_simple_name))
     )
   data_simple_command <-
     substitute(

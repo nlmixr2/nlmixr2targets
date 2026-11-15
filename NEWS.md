@@ -1,6 +1,42 @@
 # nlmixr2targets 0.1.0.9000
 
+## Breaking changes
+
+* `nlmixr_object_simplify()` now returns the simplified `nlmixrui` object
+  rather than an md5 hash, and the object travels between targets as an
+  ordinary target value. The indirect cache under
+  `<targets store>/user/nlmixr2` is gone, along with the `directory` arguments
+  of `nlmixr_object_simplify()`, `nlmixr_object_covariates()`,
+  `nlmixr_data_simplify()` and `nlmixr_fit_simple()`, and the
+  `nlmixr2targets_cache_status()` and `nlmixr2targets_cache_prune()`
+  functions. Delete that directory by hand to reclaim the space.
+
+  Every pipeline re-runs its fits once after upgrading: the `_object_simple`
+  target's value changes from a string to an object, and the generated
+  commands no longer carry `directory`, so both hashes `targets` compares
+  change.
+
+  What the cache bought was a dependency hash for the fit that tracked the
+  model's content rather than the rxUi's internals. Edits to labels and
+  metadata are still insulated, because the simplified object strips them and
+  no longer carries the model function. Anything else inside an rxUi is not:
+  a change there now invalidates the fits that depend on it, and because an
+  rxUi does not serialize identically across platforms, so does rebuilding an
+  `_object_simple` target on a different platform from the one that built it
+  last. What the cache cost was a file on one machine's disk, which a pipeline
+  whose workers run on other machines cannot read back -- the reason for this
+  change.
+
 ## New features
+
+* `nlmixr2_indirect()` is renamed `nlmixr_fit_simple()`: nothing is indirect
+  about it now, and the new name matches the `_fit_simple` target it is the
+  command for, and the `nlmixr_*` family it belongs to.
+
+* The simplified object no longer carries the model function it was built
+  from. Nothing read it -- `$model` is derived, and estimation works without
+  it -- and it held the `label()` calls, so keeping it would have made a
+  label-only edit change the object.
 
 * The final `<name>` target of `tar_nlmixr()` now emits `fitUpdate` (the restored
   labels and data) and `assign` (the target name) on the rxode2 event bus
@@ -71,8 +107,8 @@
 * The generated targets now run on a worker that has attached nothing but the
   target's own `packages`, such as a `crew` worker on another machine or in a
   fresh container. The estimation (`_fit_simple`) target called
-  `nlmixr2_indirect()` while declaring only `nlmixr2est`, and failed with
-  `could not find function "nlmixr2_indirect"`. The final target evaluated the
+  `nlmixr_fit_simple()` while declaring only `nlmixr2est`, and failed with
+  `could not find function "nlmixr_fit_simple"`. The final target evaluated the
   model expression (e.g. `pheno |> ini(...)`) without `nlmixr2est`, so `ini()`
   was not found. All four targets per model now load `nlmixr2targets` and
   `nlmixr2est`. The combined list target of `tar_nlmixr_multimodel()` loads no
