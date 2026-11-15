@@ -85,7 +85,8 @@
   in two sessions previously gave objects that serialized to different bytes,
   so `targets` saw the `_object_simple` target change on every rebuild and
   re-ran every fit below it. The model's content hash (`ui$md5`) is
-  unaffected.
+  unaffected. The clearing is conditional on the field being present, so it
+  stays correct when a later rxode2 stops storing it.
 
 * `nlmixr_data_simplify()` now treats an explicit `object = NULL` as "not
   supplied", like a missing argument, so it gives the documented

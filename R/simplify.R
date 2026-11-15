@@ -100,7 +100,12 @@ nlmixr_object_simplify <- function(object,
 # that sentinel makes the model vars serialize identically in every session.
 nlmixr_clear_time_id <- function(model_vars) {
   checkmate::assert_class(model_vars, "rxModelVars")
-  model_vars$timeId <- -1L
+  # Assigning unconditionally would add the field rather than clear it once
+  # rxode2 stops storing it, leaving the object carrying a slot rxode2's own
+  # model vars do not have.
+  if ("timeId" %in% names(model_vars)) {
+    model_vars$timeId <- -1L
+  }
   model_vars
 }
 

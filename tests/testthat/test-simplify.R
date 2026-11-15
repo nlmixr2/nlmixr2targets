@@ -1007,13 +1007,22 @@ pheno_linCmt <- function() {
   })
 }
 
+# timeId is the wall-clock time of a model's first translation in the session,
+# so leaving it in makes the same model serialize to different bytes in every
+# session.  The object is a target value now, so targets hashes it and a
+# drifting field would re-run every fit.  -1L is what rxode2's own parse-only
+# path writes.  rxode2 is expected to drop the field, and then there is nothing
+# to clear and nothing to assert, so say so rather than fail.
+expect_time_id_cleared <- function(model_vars) {
+  if ("timeId" %in% names(model_vars)) {
+    expect_identical(model_vars$timeId, -1L)
+  } else {
+    succeed("rxode2 no longer stores timeId")
+  }
+}
+
 test_that("nlmixr_object_simplify returns a session-independent object", {
-  # timeId is the wall-clock time of the model's first translation in the
-  # session, so leaving it in makes the same model serialize to different bytes
-  # in every session.  The object is a target value now, so targets hashes it
-  # and a drifting field would re-run every fit.  -1L is what rxode2's own
-  # parse-only path writes.
-  expect_identical(model_simple$mv0$timeId, -1L)
+  expect_time_id_cleared(model_simple$mv0)
   expect_s3_class(model_simple$mv0, "rxModelVars")
   # The decompressed form is what is returned: a compressed rxUi is a list
   # whose fixed components cannot be written to.
@@ -1031,10 +1040,24 @@ test_that("nlmixr_object_simplify returns a session-independent object", {
       nlmixr_object_simplify(pheno_linCmt)
     ))
   expect_false(is.null(linCmt_simple$mvL))
-  expect_identical(linCmt_simple$mv0$timeId, -1L)
-  expect_identical(linCmt_simple$mvL$timeId, -1L)
+  expect_time_id_cleared(linCmt_simple$mv0)
+  expect_time_id_cleared(linCmt_simple$mvL)
 })
 
 test_that("nlmixr_clear_time_id refuses anything but model vars", {
   expect_error(nlmixr_clear_time_id(list(timeId = 1L)), "rxModelVars")
+})
+
+test_that("nlmixr_clear_time_id leaves model vars without a timeId alone", {
+  # rxode2 is expected to drop timeId.  Clearing it then must do nothing
+  # rather than add a slot rxode2's own model vars do not have.
+  with_id <- structure(
+    list(params = "a", timeId = 1794690000L),
+    class = "rxModelVars"
+  )
+  expect_identical(nlmixr_clear_time_id(with_id)$timeId, -1L)
+
+  without_id <- structure(list(params = "a"), class = "rxModelVars")
+  expect_identical(nlmixr_clear_time_id(without_id), without_id)
+  expect_false("timeId" %in% names(nlmixr_clear_time_id(without_id)))
 })
