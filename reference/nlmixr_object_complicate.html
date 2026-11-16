@@ -93,10 +93,9 @@ still stripped – so restoring <code>iniDf$label</code> alone would not make th
 labels show when the fit is printed, and</p></li>
 <li><p>replaces <code>fit$env$origData</code> with the original <code>data</code>.</p></li>
 </ul><p>This is what makes label/meta edits in the source model cheap under
-<code>targets</code>: the cache hash for the simplified model object is independent
-of labels and metadata, so <code><a href="https://docs.ropensci.org/targets/reference/tar_make.html" class="external-link">tar_make()</a></code> only re-runs this re-attachment
-step (and the cheap <code>_object_simple</code> step) when only labels or metadata
-change.</p>
+<code>targets</code>: the simplified model object is independent of labels and
+metadata, so <code><a href="https://docs.ropensci.org/targets/reference/tar_make.html" class="external-link">tar_make()</a></code> only re-runs this re-attachment step (and the
+cheap <code>_object_simple</code> step) when only labels or metadata change.</p>
 <p>This function is typically not invoked directly by end users; it is the
 command for the final target produced by <code><a href="tar_nlmixr.html">tar_nlmixr()</a></code>.</p>
     </div>

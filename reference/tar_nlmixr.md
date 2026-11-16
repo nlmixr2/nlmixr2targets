@@ -431,19 +431,15 @@ are left out on purpose:
 
 ## Running the generated targets on a remote worker
 
-The simplified model is written to
-`file.path(tar_config_get("store"), "user/nlmixr2")` by the
-`_object_simple` target and read back from there by the `_covariates`
-and estimation (`_fit_simple`) targets. That is a path, not a value
-passed between targets, so the three must agree on it: sending only the
-estimation target to a worker whose filesystem does not carry the same
-store leaves it unable to find the model. `resources_fit` covers all
-three, so leave it as one set of resources that runs them together, or
-put the store somewhere every worker reaches.
+The simplified model is the value of the `_object_simple` target, so
+`targets` carries it to whichever worker runs the `_covariates` and
+estimation (`_fit_simple`) targets. Nothing is read from a path, so the
+three need not run in the same place and the workers need not share a
+filesystem.
 
-The `_data_simple` target reads neither that directory nor the model: it
-receives the covariate names as the value of the `_covariates` target.
-It can therefore run anywhere that can evaluate `data`, which is what
+The `_data_simple` target does not receive the model at all: it gets the
+covariate names as the value of the `_covariates` target. It can
+therefore run anywhere that can evaluate `data`, which is what
 `resources_data` is for – for example, preparing the data on a small
 local controller while the fits run on a larger one. `deployment` is not
 split, so it still applies to every generated target.
@@ -510,8 +506,7 @@ tar_nlmixr(
 #>   name: pheno_model_object_simple 
 #>   description:  
 #>   command:
-#>     nlmixr_object_simplify(object = pheno, directory = file.path(targets::tar_config_get("store"), 
-#>         "user/nlmixr2")) 
+#>     nlmixr_object_simplify(object = pheno) 
 #>   format: rds 
 #>   repository: local 
 #>   iteration method: vector 
@@ -542,8 +537,7 @@ tar_nlmixr(
 #>   name: pheno_model_covariates 
 #>   description:  
 #>   command:
-#>     nlmixr_object_covariates(object = pheno_model_object_simple, 
-#>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) 
+#>     nlmixr_object_covariates(object = pheno_model_object_simple) 
 #>   format: rds 
 #>   repository: local 
 #>   iteration method: vector 
@@ -607,9 +601,8 @@ tar_nlmixr(
 #>   name: pheno_model_fit_simple 
 #>   description:  
 #>   command:
-#>     nlmixr2_indirect(object = pheno_model_object_simple, 
+#>     nlmixr_fit_simple(object = pheno_model_object_simple, 
 #>         data = pheno_model_data_simple, est = "saem", control = list(), 
-#>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"), 
 #>         error = "stop") 
 #>   format: rds 
 #>   repository: local 

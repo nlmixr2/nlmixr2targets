@@ -146,9 +146,3 @@ the function errors out at construction time with a clear message.
   not invalidate `_fit_simple` thanks to the strip-restore behaviour.
   See
   [`vignette("caching", package = "nlmixr2targets")`](https://nlmixr2.github.io/nlmixr2targets/articles/caching.md).
-- **Watch the indirect cache.** Iterative model edits leave orphaned
-  cache entries. Use
-  [`nlmixr2targets_cache_status()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr2targets_cache_status.md)
-  and
-  [`nlmixr2targets_cache_prune()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr2targets_cache_prune.md)
-  periodically.

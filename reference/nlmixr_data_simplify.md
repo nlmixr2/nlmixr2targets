@@ -9,7 +9,6 @@ nlmixr_data_simplify(
   data,
   object,
   table = list(),
-  directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"),
   est = NULL,
   control = NULL,
   covariates = NULL,
@@ -25,27 +24,13 @@ nlmixr_data_simplify(
 
 - object:
 
-  The model, in either form
+  The model, in the form
   [`nlmixr_object_covariates()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_object_covariates.md)
-  accepts: an `nlmixr` ui object, or a character md5 hash identifying a
-  simplified ui in the `nlmixr2targets` indirect cache.
+  accepts: an `nlmixr` ui object.
 
 - table:
 
   The output table control object (like \`tableControl()\`)
-
-- directory:
-
-  Cache directory to load the simplified `nlmixrui` from. Defaults to
-  `file.path(targets::tar_config_get("store"), "user/nlmixr2")`,
-  mirroring the convention used by `targets`' own
-  `store = targets::tar_config_get("store")` defaults — the path
-  resolves at call time against whatever store the user has configured
-  for the running
-  [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
-  (e.g. a [`tempdir()`](https://rdrr.io/r/base/tempfile.html) location
-  set via
-  [`targets::tar_config_set()`](https://docs.ropensci.org/targets/reference/tar_config_set.html)).
 
 - est:
 

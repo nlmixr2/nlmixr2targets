@@ -453,15 +453,13 @@ prints.  Set the <code>targets</code> versions with <code><a href="https://docs.
     <h2 id="running-the-generated-targets-on-a-remote-worker">Running the generated targets on a remote worker<a class="anchor" aria-label="anchor" href="#running-the-generated-targets-on-a-remote-worker"></a></h2>
 
 
-<p>The simplified model is written to <code>file.path(tar_config_get("store"), "user/nlmixr2")</code> by the <code>_object_simple</code> target and read back from there by
-the <code>_covariates</code> and estimation (<code>_fit_simple</code>) targets.  That is a path,
-not a value passed between targets, so the three must agree on it: sending
-only the estimation target to a worker whose filesystem does not carry the
-same store leaves it unable to find the model.  <code>resources_fit</code> covers all
-three, so leave it as one set of resources that runs them together, or put
-the store somewhere every worker reaches.</p>
-<p>The <code>_data_simple</code> target reads neither that directory nor the model: it
-receives the covariate names as the value of the <code>_covariates</code> target.  It
+<p>The simplified model is the value of the <code>_object_simple</code> target, so
+<code>targets</code> carries it to whichever worker runs the <code>_covariates</code> and
+estimation (<code>_fit_simple</code>) targets.  Nothing is read from a path, so the
+three need not run in the same place and the workers need not share a
+filesystem.</p>
+<p>The <code>_data_simple</code> target does not receive the model at all: it gets the
+covariate names as the value of the <code>_covariates</code> target.  It
 can therefore run anywhere that can evaluate <code>data</code>, which is what
 <code>resources_data</code> is for – for example, preparing the data on a small local
 controller while the fits run on a larger one.  <code>deployment</code> is not split,
@@ -529,8 +527,7 @@ dataset.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   name: pheno_model_object_simple </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   description:  </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   command:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr_object_simplify(object = pheno, directory = file.path(targets::tar_config_get("store"), </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>         "user/nlmixr2")) </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr_object_simplify(object = pheno) </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   format: rds </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   repository: local </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   iteration method: vector </span>
@@ -561,8 +558,7 @@ dataset.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   name: pheno_model_covariates </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   description:  </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   command:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr_object_covariates(object = pheno_model_object_simple, </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr_object_covariates(object = pheno_model_object_simple) </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   format: rds </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   repository: local </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   iteration method: vector </span>
@@ -626,9 +622,8 @@ dataset.</p></div>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   name: pheno_model_fit_simple </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   description:  </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   command:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr2_indirect(object = pheno_model_object_simple, </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr_fit_simple(object = pheno_model_object_simple, </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         data = pheno_model_data_simple, est = "saem", control = list(), </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"), </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         error = "stop") </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   format: rds </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   repository: local </span>

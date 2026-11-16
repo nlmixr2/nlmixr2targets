@@ -319,8 +319,7 @@ tar_nlmixr_multimodel(
 #>   name: all_models_8ae20c5c_object_simple 
 #>   description:  
 #>   command:
-#>     nlmixr_object_simplify(object = pheno, directory = file.path(targets::tar_config_get("store"), 
-#>         "user/nlmixr2")) 
+#>     nlmixr_object_simplify(object = pheno) 
 #>   format: rds 
 #>   repository: local 
 #>   iteration method: vector 
@@ -351,8 +350,7 @@ tar_nlmixr_multimodel(
 #>   name: all_models_8ae20c5c_covariates 
 #>   description:  
 #>   command:
-#>     nlmixr_object_covariates(object = all_models_8ae20c5c_object_simple, 
-#>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) 
+#>     nlmixr_object_covariates(object = all_models_8ae20c5c_object_simple) 
 #>   format: rds 
 #>   repository: local 
 #>   iteration method: vector 
@@ -416,9 +414,8 @@ tar_nlmixr_multimodel(
 #>   name: all_models_8ae20c5c_fit_simple 
 #>   description:  
 #>   command:
-#>     nlmixr2_indirect(object = all_models_8ae20c5c_object_simple, 
+#>     nlmixr_fit_simple(object = all_models_8ae20c5c_object_simple, 
 #>         data = all_models_8ae20c5c_data_simple, est = "saem", control = list(), 
-#>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"), 
 #>         error = "stop") 
 #>   format: rds 
 #>   repository: local 
@@ -484,8 +481,7 @@ tar_nlmixr_multimodel(
 #>   name: all_models_b0a374c4_object_simple 
 #>   description:  
 #>   command:
-#>     nlmixr_object_simplify(object = pheno2, directory = file.path(targets::tar_config_get("store"), 
-#>         "user/nlmixr2")) 
+#>     nlmixr_object_simplify(object = pheno2) 
 #>   format: rds 
 #>   repository: local 
 #>   iteration method: vector 
@@ -516,8 +512,7 @@ tar_nlmixr_multimodel(
 #>   name: all_models_b0a374c4_covariates 
 #>   description:  
 #>   command:
-#>     nlmixr_object_covariates(object = all_models_b0a374c4_object_simple, 
-#>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) 
+#>     nlmixr_object_covariates(object = all_models_b0a374c4_object_simple) 
 #>   format: rds 
 #>   repository: local 
 #>   iteration method: vector 
@@ -581,9 +576,8 @@ tar_nlmixr_multimodel(
 #>   name: all_models_b0a374c4_fit_simple 
 #>   description:  
 #>   command:
-#>     nlmixr2_indirect(object = all_models_b0a374c4_object_simple, 
+#>     nlmixr_fit_simple(object = all_models_b0a374c4_object_simple, 
 #>         data = all_models_b0a374c4_data_simple, est = "saem", control = list(), 
-#>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"), 
 #>         error = "stop") 
 #>   format: rds 
 #>   repository: local 

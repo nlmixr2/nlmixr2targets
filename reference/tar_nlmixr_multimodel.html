@@ -348,8 +348,7 @@ and model estimation.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   name: all_models_8ae20c5c_object_simple </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   description:  </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   command:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr_object_simplify(object = pheno, directory = file.path(targets::tar_config_get("store"), </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>         "user/nlmixr2")) </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr_object_simplify(object = pheno) </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   format: rds </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   repository: local </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   iteration method: vector </span>
@@ -380,8 +379,7 @@ and model estimation.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   name: all_models_8ae20c5c_covariates </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   description:  </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   command:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr_object_covariates(object = all_models_8ae20c5c_object_simple, </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr_object_covariates(object = all_models_8ae20c5c_object_simple) </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   format: rds </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   repository: local </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   iteration method: vector </span>
@@ -445,9 +443,8 @@ and model estimation.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   name: all_models_8ae20c5c_fit_simple </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   description:  </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   command:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr2_indirect(object = all_models_8ae20c5c_object_simple, </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr_fit_simple(object = all_models_8ae20c5c_object_simple, </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         data = all_models_8ae20c5c_data_simple, est = "saem", control = list(), </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"), </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         error = "stop") </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   format: rds </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   repository: local </span>
@@ -513,8 +510,7 @@ and model estimation.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   name: all_models_b0a374c4_object_simple </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   description:  </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   command:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr_object_simplify(object = pheno2, directory = file.path(targets::tar_config_get("store"), </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>         "user/nlmixr2")) </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr_object_simplify(object = pheno2) </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   format: rds </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   repository: local </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   iteration method: vector </span>
@@ -545,8 +541,7 @@ and model estimation.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   name: all_models_b0a374c4_covariates </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   description:  </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   command:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr_object_covariates(object = all_models_b0a374c4_object_simple, </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")) </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr_object_covariates(object = all_models_b0a374c4_object_simple) </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   format: rds </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   repository: local </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   iteration method: vector </span>
@@ -610,9 +605,8 @@ and model estimation.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   name: all_models_b0a374c4_fit_simple </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   description:  </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   command:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr2_indirect(object = all_models_b0a374c4_object_simple, </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     nlmixr_fit_simple(object = all_models_b0a374c4_object_simple, </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         data = all_models_b0a374c4_data_simple, est = "saem", control = list(), </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>         directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"), </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         error = "stop") </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   format: rds </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   repository: local </span>

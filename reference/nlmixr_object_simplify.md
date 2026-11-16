@@ -5,11 +5,7 @@ This function is typically not needed by end users.
 ## Usage
 
 ``` r
-nlmixr_object_simplify(
-  object,
-  directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"),
-  error = c("stop", "continue")
-)
+nlmixr_object_simplify(object, error = c("stop", "continue"))
 ```
 
 ## Arguments
@@ -17,19 +13,6 @@ nlmixr_object_simplify(
 - object:
 
   Fitted object or function specifying the model.
-
-- directory:
-
-  Cache directory to load the simplified `nlmixrui` from. Defaults to
-  `file.path(targets::tar_config_get("store"), "user/nlmixr2")`,
-  mirroring the convention used by `targets`' own
-  `store = targets::tar_config_get("store")` defaults — the path
-  resolves at call time against whatever store the user has configured
-  for the running
-  [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
-  (e.g. a [`tempdir()`](https://rdrr.io/r/base/tempfile.html) location
-  set via
-  [`targets::tar_config_set()`](https://docs.ropensci.org/targets/reference/tar_config_set.html)).
 
 - error:
 
@@ -48,8 +31,7 @@ nlmixr_object_simplify(
 
 ## Value
 
-The MD5 hash used to load the simplified `nlmixrui` object back from the
-`nlmixr2targets` indirect cache.
+The simplified `nlmixrui` object.
 
 ## Details
 
@@ -58,11 +40,10 @@ instead of comments to label parameters) and then converts the `object`
 to a "nlmixrui" object.
 
 Object metadata (`ui$meta`) and parameter labels (`ui$iniDf$label`) are
-also stripped from the simplified object before it is written to the
-indirect cache. They do not affect estimation, and stripping them keeps
-the cache hash stable across edits to either, so editing only labels or
-metadata will not invalidate the cached fit. The stripped values are
-restored on the final fit by
+also stripped from the simplified object. They do not affect estimation,
+and stripping them keeps the simplified object unchanged across edits to
+either, so editing only labels or metadata will not invalidate a fit.
+The stripped values are restored on the final fit by
 [`nlmixr_object_complicate()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_object_complicate.md),
 which reads them straight back off the original model.
 
@@ -92,10 +73,9 @@ after
 [`tar_nlmixr()`](https://nlmixr2.github.io/nlmixr2targets/reference/tar_nlmixr.md)
 will see `cmt(initial)` in its body.
 
-The simplified model's `model.name` is always set to `"object"`. This
-keeps the simplified output stable so that the MD5 hash used by the
-`targets` indirect cache is independent of the symbol the caller bound
-the model function to.
+The simplified model's `model.name` is always set to `"object"`, so the
+simplified output does not depend on the symbol the caller bound the
+model function to.
 
 ## See also
 

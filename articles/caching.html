@@ -93,7 +93,7 @@ the five targets generated are:</p>
 <tbody>
 <tr class="odd">
 <td><code>&lt;name&gt;_object_simple</code></td>
-<td>md5 string identifying the simplified ui in the indirect cache</td>
+<td>the simplified ui</td>
 <td>the captured <code>object</code> expression</td>
 </tr>
 <tr class="even">
@@ -133,8 +133,9 @@ expression, the <code>table$keep</code> columns, and
 <code>&lt;name&gt;_fit_simple</code> depends only on the
 <strong>structural</strong> content of the model.
 <code><a href="../reference/nlmixr_object_simplify.html">nlmixr_object_simplify()</a></code> strips parameter labels and the
-model’s metadata environment before caching, so cosmetic edits to either
-do not invalidate the expensive estimation step.</p>
+model’s metadata environment, and drops the model function the ui was
+built from, so cosmetic edits to any of them do not invalidate the
+expensive estimation step.</p>
 <p>The simplified data, in turn, depend on the model only through
 <code>&lt;name&gt;_covariates</code>. A model edit re-runs the cheap
 <code>_covariates</code> target, and when the covariate names come out
@@ -180,41 +181,13 @@ the same, <code>_data_simple</code> is skipped rather than rebuilt.</p>
 <span><span class="co">#   when it runs, and it is deliberately excluded from that target's hash.</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="inspecting-and-pruning-the-indirect-cache">Inspecting and pruning the indirect cache<a class="anchor" aria-label="anchor" href="#inspecting-and-pruning-the-indirect-cache"></a>
-</h2>
-<p>The simplified-model md5 cache lives under
-<code>&lt;tar_config_get("store")&gt;/user/nlmixr2/</code>. It is
-<strong>not</strong> removed by <code><a href="https://docs.ropensci.org/targets/reference/tar_destroy.html" class="external-link">targets::tar_destroy()</a></code>, so
-it can accumulate orphan files over time (e.g. after model
-iterations).</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Quick inventory: hashes, sizes, last-modified</span></span>
-<span><span class="fu"><a href="../reference/nlmixr2targets_cache_status.html">nlmixr2targets_cache_status</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt;      hash size_bytes               mtime</span></span>
-<span><span class="co">#&gt; 1 aaaaaa..       1234 2026-05-21 12:00:00</span></span>
-<span><span class="co">#&gt; 2 bbbbbb..       1567 2026-05-21 13:30:00</span></span>
-<span></span>
-<span><span class="co"># Find orphans (dry run by default)</span></span>
-<span><span class="fu"><a href="../reference/nlmixr2targets_cache_prune.html">nlmixr2targets_cache_prune</a></span><span class="op">(</span><span class="op">)</span></span>
-<span></span>
-<span><span class="co"># Delete them</span></span>
-<span><span class="fu"><a href="../reference/nlmixr2targets_cache_prune.html">nlmixr2targets_cache_prune</a></span><span class="op">(</span>dry_run <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
-<p><code><a href="../reference/nlmixr2targets_cache_prune.html">nlmixr2targets_cache_prune()</a></code> with no <code>keep</code>
-argument reads <code><a href="https://docs.ropensci.org/targets/reference/tar_meta.html" class="external-link">targets::tar_meta()</a></code> from the current store,
-finds every built target whose name ends in <code>_object_simple</code>,
-and treats those hash values as reachable. Anything else in the cache
-directory is reported (and, with <code>dry_run = FALSE</code>, removed).
-Pass <code>keep = character()</code> to wipe the cache
-unconditionally.</p>
-</div>
-<div class="section level2">
 <h2 id="tar_outdated-is-a-quick-way-to-preview-what-would-rerun">
 <code>tar_outdated()</code> is a quick way to preview what would
 rerun<a class="anchor" aria-label="anchor" href="#tar_outdated-is-a-quick-way-to-preview-what-would-rerun"></a>
 </h2>
 <p>If you are about to edit a model and are unsure how invasive the
 change is, run</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">targets</span><span class="fu">::</span><span class="fu"><a href="https://docs.ropensci.org/targets/reference/tar_outdated.html" class="external-link">tar_outdated</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
 <p>after the edit but before <code><a href="https://docs.ropensci.org/targets/reference/tar_make.html" class="external-link">tar_make()</a></code>. The list of
 outdated targets is every target that may re-execute.

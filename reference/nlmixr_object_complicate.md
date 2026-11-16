@@ -48,8 +48,8 @@ The modified `fit`.
 - replaces `fit$env$origData` with the original `data`.
 
 This is what makes label/meta edits in the source model cheap under
-`targets`: the cache hash for the simplified model object is independent
-of labels and metadata, so
+`targets`: the simplified model object is independent of labels and
+metadata, so
 [`tar_make()`](https://docs.ropensci.org/targets/reference/tar_make.html)
 only re-runs this re-attachment step (and the cheap `_object_simple`
 step) when only labels or metadata change.

@@ -6,22 +6,11 @@
   : Replace the fit data with the original data, then return the
   modified fit
 
-- [`nlmixr2_indirect()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr2_indirect.md)
-  : Estimate an nlmixr2 model loading the model from a targets indirect
-  hash storage
-
-- [`nlmixr2targets_cache_prune()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr2targets_cache_prune.md)
-  :
-
-  Drop orphaned entries from the `nlmixr2targets` indirect cache
-
-- [`nlmixr2targets_cache_status()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr2targets_cache_status.md)
-  :
-
-  Inspect the `nlmixr2targets` indirect cache
-
 - [`nlmixr_data_simplify()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_data_simplify.md)
   : Standardize and simplify data for nlmixr2 estimation
+
+- [`nlmixr_fit_simple()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_fit_simple.md)
+  : Estimate an nlmixr2 model from a simplified model object
 
 - [`nlmixr_object_complicate()`](https://nlmixr2.github.io/nlmixr2targets/reference/nlmixr_object_complicate.md)
   : Re-attach labels, metadata, and original data to a simplified fit
