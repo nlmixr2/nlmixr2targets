@@ -13,10 +13,31 @@
   `nlmixr_object_covariates()` and `nlmixr_data_simplify()` no longer accept a
   character md5 for `object`; pass the simplified object.
 
-  Every pipeline re-runs its fits once after upgrading: the `_object_simple`
-  target's value changes from a string to an object, and the generated
-  commands no longer carry `directory`, so both hashes `targets` compares
-  change.
+  Building on a store an earlier version wrote now stops with an error that
+  names the cache directory, because `targets` would otherwise re-run every
+  fit: the `_object_simple` target's value changes from a string to an
+  object, and the generated commands no longer carry `directory`, so both
+  hashes `targets` compares change. To keep the fits already in the store,
+  run the conversion script once before building:
+
+  ```r
+  source(system.file(
+    "scripts", "convert-indirect-cache.R", package = "nlmixr2targets"
+  ))
+  ```
+
+  It rebuilds the cheap generated targets, which take seconds, and rewrites
+  each estimation target's recorded command and dependency hashes to the
+  ones this version produces, so the fits are up to date rather than
+  re-run. The fit objects are never read, written or recomputed, a
+  timestamped copy of the metadata is made first, and the cache directory is
+  removed last. Run it with `Rscript` and `--dry-run` to see what it would
+  do without changing anything. It needs the `secretbase` package, which
+  ships with `targets`.
+
+  To accept re-running the fits instead, delete the cache directory. To
+  build over it and leave it in place, set
+  `options(nlmixr2targets.allow_indirect_cache = TRUE)`.
 
   What the cache bought was a dependency hash for the fit that tracked the
   model's content rather than the rxUi's internals. Edits to labels and

@@ -25,6 +25,7 @@ Suggests:
     knitr,
     nlmixr2data,
     rmarkdown,
+    secretbase,
     spelling,
     tarchetypes,
     testthat (>= 3.0.0),

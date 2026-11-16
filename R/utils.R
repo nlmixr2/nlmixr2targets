@@ -103,3 +103,79 @@ tar_nlmixr_collect_target_settings_default <- function() {
   stopifnot(identical(names(ret), tar_nlmixr_target_setting_names))
   ret
 }
+
+#' Refuse to build the targets when the store still holds the indirect cache
+#'
+#' Earlier versions wrote the simplified model to
+#' `<store>/user/nlmixr2/<md5>` and passed the md5 from target to target.  The
+#' object is the target's value now, so a store holding that directory
+#' recorded its fits against the old scheme: every `_object_simple` value is a
+#' character where an `rxUi` is now expected, and every fit below one would be
+#' re-run.  The check runs while `_targets.R` is being sourced, which is the
+#' last moment before `targets` starts comparing hashes, and reads the store
+#' at call time as the forwarded settings do.
+#'
+#' @param store The `targets` store to look in.
+#' @returns `NULL`, invisibly, when there is no old cache.
+#' @noRd
+nlmixr2targets_assert_no_indirect_cache <- function(store = targets::tar_config_get("store")) {
+  if (isTRUE(getOption("nlmixr2targets.allow_indirect_cache"))) {
+    return(invisible(NULL))
+  }
+  directory <- file.path(store, "user", "nlmixr2")
+  if (!dir.exists(directory)) {
+    return(invisible(NULL))
+  }
+  script <- system.file(
+    "scripts",
+    "convert-indirect-cache.R",
+    package = "nlmixr2targets"
+  )
+  # system.file() gives "" when the package is loaded in a way that has no
+  # installed inst/, such as pkgload during development, so name the file
+  # rather than printing an empty path.
+  if (!nzchar(script)) {
+    script <- "the convert-indirect-cache.R script in this package's inst/scripts/"
+  }
+  stop(
+    structure(
+      class = c(
+        "nlmixr2targets_indirect_cache",
+        "error",
+        "condition"
+      ),
+      list(
+        message = paste0(
+          "This version of nlmixr2targets passes the simplified model object ",
+          "between targets instead of caching it and passing an md5. The ",
+          "store still holds the old cache:
+
+  ",
+          directory,
+          "
+
+Building now would ignore it and re-run every fit. To carry ",
+          "the existing fits over, run:
+
+  Rscript \"",
+          script,
+          "\"
+
+To accept re-running the fits instead, remove the ",
+          "directory:
+
+  unlink(\"",
+          directory,
+          "\", recursive = TRUE)
+
+To build anyway and leave the ",
+          "directory in place, set
+
+  ",
+          "options(nlmixr2targets.allow_indirect_cache = TRUE)"
+        ),
+        call = NULL
+      )
+    )
+  )
+}

@@ -250,6 +250,10 @@ tar_nlmixr_raw <- function(name, object, data, est, control, table,
                            error = "stop", description = NULL,
                            target_settings = tar_nlmixr_collect_target_settings_default(),
                            covariates_name = paste(name, "covariates", sep = "_")) {
+  # Both generators come through here, and this runs while `_targets.R` is
+  # being sourced, which is the last moment before targets starts comparing
+  # hashes against a store an older version wrote.
+  nlmixr2targets_assert_no_indirect_cache()
   checkmate::assert_character(name, len = 1, min.chars = 1, any.missing = FALSE)
   checkmate::assert_character(object_simple_name, len = 1, min.chars = 1, any.missing = FALSE)
   checkmate::assert_character(data_simple_name, len = 1, min.chars = 1, any.missing = FALSE)
