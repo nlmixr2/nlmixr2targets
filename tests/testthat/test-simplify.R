@@ -55,26 +55,16 @@ pheno_iov_two <- function() {
   })
 }
 
-# `nlmixr_object_simplify()` writes the simplified rxUi to disk. The
-# function's default `directory` resolves to
-# `file.path(targets::tar_config_get("store"), "user/nlmixr2")` which —
-# outside a `tar_test()` / `tar_dir()` sandbox — points under
-# tests/testthat/. CRAN policy disallows writing there, so this file
-# routes all writes/reads through a per-session tempfile dir.
-.simplify_cache_dir <- tempfile("nlmixr2targets-test-cache-")
-dir.create(.simplify_cache_dir, recursive = TRUE)
-
 model_simple <-
   suppressMessages(suppressWarnings(
-    nlmixr_object_simplify(pheno, directory = .simplify_cache_dir)
+    nlmixr_object_simplify(pheno)
   ))
 
 test_that("nlmixr_data_simplify", {
   # Columns are kept in the correct order
   expect_equal(
     names(nlmixr_data_simplify(
-      data = nlmixr2data::pheno_sd, object = model_simple,
-      directory = .simplify_cache_dir
+      data = nlmixr2data::pheno_sd, object = model_simple
     )),
     c("id", "time", "amt", "dv", "mdv", "evid", "WT")
   )
@@ -83,8 +73,7 @@ test_that("nlmixr_data_simplify", {
     names(nlmixr_data_simplify(
       data = nlmixr2data::pheno_sd,
       object = model_simple,
-      table = nlmixr2est::tableControl(keep = "APGR"),
-      directory = .simplify_cache_dir
+      table = nlmixr2est::tableControl(keep = "APGR")
     )),
     c("id", "time", "amt", "dv", "mdv", "evid", "APGR", "WT")
   )
@@ -94,8 +83,7 @@ test_that("nlmixr_data_simplify", {
     names(nlmixr_data_simplify(
       data = nlmixr2data::pheno_sd,
       object = model_simple,
-      table = nlmixr2est::tableControl(keep = "WT"),
-      directory = .simplify_cache_dir
+      table = nlmixr2est::tableControl(keep = "WT")
     )),
     c("id", "time", "amt", "dv", "mdv", "evid", "WT")
   )
@@ -105,8 +93,7 @@ test_that("nlmixr_data_simplify", {
     names(nlmixr_data_simplify(
       data = nlmixr2data::pheno_sd,
       object = model_simple,
-      table = nlmixr2est::tableControl(keep = "MDV"),
-      directory = .simplify_cache_dir
+      table = nlmixr2est::tableControl(keep = "MDV")
     )),
     c("id", "time", "amt", "dv", "mdv", "evid", "WT")
   )
@@ -117,8 +104,7 @@ test_that("nlmixr_data_simplify expected errors", {
   bad_data_lower_case$id <- bad_data_lower_case$ID
   expect_error(
     nlmixr_data_simplify(
-      data = bad_data_lower_case, object = model_simple,
-      directory = .simplify_cache_dir
+      data = bad_data_lower_case, object = model_simple
     ),
     regexp = "The following column(s) are duplicated when lower case: 'id'",
     fixed = TRUE
@@ -127,8 +113,7 @@ test_that("nlmixr_data_simplify expected errors", {
   bad_data_no_cov$WT <- NULL
   expect_error(
     nlmixr_data_simplify(
-      data = bad_data_no_cov, object = model_simple,
-      directory = .simplify_cache_dir
+      data = bad_data_no_cov, object = model_simple
     ),
     regexp = "The following covariate column(s) are missing from the data: 'WT'",
     fixed = TRUE
@@ -136,21 +121,19 @@ test_that("nlmixr_data_simplify expected errors", {
   expect_error(
     nlmixr_data_simplify(
       data = nlmixr2data::pheno_sd, object = model_simple,
-      directory = .simplify_cache_dir, est = c("saem", "vae")
+      est = c("saem", "vae")
     ),
     regexp = "Must have length 1"
   )
 })
 
-test_that("nlmixr_object_covariates reads the covariates from a cache hash or a ui", {
+test_that("nlmixr_object_covariates reads the covariates from a ui", {
+  expect_identical(nlmixr_object_covariates(model_simple), "WT")
+  # the `$ui` slot of a fit-shaped object is preferred over its own all.covs
   expect_identical(
-    nlmixr_object_covariates(model_simple, directory = .simplify_cache_dir),
+    nlmixr_object_covariates(list(ui = model_simple, all.covs = "OTHER")),
     "WT"
   )
-  ui <- read_nlmixr2obj_indirect(model_simple, directory = .simplify_cache_dir)
-  expect_identical(nlmixr_object_covariates(ui), "WT")
-  # the `$ui` slot of a fit-shaped object is preferred over its own all.covs
-  expect_identical(nlmixr_object_covariates(list(ui = ui, all.covs = "OTHER")), "WT")
 })
 
 test_that("nlmixr_object_covariates sorts in the C locale and de-duplicates", {
@@ -173,7 +156,8 @@ test_that("nlmixr_object_covariates rejects an object it cannot read covariates 
   )
   expect_error(
     nlmixr_object_covariates(c("a", "b")),
-    regexp = "Must have length 1"
+    regexp = "got object of class 'character'",
+    fixed = TRUE
   )
 })
 
@@ -188,8 +172,7 @@ test_that("nlmixr_object_covariates keeps every occasion grouping variable", {
 })
 
 test_that("nlmixr_object_covariates is unchanged for a model without an IOV effect", {
-  ui <- read_nlmixr2obj_indirect(model_simple, directory = .simplify_cache_dir)
-  expect_identical(nlmixr_object_covariates(ui), "WT")
+  expect_identical(nlmixr_object_covariates(model_simple), "WT")
 })
 
 test_that("nlmixr_object_covariates ignores the subject level and the residual", {
@@ -212,13 +195,13 @@ test_that("nlmixr_object_covariates ignores the subject level and the residual",
 test_that("nlmixr_data_simplify keeps an IOV grouping variable", {
   model_iov <-
     suppressMessages(suppressWarnings(
-      nlmixr_object_simplify(pheno_iov, directory = .simplify_cache_dir)
+      nlmixr_object_simplify(pheno_iov)
     ))
   data_occ <- nlmixr2data::pheno_sd
   data_occ$OCC <- 1
   expect_identical(
     names(nlmixr_data_simplify(
-      data = data_occ, object = model_iov, directory = .simplify_cache_dir
+      data = data_occ, object = model_iov
     )),
     c("id", "time", "amt", "dv", "mdv", "evid", "OCC", "WT")
   )
@@ -228,8 +211,7 @@ test_that("nlmixr_data_simplify keeps an IOV grouping variable", {
   # its grouping variables travel together.
   expect_error(
     nlmixr_data_simplify(
-      data = nlmixr2data::pheno_sd, object = model_iov,
-      directory = .simplify_cache_dir
+      data = nlmixr2data::pheno_sd, object = model_iov
     ),
     regexp = "The following covariate column(s) are missing from the data: 'OCC'",
     fixed = TRUE
@@ -241,8 +223,7 @@ test_that("nlmixr_data_simplify gives the same data from covariates as from the 
     expect_identical(
       nlmixr_data_simplify(data = nlmixr2data::pheno_sd, covariates = "WT", table = table),
       nlmixr_data_simplify(
-        data = nlmixr2data::pheno_sd, object = model_simple, table = table,
-        directory = .simplify_cache_dir
+        data = nlmixr2data::pheno_sd, object = model_simple, table = table
       )
     )
   }
@@ -265,8 +246,7 @@ test_that("nlmixr_data_simplify takes exactly one of object and covariates", {
   )
   expect_error(
     nlmixr_data_simplify(
-      data = nlmixr2data::pheno_sd, object = model_simple, covariates = "WT",
-      directory = .simplify_cache_dir
+      data = nlmixr2data::pheno_sd, object = model_simple, covariates = "WT"
     ),
     regexp = "Supply exactly one of `object` and `covariates`",
     fixed = TRUE
@@ -300,22 +280,22 @@ test_that("the simplifiers honor error = 'continue' and pass sentinels through",
   # still propagates under the default "stop".
   boom <- function() stop("bad model structure")
   res_obj <- suppressMessages(suppressWarnings(
-    nlmixr_object_simplify(object = boom(), directory = .simplify_cache_dir, error = "continue")
+    nlmixr_object_simplify(object = boom(), error = "continue")
   ))
   expect_s3_class(res_obj, "nlmixr2targetsError")
   expect_error(
-    nlmixr_object_simplify(object = boom(), directory = .simplify_cache_dir),
+    nlmixr_object_simplify(object = boom()),
     regexp = "bad model structure", fixed = TRUE
   )
   # A sentinel handed in as the object (a failed self-referential multimodel
-  # entry) is passed straight through, without writing to the cache.
+  # entry) is passed straight through rather than simplified.
   expect_identical(
-    nlmixr_object_simplify(object = sentinel, directory = .simplify_cache_dir),
+    nlmixr_object_simplify(object = sentinel),
     sentinel
   )
 
-  # Covariates: a sentinel object_simple passes through without reading the
-  # cache for a bogus hash.
+  # Covariates: a sentinel object_simple passes through rather than being read
+  # as a model.
   expect_identical(nlmixr_object_covariates(object = sentinel), sentinel)
 
   # Data simplification: a sentinel reaching either upstream passes through,
@@ -362,7 +342,7 @@ test_that("nlmixr_data_simplify keeps the vae covariate-search columns", {
   expect_equal(
     names(nlmixr_data_simplify(
       data = nlmixr2data::pheno_sd, object = model_simple,
-      directory = .simplify_cache_dir, est = "vae"
+      est = "vae"
     )),
     c("id", "time", "amt", "dv", "mdv", "evid", "APGR", "WT")
   )
@@ -370,7 +350,7 @@ test_that("nlmixr_data_simplify keeps the vae covariate-search columns", {
   expect_equal(
     names(nlmixr_data_simplify(
       data = nlmixr2data::pheno_sd, object = model_simple,
-      directory = .simplify_cache_dir, est = "saem"
+      est = "saem"
     )),
     c("id", "time", "amt", "dv", "mdv", "evid", "WT")
   )
@@ -389,7 +369,7 @@ test_that("nlmixr_data_simplify vae drops unsearchable columns with a warning", 
   expect_warning(
     simplified_tv <- nlmixr_data_simplify(
       data = data_time_varying, object = model_simple,
-      directory = .simplify_cache_dir, est = "vae"
+      est = "vae"
     ),
     regexp = "time-varying covariate(s) were excluded",
     fixed = TRUE
@@ -404,7 +384,7 @@ test_that("nlmixr_data_simplify vae drops unsearchable columns with a warning", 
   expect_warning(
     simplified_na <- nlmixr_data_simplify(
       data = data_na, object = model_simple,
-      directory = .simplify_cache_dir, est = "vae"
+      est = "vae"
     ),
     regexp = "covariate(s) with missing values were excluded",
     fixed = TRUE
@@ -428,7 +408,7 @@ test_that("nlmixr_data_simplify vae honors the control search options", {
   expect_equal(
     names(nlmixr_data_simplify(
       data = data_flag, object = model_simple,
-      directory = .simplify_cache_dir, est = "vae"
+      est = "vae"
     )),
     c("id", "time", "amt", "dv", "mdv", "evid", "APGR", "WT")
   )
@@ -437,7 +417,7 @@ test_that("nlmixr_data_simplify vae honors the control search options", {
   expect_equal(
     names(nlmixr_data_simplify(
       data = data_flag, object = model_simple,
-      directory = .simplify_cache_dir, est = "vae",
+      est = "vae",
       control = list(catCutoff = 0.01)
     )),
     c("id", "time", "amt", "dv", "mdv", "evid", "APGR", "FLAG", "WT")
@@ -446,7 +426,7 @@ test_that("nlmixr_data_simplify vae honors the control search options", {
   expect_equal(
     names(nlmixr_data_simplify(
       data = data_flag, object = model_simple,
-      directory = .simplify_cache_dir, est = "vae",
+      est = "vae",
       control = nlmixr2est::vaeControl(catCutoff = 0.01)
     )),
     c("id", "time", "amt", "dv", "mdv", "evid", "APGR", "FLAG", "WT")
@@ -456,7 +436,7 @@ test_that("nlmixr_data_simplify vae honors the control search options", {
   expect_equal(
     names(nlmixr_data_simplify(
       data = data_flag, object = model_simple,
-      directory = .simplify_cache_dir, est = "vae",
+      est = "vae",
       control = structure(list(catCutoff = 0.01), class = "saemControl")
     )),
     c("id", "time", "amt", "dv", "mdv", "evid", "APGR", "WT")
@@ -705,8 +685,7 @@ test_that("nlmixr_data_simplify rejects non-data-frame data", {
 test_that("nlmixr_data_simplify rejects non-list table", {
   expect_error(
     nlmixr_data_simplify(
-      data = nlmixr2data::pheno_sd, object = model_simple, table = "bad",
-      directory = .simplify_cache_dir
+      data = nlmixr2data::pheno_sd, object = model_simple, table = "bad"
     ),
     regexp = "Must be of type 'list'"
   )
@@ -718,7 +697,7 @@ test_that("re-estimating a model works with covariates (#9)", {
   fit_estimated <-
     suppressMessages(
       nlmixr2est::nlmixr(
-        object = read_nlmixr2obj_indirect(model_simple, directory = .simplify_cache_dir),
+        object = model_simple,
         data = nlmixr2data::pheno_sd,
         est = "focei",
         control = list(eval.max = 1)
@@ -731,13 +710,15 @@ test_that("re-estimating a model works with covariates (#9)", {
 
 # Tests for the strip-and-restore round trip introduced for #28.
 
-test_that("nlmixr_object_simplify writes the simplified rxUi with labels and meta stripped", {
-  cached <- read_nlmixr2obj_indirect(model_simple, directory = .simplify_cache_dir)
-  expect_true(all(is.na(cached$iniDf$label)))
-  expect_equal(ls(envir = cached$meta, all.names = TRUE), character(0))
+test_that("nlmixr_object_simplify strips labels, meta and the model function", {
+  expect_true(all(is.na(model_simple$iniDf$label)))
+  expect_equal(ls(envir = model_simple$meta, all.names = TRUE), character(0))
+  # The ui keeps the model function it was built from, labels and all, so a
+  # label-only edit would change the object if it were left in place.
+  expect_false(exists("model", envir = model_simple, inherits = FALSE))
 })
 
-test_that("nlmixr_object_simplify yields the same hash for models that differ only in labels (#28)", {
+test_that("models differing only in labels simplify to the same object (#28)", {
   model_with <- function() {
     ini({
       lcl <- log(0.008); label("Typical clearance")
@@ -762,13 +743,17 @@ test_that("nlmixr_object_simplify yields the same hash for models that differ on
       cp ~ add(cpaddSd)
     })
   }
-  hash_with <- suppressMessages(suppressWarnings(
-    nlmixr_object_simplify(model_with, directory = .simplify_cache_dir)
+  simple_with <- suppressMessages(suppressWarnings(
+    nlmixr_object_simplify(model_with)
   ))
-  hash_relabeled <- suppressMessages(suppressWarnings(
-    nlmixr_object_simplify(model_relabeled, directory = .simplify_cache_dir)
+  simple_relabeled <- suppressMessages(suppressWarnings(
+    nlmixr_object_simplify(model_relabeled)
   ))
-  expect_identical(hash_with, hash_relabeled)
+  expect_identical(simple_with$md5, simple_relabeled$md5)
+  expect_identical(
+    serialize(simple_with, connection = NULL),
+    serialize(simple_relabeled, connection = NULL)
+  )
 })
 
 test_that("nlmixr_object_complicate restores labels, meta, and data from the original model", {
@@ -1024,9 +1009,10 @@ pheno_linCmt <- function() {
 
 # timeId is the wall-clock time of a model's first translation in the session,
 # so leaving it in makes the same model serialize to different bytes in every
-# session.  -1L is what rxode2's own parse-only path writes.  rxode2 is
-# expected to drop the field, and then there is nothing to clear and nothing
-# to assert, so say so rather than fail.
+# session.  The object is a target value now, so targets hashes it and a
+# drifting field would re-run every fit.  -1L is what rxode2's own parse-only
+# path writes.  rxode2 is expected to drop the field, and then there is nothing
+# to clear and nothing to assert, so say so rather than fail.
 expect_time_id_cleared <- function(model_vars) {
   if ("timeId" %in% names(model_vars)) {
     expect_identical(model_vars$timeId, -1L)
@@ -1035,30 +1021,27 @@ expect_time_id_cleared <- function(model_vars) {
   }
 }
 
-test_that("nlmixr_object_simplify writes a session-independent object", {
-  saved <- readRDS(file.path(.simplify_cache_dir, model_simple))
-  expect_time_id_cleared(saved$mv0)
-  expect_s3_class(saved$mv0, "rxModelVars")
-  # The decompressed form is what gets saved: a compressed rxUi is a list whose
-  # fixed components cannot be written to.
-  expect_type(saved, "environment")
+test_that("nlmixr_object_simplify returns a session-independent object", {
+  expect_time_id_cleared(model_simple$mv0)
+  expect_s3_class(model_simple$mv0, "rxModelVars")
+  # The decompressed form is what is returned: a compressed rxUi is a list
+  # whose fixed components cannot be written to.
+  expect_type(model_simple, "environment")
 
-  # Clearing it must not move the content hash the cache file is named by, or
-  # entries written by earlier versions are orphaned.
+  # Clearing timeId must not move the model's content hash.
   ui <- suppressMessages(suppressWarnings(nlmixr2est::nlmixr(pheno)))
   md5_before <- ui$md5
   ui$mv0 <- nlmixr_clear_time_id(ui$mv0)
   expect_identical(ui$md5, md5_before)
 
   # A linCmt() model has a second set of model vars with its own timestamp.
-  linCmt_md5 <-
+  linCmt_simple <-
     suppressMessages(suppressWarnings(
-      nlmixr_object_simplify(pheno_linCmt, directory = .simplify_cache_dir)
+      nlmixr_object_simplify(pheno_linCmt)
     ))
-  linCmt_saved <- readRDS(file.path(.simplify_cache_dir, linCmt_md5))
-  expect_false(is.null(linCmt_saved$mvL))
-  expect_time_id_cleared(linCmt_saved$mv0)
-  expect_time_id_cleared(linCmt_saved$mvL)
+  expect_false(is.null(linCmt_simple$mvL))
+  expect_time_id_cleared(linCmt_simple$mv0)
+  expect_time_id_cleared(linCmt_simple$mvL)
 })
 
 test_that("nlmixr_clear_time_id refuses anything but model vars", {

@@ -1,5 +1,64 @@
 # nlmixr2targets 0.1.0.9000
 
+## Breaking changes
+
+* `nlmixr_object_simplify()` now returns the simplified `nlmixrui` object
+  rather than an md5 hash, and the object travels between targets as an
+  ordinary target value. The indirect cache under
+  `<targets store>/user/nlmixr2` is gone, along with the `directory` arguments
+  of `nlmixr_object_simplify()`, `nlmixr_object_covariates()`,
+  `nlmixr_data_simplify()` and `nlmixr_fit_simple()`, and the
+  `nlmixr2targets_cache_status()` and `nlmixr2targets_cache_prune()`
+  functions. Delete that directory by hand to reclaim the space.
+  `nlmixr_object_covariates()` and `nlmixr_data_simplify()` no longer accept a
+  character md5 for `object`; pass the simplified object.
+
+  Building on a store an earlier version wrote now stops with an error that
+  names the cache directory, because `targets` would otherwise re-run every
+  fit: the `_object_simple` target's value changes from a string to an
+  object, and the generated commands no longer carry `directory`, so both
+  hashes `targets` compares change. To keep the fits already in the store,
+  run the conversion script once before building:
+
+  ```r
+  source(system.file(
+    "scripts", "convert-indirect-cache.R", package = "nlmixr2targets"
+  ))
+  ```
+
+  It rebuilds the cheap generated targets, which take seconds, and rewrites
+  each estimation target's recorded command and dependency hashes to the
+  ones this version produces, so the fits are up to date rather than
+  re-run. The fit objects are never read, written or recomputed, a
+  timestamped copy of the metadata is made first, and the cache directory is
+  removed last. Run it with `Rscript` and `--dry-run` to see what it would
+  do without changing anything. It needs the `secretbase` package, which
+  ships with `targets`.
+
+  To accept re-running the fits instead, delete the cache directory. To
+  build over it and leave it in place, set
+  `options(nlmixr2targets.allow_indirect_cache = TRUE)`.
+
+  What the cache bought was a dependency hash for the fit that tracked the
+  model's content rather than the rxUi's internals. Edits to labels and
+  metadata are still insulated, because the simplified object strips them and
+  no longer carries the model function. Anything else inside an rxUi is not:
+  a change there now invalidates the fits that depend on it, and because an
+  rxUi does not serialize identically across platforms, so does rebuilding an
+  `_object_simple` target on a different platform from the one that built it
+  last. What the cache cost was a file on one machine's disk, which a pipeline
+  whose workers run on other machines cannot read back -- the reason for this
+  change.
+
+* `nlmixr2_indirect()` is renamed `nlmixr_fit_simple()`: nothing is indirect
+  about it now, and the new name matches the `_fit_simple` target it is the
+  command for, and the `nlmixr_*` family it belongs to.
+
+* The simplified object no longer carries the model function it was built
+  from. Nothing read it -- `$model` is derived, and estimation works without
+  it -- and it held the `label()` calls, so keeping it would have made a
+  label-only edit change the object.
+
 ## New features
 
 * The final `<name>` target of `tar_nlmixr()` now emits `fitUpdate` (the restored
@@ -19,10 +78,8 @@
   `resources_fit` for every other target, so the data can be prepared on a
   different controller from the one that fits the model. Both default to
   `targets::tar_option_get("resources")`. `?tar_nlmixr` documents the
-  arguments that are deliberately not forwarded, and the shared cache
-  directory the model targets need when they run on a remote worker. Adding
-  these does not change any estimation command, so cached fits are not
-  re-run.
+  arguments that are deliberately not forwarded. Adding these does not change
+  any estimation command, so cached fits are not re-run.
 
 * Each model now has a `<name>_covariates` target holding the sorted names of
   the covariates it reads, and the `_data_simple` target depends on that
@@ -44,15 +101,13 @@
 ## Bug fixes
 
 * `nlmixr_object_simplify()` now clears `rxModelVars$timeId`, the wall-clock
-  time of the model's first translation in an R session, before saving the
-  simplified object; a `linCmt()` model's second set of model vars (`mvL`) is
-  cleared too. The same model simplified in two sessions previously serialized
-  to different bytes, so anything that hashed the saved object -- rather than
-  the md5 the cache is keyed by -- saw it change on every rebuild. The cache
-  file name is unchanged, so entries written by earlier versions are still
-  found; such an entry keeps its old timestamp until that model is simplified
-  again. The clearing is conditional on the field being present, so it stays
-  correct when a later rxode2 stops storing it.
+  time of the model's first translation in an R session; a `linCmt()` model's
+  second set of model vars (`mvL`) is cleared too. The same model simplified
+  in two sessions previously gave objects that serialized to different bytes,
+  so `targets` saw the `_object_simple` target change on every rebuild and
+  re-ran every fit below it. The model's content hash (`ui$md5`) is
+  unaffected. The clearing is conditional on the field being present, so it
+  stays correct when a later rxode2 stops storing it.
 
 * `nlmixr_data_simplify()` now treats an explicit `object = NULL` as "not
   supplied", like a missing argument, so it gives the documented
@@ -72,8 +127,8 @@
 * The generated targets now run on a worker that has attached nothing but the
   target's own `packages`, such as a `crew` worker on another machine or in a
   fresh container. The estimation (`_fit_simple`) target called
-  `nlmixr2_indirect()` while declaring only `nlmixr2est`, and failed with
-  `could not find function "nlmixr2_indirect"`. The final target evaluated the
+  `nlmixr_fit_simple()` while declaring only `nlmixr2est`, and failed with
+  `could not find function "nlmixr_fit_simple"`. The final target evaluated the
   model expression (e.g. `pheno |> ini(...)`) without `nlmixr2est`, so `ini()`
   was not found. All four targets per model now load `nlmixr2targets` and
   `nlmixr2est`. The combined list target of `tar_nlmixr_multimodel()` loads no

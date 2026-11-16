@@ -2,10 +2,8 @@
 
 S3method(print,nlmixr2targetsError)
 export(assign_origData)
-export(nlmixr2_indirect)
-export(nlmixr2targets_cache_prune)
-export(nlmixr2targets_cache_status)
 export(nlmixr_data_simplify)
+export(nlmixr_fit_simple)
 export(nlmixr_object_complicate)
 export(nlmixr_object_covariates)
 export(nlmixr_object_simplify)

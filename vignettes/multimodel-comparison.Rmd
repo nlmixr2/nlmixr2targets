@@ -151,6 +151,3 @@ construction time with a clear message.
   (labels, metadata) do not invalidate `_fit_simple` thanks to the
   strip-restore behaviour. See
   `vignette("caching", package = "nlmixr2targets")`.
-- **Watch the indirect cache.** Iterative model edits leave orphaned
-  cache entries. Use `nlmixr2targets_cache_status()` and
-  `nlmixr2targets_cache_prune()` periodically.

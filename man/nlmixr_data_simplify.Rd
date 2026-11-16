@@ -8,7 +8,6 @@ nlmixr_data_simplify(
   data,
   object,
   table = list(),
-  directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"),
   est = NULL,
   control = NULL,
   covariates = NULL,
@@ -18,19 +17,11 @@ nlmixr_data_simplify(
 \arguments{
 \item{data}{nlmixr data}
 
-\item{object}{The model, in either form \code{\link[=nlmixr_object_covariates]{nlmixr_object_covariates()}}
-accepts: an \code{nlmixr} ui object, or a character md5 hash identifying a
-simplified ui in the \code{nlmixr2targets} indirect cache.}
+\item{object}{The model, in the form \code{\link[=nlmixr_object_covariates]{nlmixr_object_covariates()}}
+accepts: an \code{nlmixr} ui object.}
 
 \item{table}{The output table control object (like
 `tableControl()`)}
-
-\item{directory}{Cache directory to load the simplified \code{nlmixrui} from.
-Defaults to \code{file.path(targets::tar_config_get("store"), "user/nlmixr2")},
-mirroring the convention used by \code{targets}' own \code{store = targets::tar_config_get("store")} defaults — the path resolves at
-call time against whatever store the user has configured for the
-running \code{tar_make()} (e.g. a \code{tempdir()} location set via
-\code{targets::tar_config_set()}).}
 
 \item{est}{estimation method (all methods are shown by
 `nlmixr2AllEst()`). Methods can be added for other tools}

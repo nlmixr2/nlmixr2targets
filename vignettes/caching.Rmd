@@ -30,7 +30,7 @@ generated are:
 
 | Target | Stores | Hashed inputs |
 | ------ | ------ | ------------- |
-| `<name>_object_simple` | md5 string identifying the simplified ui in the indirect cache | the captured `object` expression |
+| `<name>_object_simple` | the simplified ui | the captured `object` expression |
 | `<name>_covariates` | sorted names of the covariates the model reads | `<name>_object_simple` |
 | `<name>_data_simple` | simplified data frame | `<name>_covariates`, the captured `data` expression, the `table$keep` columns, and `est`/`control` (methods like `est = "vae"` also keep their covariate-search columns) |
 | `<name>_fit_simple` | fitted nlmixr2 object | `<name>_object_simple`, `<name>_data_simple`, `est`, `control` |
@@ -39,8 +39,9 @@ generated are:
 The single most important property of this layout is that
 `<name>_fit_simple` depends only on the **structural** content of the
 model. `nlmixr_object_simplify()` strips parameter labels and the model's
-metadata environment before caching, so cosmetic edits to either do not
-invalidate the expensive estimation step.
+metadata environment, and drops the model function the ui was built from,
+so cosmetic edits to any of them do not invalidate the expensive estimation
+step.
 
 The simplified data, in turn, depend on the model only through
 `<name>_covariates`. A model edit re-runs the cheap `_covariates` target,
@@ -85,34 +86,6 @@ rather than rebuilt.
 #   named list. The name is the description that `_fit_simple` announces
 #   when it runs, and it is deliberately excluded from that target's hash.
 ```
-
-# Inspecting and pruning the indirect cache
-
-The simplified-model md5 cache lives under
-`<tar_config_get("store")>/user/nlmixr2/`. It is **not** removed by
-`targets::tar_destroy()`, so it can accumulate orphan files over time
-(e.g. after model iterations).
-
-```{r cache-helpers, eval = FALSE}
-# Quick inventory: hashes, sizes, last-modified
-nlmixr2targets_cache_status()
-#>      hash size_bytes               mtime
-#> 1 aaaaaa..       1234 2026-05-21 12:00:00
-#> 2 bbbbbb..       1567 2026-05-21 13:30:00
-
-# Find orphans (dry run by default)
-nlmixr2targets_cache_prune()
-
-# Delete them
-nlmixr2targets_cache_prune(dry_run = FALSE)
-```
-
-`nlmixr2targets_cache_prune()` with no `keep` argument reads
-`targets::tar_meta()` from the current store, finds every built target
-whose name ends in `_object_simple`, and treats those hash values as
-reachable. Anything else in the cache directory is reported (and, with
-`dry_run = FALSE`, removed). Pass `keep = character()` to wipe the cache
-unconditionally.
 
 # `tar_outdated()` is a quick way to preview what would rerun
 

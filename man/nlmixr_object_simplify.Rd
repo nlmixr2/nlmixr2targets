@@ -4,21 +4,10 @@
 \alias{nlmixr_object_simplify}
 \title{Simplify an nlmixr object}
 \usage{
-nlmixr_object_simplify(
-  object,
-  directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"),
-  error = c("stop", "continue")
-)
+nlmixr_object_simplify(object, error = c("stop", "continue"))
 }
 \arguments{
 \item{object}{Fitted object or function specifying the model.}
-
-\item{directory}{Cache directory to load the simplified \code{nlmixrui} from.
-Defaults to \code{file.path(targets::tar_config_get("store"), "user/nlmixr2")},
-mirroring the convention used by \code{targets}' own \code{store = targets::tar_config_get("store")} defaults — the path resolves at
-call time against whatever store the user has configured for the
-running \code{tar_make()} (e.g. a \code{tempdir()} location set via
-\code{targets::tar_config_set()}).}
 
 \item{error}{What should happen if any step of a model's chain throws an
 error? \code{"stop"} (the default) lets the error propagate, halting
@@ -33,8 +22,7 @@ model does not stop the rest of the pipeline. Detect a failed model with
 \code{inherits(fit, "try-error")}.}
 }
 \value{
-The MD5 hash used to load the simplified \code{nlmixrui} object back
-from the \code{nlmixr2targets} indirect cache.
+The simplified \code{nlmixrui} object.
 }
 \description{
 This function is typically not needed by end users.
@@ -45,12 +33,12 @@ instead of comments to label parameters) and then converts the \code{object}
 to a "nlmixrui" object.
 
 Object metadata (\code{ui$meta}) and parameter labels (\code{ui$iniDf$label}) are
-also stripped from the simplified object before it is written to the
-indirect cache. They do not affect estimation, and stripping them keeps
-the cache hash stable across edits to either, so editing only labels or
-metadata will not invalidate the cached fit. The stripped values are
-restored on the final fit by \code{\link[=nlmixr_object_complicate]{nlmixr_object_complicate()}}, which reads
-them straight back off the original model.
+also stripped from the simplified object. They do not affect estimation,
+and stripping them keeps the simplified object unchanged across edits to
+either, so editing only labels or metadata will not invalidate a fit. The
+stripped values are restored on the final fit by
+\code{\link[=nlmixr_object_complicate]{nlmixr_object_complicate()}}, which reads them straight back off the
+original model.
 
 The natural nlmixr2 DSL form for compartment initial conditions
 (\code{cmt(0) <- value} inside a \code{model({...})} block) trips \code{targets}'
@@ -71,9 +59,8 @@ function in env, calling the model function directly (outside
 \code{tar_make()}) after \code{tar_nlmixr()} will see \code{cmt(initial)} in its
 body.
 
-The simplified model's \code{model.name} is always set to \code{"object"}. This keeps
-the simplified output stable so that the MD5 hash used by the \code{targets}
-indirect cache is independent of the symbol the caller bound the model
+The simplified model's \code{model.name} is always set to \code{"object"}, so the
+simplified output does not depend on the symbol the caller bound the model
 function to.
 }
 \seealso{

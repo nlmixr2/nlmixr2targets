@@ -39,10 +39,9 @@ labels show when the fit is printed, and
 }
 
 This is what makes label/meta edits in the source model cheap under
-\code{targets}: the cache hash for the simplified model object is independent
-of labels and metadata, so \code{tar_make()} only re-runs this re-attachment
-step (and the cheap \verb{_object_simple} step) when only labels or metadata
-change.
+\code{targets}: the simplified model object is independent of labels and
+metadata, so \code{tar_make()} only re-runs this re-attachment step (and the
+cheap \verb{_object_simple} step) when only labels or metadata change.
 
 This function is typically not invoked directly by end users; it is the
 command for the final target produced by \code{\link[=tar_nlmixr]{tar_nlmixr()}}.

@@ -129,8 +129,7 @@ test_that("tar_nlmixr_raw constructs five targets with expected names", {
   expect_true("fit_x_data_simple" %in% targets::tar_deps_raw(out$fit_simple$command$expr))
   expect_true("fit_x_fit_simple" %in% targets::tar_deps_raw(out$fit$command$expr))
   # The data target sees the model only through its covariate names, so it is
-  # not rebuilt for a model edit that keeps them, and it never reads the
-  # indirect cache.
+  # not rebuilt for a model edit that keeps them.
   expect_false("fit_x_object_simple" %in% targets::tar_deps_raw(out$data_simple$command$expr))
   expect_identical(
     out$data_simple$command$expr[[1]],
@@ -141,10 +140,7 @@ test_that("tar_nlmixr_raw constructs five targets with expected names", {
   )
   expect_identical(
     out$covariates$command$expr[[1]],
-    quote(nlmixr_object_covariates(
-      object = fit_x_object_simple,
-      directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")
-    ))
+    quote(nlmixr_object_covariates(object = fit_x_object_simple))
   )
 })
 
@@ -203,7 +199,7 @@ test_that("tar_nlmixr_raw rejects malformed simple_name arguments", {
 })
 
 # Issue #35: the error mode chosen by the user must reach the generated
-# fit_simple target command so nlmixr2_indirect() runs in the right mode.
+# fit_simple target command so nlmixr_fit_simple() runs in the right mode.
 # (Called directly rather than via do.call() so the quoted `object` symbol is
 # passed through as a language object instead of being evaluated.)
 test_that("tar_nlmixr_raw threads the error mode into the fit_simple command", {
@@ -396,11 +392,11 @@ test_that("command_bare_calls lists only un-namespaced calls outside quote()", {
 
 test_that("command_unresolved_calls reports calls the target's packages do not provide", {
   undeclared <-
-    targets::tar_target_raw("t", quote(nlmixr2_indirect(object = x)), packages = "nlmixr2est")
-  expect_identical(command_unresolved_calls(undeclared), "nlmixr2_indirect")
+    targets::tar_target_raw("t", quote(nlmixr_fit_simple(object = x)), packages = "nlmixr2est")
+  expect_identical(command_unresolved_calls(undeclared), "nlmixr_fit_simple")
   declared <-
     targets::tar_target_raw(
-      "t", quote(nlmixr2_indirect(object = x)),
+      "t", quote(nlmixr_fit_simple(object = x)),
       packages = c("nlmixr2targets", "nlmixr2est")
     )
   expect_identical(command_unresolved_calls(declared), character())
@@ -431,15 +427,15 @@ test_that("every tar_nlmixr_raw target declares the packages its command calls",
   # The calls that need a package must be visible to the check, or passing it
   # proves nothing.
   bare_calls <- lapply(out, \(x) command_bare_calls(x$command$expr[[1L]]))
-  expect_setequal(bare_calls$object_simple, c("nlmixr_object_simplify", "ini", "log", "file.path"))
-  expect_setequal(bare_calls$covariates, c("nlmixr_object_covariates", "file.path"))
+  expect_setequal(bare_calls$object_simple, c("nlmixr_object_simplify", "ini", "log"))
+  expect_setequal(bare_calls$covariates, "nlmixr_object_covariates")
   expect_setequal(
     bare_calls$data_simple,
     c("nlmixr_data_simplify", "tableControl", "saemControl")
   )
   expect_setequal(
     bare_calls$fit_simple,
-    c("nlmixr2_indirect", "saemControl", "tableControl", "file.path")
+    c("nlmixr_fit_simple", "saemControl", "tableControl")
   )
   expect_setequal(bare_calls$fit, c("nlmixr_object_complicate", "ini", "log"))
   for (nm in names(out)) {
@@ -529,7 +525,7 @@ targets::tar_test("tar_nlmixr execution", {
   # and an `inherits(x, "nlmixr2FitCore")` check cannot tell the two apart.
   # as.character() drops the `.foceiEnv` attribute nlmixr2est hangs on the
   # class vector to carry the fit environment.
-  expect_type(targets::tar_read(pheno_model_object_simple), "character")
+  expect_type(targets::tar_read(pheno_model_object_simple), "environment")
   # this model reads no covariate
   expect_identical(targets::tar_read(pheno_model_covariates), character(0))
   expect_s3_class(targets::tar_read(pheno_model_data_simple), class = "data.frame")
@@ -822,7 +818,7 @@ targets::tar_test("tar_nlmixr(error = 'continue') records a failure sentinel wit
     targets::tar_make(callr_function = NULL)
   )))
   # The simplification steps succeeded; only the fit failed.
-  expect_type(targets::tar_read(pheno_model_object_simple), "character")
+  expect_type(targets::tar_read(pheno_model_object_simple), "environment")
   expect_s3_class(targets::tar_read(pheno_model_data_simple), "data.frame")
   # Both the fit_simple and the final fit hold the failure sentinel.
   fit_simple <- targets::tar_read(pheno_model_fit_simple)
@@ -936,12 +932,11 @@ test_that("tar_nlmixr_raw omits the default table from the generated command", {
   expect_identical(
     fit_simple_call(out),
     quote(
-      nlmixr2_indirect(
+      nlmixr_fit_simple(
         object = fit_x_object_simple,
         data = fit_x_data_simple,
         est = "saem",
         control = list(),
-        directory = file.path(targets::tar_config_get("store"), "user/nlmixr2"),
         error = "stop"
       )
     )
@@ -1000,10 +995,7 @@ test_that("tar_nlmixr_raw leaves error out of the simplification commands by def
   }
   expect_identical(
     generated_call(out, "object_simple"),
-    quote(nlmixr_object_simplify(
-      object = my_model,
-      directory = file.path(targets::tar_config_get("store"), "user/nlmixr2")
-    ))
+    quote(nlmixr_object_simplify(object = my_model))
   )
 })
 
