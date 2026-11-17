@@ -316,6 +316,17 @@ convert_indirect_cache <- function(store = targets::tar_config_get("store"),
                                    script = targets::tar_config_get("script"),
                                    backup = TRUE,
                                    dry_run = FALSE) {
+  # The check that sends people here fires every time `_targets.R` is sourced,
+  # and this function sources it twice: once to read the pipeline, and again
+  # inside tar_make() when the helpers are rebuilt.  It therefore stands down
+  # for the whole call.  Scoping it to the read alone leaves the rebuild to
+  # stop at the very check the conversion exists to satisfy.
+  previous <- getOption("nlmixr2targets.allow_indirect_cache")
+  options(nlmixr2targets.allow_indirect_cache = TRUE)
+  on.exit(
+    options(nlmixr2targets.allow_indirect_cache = previous),
+    add = TRUE
+  )
   directory <- file.path(store, "user", "nlmixr2")
   if (!dir.exists(directory)) {
     message("No indirect cache at ", directory, ", so there is nothing to do.")

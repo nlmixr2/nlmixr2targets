@@ -638,3 +638,53 @@ targets::tar_test("the conversion stops if a worker returns the old type", {
     "came back as a character"
   )
 })
+
+# The check stands down for the rebuild too ----
+#
+# `_targets.R` is sourced twice by one conversion: once to read the pipeline,
+# and again inside tar_make() when the helpers are rebuilt. Standing the check
+# down only for the read leaves the rebuild stopping at the very check the
+# conversion exists to satisfy -- and no pipeline in these tests calls
+# tar_nlmixr_raw(), so nothing else here would notice.
+targets::tar_test("the cache check stays down for the rebuild, not just the read", {
+  skip_if_not_installed("secretbase")
+  env <- convert_source()
+  pipeline <- function(guard) {
+    writeLines(
+      c(
+        "library(targets)",
+        if (guard) {
+          "stopifnot(isTRUE(getOption('nlmixr2targets.allow_indirect_cache')))"
+        },
+        "nlmixr_object_simplify_probe <- function() 1L",
+        "list(",
+        "  targets::tar_target(",
+        "    demo_object_simple,",
+        "    nlmixr_object_simplify_probe()",
+        "  ),",
+        "  targets::tar_target(demo_fit_simple, demo_object_simple + 1L)",
+        ")"
+      ),
+      "_targets.R"
+    )
+  }
+  # Built without the guard, because the check is legitimately not standing
+  # down for an ordinary build.
+  pipeline(guard = FALSE)
+  suppressMessages(
+    targets::tar_make(
+      callr_function = NULL,
+      reporter = "silent",
+      envir = globalenv()
+    )
+  )
+  # From here on, every source of the script insists the check is down.
+  pipeline(guard = TRUE)
+  dir.create(file.path("_targets", "user", "nlmixr2"), recursive = TRUE)
+  convert_scramble("demo_fit_simple")
+  out <- suppressMessages(
+    env$convert_indirect_cache(store = "_targets", script = "_targets.R")
+  )
+  expect_identical(out$name, "demo_fit_simple")
+  expect_false(dir.exists(file.path("_targets", "user", "nlmixr2")))
+})
