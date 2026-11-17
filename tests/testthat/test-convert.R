@@ -688,3 +688,47 @@ targets::tar_test("the cache check stays down for the rebuild, not just the read
   expect_identical(out$name, "demo_fit_simple")
   expect_false(dir.exists(file.path("_targets", "user", "nlmixr2")))
 })
+
+# A conversion that stopped part way leaves its helpers invalidated and its
+# fits not yet adopted. tar_invalidate() refuses a name the metadata no longer
+# has, so the second attempt must not hand it the whole set.
+targets::tar_test("a conversion restarts after one that stopped part way", {
+  skip_if_not_installed("secretbase")
+  env <- convert_source()
+  writeLines(
+    c(
+      "library(targets)",
+      "nlmixr_object_simplify_probe <- function() 1L",
+      "list(",
+      "  targets::tar_target(",
+      "    demo_object_simple,",
+      "    nlmixr_object_simplify_probe()",
+      "  ),",
+      "  targets::tar_target(demo_fit_simple, demo_object_simple + 1L)",
+      ")"
+    ),
+    "_targets.R"
+  )
+  suppressMessages(
+    targets::tar_make(
+      callr_function = NULL,
+      reporter = "silent",
+      envir = globalenv()
+    )
+  )
+  dir.create(file.path("_targets", "user", "nlmixr2"), recursive = TRUE)
+  convert_scramble("demo_fit_simple")
+  # Exactly what the earlier attempt left behind.
+  targets::tar_invalidate(names = "demo_object_simple", store = "_targets")
+  expect_false("demo_object_simple" %in% targets::tar_meta(store = "_targets")$name)
+  out <- suppressMessages(
+    env$convert_indirect_cache(store = "_targets", script = "_targets.R")
+  )
+  expect_identical(out$name, "demo_fit_simple")
+  expect_false("demo_fit_simple" %in% targets::tar_outdated(
+    store = "_targets",
+    script = "_targets.R",
+    callr_function = NULL,
+    envir = globalenv()
+  ))
+})

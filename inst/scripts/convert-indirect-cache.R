@@ -381,9 +381,17 @@ convert_indirect_cache <- function(store = targets::tar_config_get("store"),
     message("Rebuilding ", nrow(helpers), " generated target(s).")
     # Invalidated first so the rebuild happens even where the recorded
     # command already matches this version: see convert_generated_helpers().
-    convert_muffle_tidyselect(
-      targets::tar_invalidate(names = helpers$name, store = store)
-    )
+    #
+    # Only the ones the metadata still has: tar_invalidate() refuses a name it
+    # does not know, and a conversion that stopped after invalidating and
+    # before adopting leaves exactly that, so passing the whole set would make
+    # the second attempt fail on the first one's work.
+    recorded <- intersect(helpers$name, meta$name)
+    if (length(recorded)) {
+      convert_muffle_tidyselect(
+        targets::tar_invalidate(names = recorded, store = store)
+      )
+    }
     # callr_function = NULL keeps the build in this process, because the check
     # that sends people here stands down through an option and an option does
     # not cross into a callr subprocess, which would re-source `_targets.R`
