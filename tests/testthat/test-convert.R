@@ -509,3 +509,226 @@ targets::tar_test("the option goes back to what it was, not to unset", {
   env$convert_pipeline_targets("_targets.R")
   expect_false(getOption("nlmixr2targets.allow_indirect_cache"))
 })
+
+# The rebuild's environment ----
+#
+# tar_make() defaults envir to parent.frame(), so a rebuild driven from inside
+# a function hands targets that frame as the pipeline's environment. For a
+# target bound for a worker, targets then ships the environment itself instead
+# of the objects of the global one, and a `_targets.R` that source()s its model
+# functions -- which land in the global environment -- leaves the worker
+# without them: "object ... not found", far from the cause. The conversion
+# therefore passes envir = globalenv().
+
+targets::tar_test("the rebuild runs with the global environment", {
+  skip_if_not_installed("secretbase")
+  env <- convert_source()
+  # The stub reports the environment targets is using while it builds, which
+  # is the only way to see it: tar_make() puts the old one back on exit.
+  writeLines(
+    c(
+      "the_model <- 41L",
+      "nlmixr_object_simplify_probe <- function(x) {",
+      "  identical(targets::tar_option_get('envir'), globalenv())",
+      "}"
+    ),
+    "helpers.R"
+  )
+  writeLines(
+    c(
+      "library(targets)",
+      "source('helpers.R')",
+      "list(",
+      "  targets::tar_target(",
+      "    demo_object_simple,",
+      "    nlmixr_object_simplify_probe(the_model)",
+      "  ),",
+      "  targets::tar_target(demo_fit_simple, isTRUE(demo_object_simple))",
+      ")"
+    ),
+    "_targets.R"
+  )
+  suppressMessages(
+    targets::tar_make(callr_function = NULL, reporter = "silent")
+  )
+  dir.create(file.path("_targets", "user", "nlmixr2"), recursive = TRUE)
+  convert_scramble("demo_fit_simple")
+  suppressMessages(
+    env$convert_indirect_cache(store = "_targets", script = "_targets.R")
+  )
+  expect_true(targets::tar_read(demo_object_simple))
+})
+
+test_that("convert_generated_helpers finds them by what the command calls", {
+  env <- convert_source()
+  pipeline <- list(
+    demo_object_simple = list(
+      command = list(string = "nlmixr_object_simplify(mod)"),
+      deps = character(0)
+    ),
+    demo_covariates = list(
+      command = list(string = "nlmixr_object_covariates(demo_object_simple)"),
+      deps = character(0)
+    ),
+    d_mod = list(
+      command = list(string = "make_the_data(raw)"),
+      deps = character(0)
+    ),
+    demo_fit_simple = list(
+      command = list(string = "nlmixr_fit_simple(demo_object_simple, d_mod)"),
+      deps = c("demo_object_simple", "demo_covariates", "d_mod")
+    )
+  )
+  out <- env$convert_generated_helpers(
+    pipeline = pipeline,
+    fits = "demo_fit_simple"
+  )
+  # The user's own data target is a dependency too and must not be rebuilt.
+  expect_identical(out$name, c("demo_object_simple", "demo_covariates"))
+  expect_identical(out$simplifies, c(TRUE, FALSE))
+})
+
+test_that("convert_generated_helpers returns the shape when nothing matches", {
+  env <- convert_source()
+  out <- env$convert_generated_helpers(
+    pipeline = list(
+      demo_fit_simple = list(
+        command = list(string = "nlmixr_fit_simple(a, b)"),
+        deps = character(0)
+      )
+    ),
+    fits = "demo_fit_simple"
+  )
+  expect_identical(nrow(out), 0L)
+  expect_identical(names(out), c("name", "simplifies"))
+})
+
+targets::tar_test("the conversion stops if a worker returns the old type", {
+  env <- convert_source()
+  # What a version from before the cache was removed gives back: the md5 of a
+  # cache file rather than the model.
+  writeLines(
+    c(
+      "library(targets)",
+      "nlmixr_object_simplify_oldstyle <- function() {",
+      "  'add26df84bb8f731decbc2517b9cbb63'",
+      "}",
+      "list(",
+      "  targets::tar_target(",
+      "    demo_object_simple,",
+      "    nlmixr_object_simplify_oldstyle()",
+      "  )",
+      ")"
+    ),
+    "_targets.R"
+  )
+  suppressMessages(
+    targets::tar_make(callr_function = NULL, reporter = "silent",
+                      envir = globalenv())
+  )
+  expect_error(
+    env$convert_check_simplified(
+      helpers = data.frame(
+        name = "demo_object_simple",
+        simplifies = TRUE,
+        stringsAsFactors = FALSE
+      ),
+      store = "_targets"
+    ),
+    "came back as a character"
+  )
+})
+
+# The check stands down for the rebuild too ----
+#
+# `_targets.R` is sourced twice by one conversion: once to read the pipeline,
+# and again inside tar_make() when the helpers are rebuilt. Standing the check
+# down only for the read leaves the rebuild stopping at the very check the
+# conversion exists to satisfy -- and no pipeline in these tests calls
+# tar_nlmixr_raw(), so nothing else here would notice.
+targets::tar_test("the cache check stays down for the rebuild, not just the read", {
+  skip_if_not_installed("secretbase")
+  env <- convert_source()
+  pipeline <- function(guard) {
+    writeLines(
+      c(
+        "library(targets)",
+        if (guard) {
+          "stopifnot(isTRUE(getOption('nlmixr2targets.allow_indirect_cache')))"
+        },
+        "nlmixr_object_simplify_probe <- function() 1L",
+        "list(",
+        "  targets::tar_target(",
+        "    demo_object_simple,",
+        "    nlmixr_object_simplify_probe()",
+        "  ),",
+        "  targets::tar_target(demo_fit_simple, demo_object_simple + 1L)",
+        ")"
+      ),
+      "_targets.R"
+    )
+  }
+  # Built without the guard, because the check is legitimately not standing
+  # down for an ordinary build.
+  pipeline(guard = FALSE)
+  suppressMessages(
+    targets::tar_make(
+      callr_function = NULL,
+      reporter = "silent",
+      envir = globalenv()
+    )
+  )
+  # From here on, every source of the script insists the check is down.
+  pipeline(guard = TRUE)
+  dir.create(file.path("_targets", "user", "nlmixr2"), recursive = TRUE)
+  convert_scramble("demo_fit_simple")
+  out <- suppressMessages(
+    env$convert_indirect_cache(store = "_targets", script = "_targets.R")
+  )
+  expect_identical(out$name, "demo_fit_simple")
+  expect_false(dir.exists(file.path("_targets", "user", "nlmixr2")))
+})
+
+# A conversion that stopped part way leaves its helpers invalidated and its
+# fits not yet adopted. tar_invalidate() refuses a name the metadata no longer
+# has, so the second attempt must not hand it the whole set.
+targets::tar_test("a conversion restarts after one that stopped part way", {
+  skip_if_not_installed("secretbase")
+  env <- convert_source()
+  writeLines(
+    c(
+      "library(targets)",
+      "nlmixr_object_simplify_probe <- function() 1L",
+      "list(",
+      "  targets::tar_target(",
+      "    demo_object_simple,",
+      "    nlmixr_object_simplify_probe()",
+      "  ),",
+      "  targets::tar_target(demo_fit_simple, demo_object_simple + 1L)",
+      ")"
+    ),
+    "_targets.R"
+  )
+  suppressMessages(
+    targets::tar_make(
+      callr_function = NULL,
+      reporter = "silent",
+      envir = globalenv()
+    )
+  )
+  dir.create(file.path("_targets", "user", "nlmixr2"), recursive = TRUE)
+  convert_scramble("demo_fit_simple")
+  # Exactly what the earlier attempt left behind.
+  targets::tar_invalidate(names = "demo_object_simple", store = "_targets")
+  expect_false("demo_object_simple" %in% targets::tar_meta(store = "_targets")$name)
+  out <- suppressMessages(
+    env$convert_indirect_cache(store = "_targets", script = "_targets.R")
+  )
+  expect_identical(out$name, "demo_fit_simple")
+  expect_false("demo_fit_simple" %in% targets::tar_outdated(
+    store = "_targets",
+    script = "_targets.R",
+    callr_function = NULL,
+    envir = globalenv()
+  ))
+})

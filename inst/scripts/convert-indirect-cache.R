@@ -24,7 +24,11 @@
 # group.
 #
 # The generated helper targets are cheap, so they are rebuilt rather than
-# converted.  Once they hold their new values, each estimation target's two
+# converted.  Whatever the workers load this package from must already be the
+# version that returns the object -- a container image, for one, has to be
+# rebuilt first -- because a worker still on the old one hands back the md5 of
+# a cache file.  That is checked after the rebuild and stops the conversion
+# before any fit's row is touched.  Once they hold their new values, each estimation target's two
 # stale fields can be recomputed and written, which leaves the fit itself
 # untouched on disk and up to date in the metadata.
 #
@@ -124,7 +128,25 @@ convert_pipeline_targets <- function(script) {
 # rather than by the target's name, which is configurable, and by the command
 # hash having moved, so a dependency the pipeline still writes the same way is
 # left alone and an expensive target of the user's own is never caught.
-convert_stale_upstream <- function(pipeline, fits, meta) {
+convert_no_helpers <- function() {
+  data.frame(
+    name = character(0),
+    simplifies = logical(0),
+    stringsAsFactors = FALSE
+  )
+}
+
+# The estimation targets' own dependencies that this package generates, and
+# which of them produce the simplified model.  Identified by what the command
+# calls rather than by the target's name, which is configurable, so a target
+# of the user's own is never caught.
+#
+# Every one of them is rebuilt, rather than only those whose recorded command
+# has moved: a conversion that stopped part way can leave one recorded under
+# the command this version writes while it still holds the value an older
+# version produced, and a check on the command alone would then skip it and
+# take the stale value for the fits' dependency hash.
+convert_generated_helpers <- function(pipeline, fits) {
   generators <- c(
     "nlmixr_object_simplify",
     "nlmixr_object_covariates",
@@ -132,27 +154,68 @@ convert_stale_upstream <- function(pipeline, fits, meta) {
   )
   deps <- unique(unlist(lapply(fits, function(name) pipeline[[name]]$deps)))
   deps <- intersect(deps, names(pipeline))
-  if (!length(deps)) {
-    return(character(0))
+  out <- convert_no_helpers()
+  for (name in deps) {
+    string <- pipeline[[name]]$command$string
+    hit <- generators[vapply(
+      generators,
+      function(generator) grepl(generator, string, fixed = TRUE),
+      logical(1)
+    )]
+    if (!length(hit)) {
+      next
+    }
+    out <- rbind(
+      out,
+      data.frame(
+        name = name,
+        simplifies = "nlmixr_object_simplify" %in% hit,
+        stringsAsFactors = FALSE
+      )
+    )
   }
-  keep <- vapply(
-    deps,
-    function(name) {
-      target <- pipeline[[name]]
-      generated <- any(vapply(
-        generators,
-        function(generator) {
-          grepl(generator, target$command$string, fixed = TRUE)
-        },
-        logical(1)
-      ))
-      recorded <- meta$command[match(name, meta$name)]
-      generated && !identical(recorded, target$command$hash)
-    },
-    logical(1),
-    USE.NAMES = FALSE
+  out
+}
+
+# targets validates `names` as a character vector and then selects with
+# tidyselect, which deprecates being handed one.  That warning is about
+# targets' own call and says nothing about this conversion, so it alone is
+# muffled and every other warning still reaches the user.
+convert_muffle_tidyselect <- function(expr) {
+  withCallingHandlers(
+    expr,
+    warning = function(condition) {
+      if (grepl(
+        "external vector in selections",
+        conditionMessage(condition),
+        fixed = TRUE
+      )) {
+        invokeRestart("muffleWarning")
+      }
+    }
   )
-  deps[keep]
+}
+
+# A simplified model is an rxUi, never a character.  A version from before the
+# cache was removed returned the md5 of a cache file instead, so a character
+# here means the worker that built it loads that older package -- most often a
+# container image that has not been rebuilt.  Stopping now leaves every fit's
+# row untouched.
+convert_check_simplified <- function(helpers, store) {
+  for (name in helpers$name[helpers$simplifies]) {
+    value <- targets::tar_read_raw(name, store = store)
+    if (is.character(value)) {
+      stop(
+        "The target ", name, " came back as a character, which is what a ",
+        "version from before the cache was removed returns. The worker that ",
+        "built it loads that older nlmixr2targets: update whatever the ",
+        "workers load the package from, such as the container image, and run ",
+        "this again. No fit has been changed.",
+        call. = FALSE
+      )
+    }
+  }
+  invisible(NULL)
 }
 
 # One row per estimation target that has a stored fit worth keeping.
@@ -253,6 +316,17 @@ convert_indirect_cache <- function(store = targets::tar_config_get("store"),
                                    script = targets::tar_config_get("script"),
                                    backup = TRUE,
                                    dry_run = FALSE) {
+  # The check that sends people here fires every time `_targets.R` is sourced,
+  # and this function sources it twice: once to read the pipeline, and again
+  # inside tar_make() when the helpers are rebuilt.  It therefore stands down
+  # for the whole call.  Scoping it to the read alone leaves the rebuild to
+  # stop at the very check the conversion exists to satisfy.
+  previous <- getOption("nlmixr2targets.allow_indirect_cache")
+  options(nlmixr2targets.allow_indirect_cache = TRUE)
+  on.exit(
+    options(nlmixr2targets.allow_indirect_cache = previous),
+    add = TRUE
+  )
   directory <- file.path(store, "user", "nlmixr2")
   if (!dir.exists(directory)) {
     message("No indirect cache at ", directory, ", so there is nothing to do.")
@@ -279,11 +353,7 @@ convert_indirect_cache <- function(store = targets::tar_config_get("store"),
   # Every column rather than a selection: tar_meta() selects fields with
   # tidyselect, which deprecates being handed a character vector.
   meta <- targets::tar_meta(store = store, targets_only = FALSE)
-  upstream <- convert_stale_upstream(
-    pipeline = pipeline,
-    fits = fits,
-    meta = meta
-  )
+  helpers <- convert_generated_helpers(pipeline = pipeline, fits = fits)
   if (dry_run) {
     out <- convert_report(
       pipeline = pipeline,
@@ -292,11 +362,11 @@ convert_indirect_cache <- function(store = targets::tar_config_get("store"),
       depend = FALSE
     )
     message(
-      "Would adopt ", nrow(out), " fit(s) and rebuild ", length(upstream),
-      " cheap target(s)."
+      "Would adopt ", nrow(out), " fit(s) and rebuild ", nrow(helpers),
+      " generated target(s)."
     )
-    if (length(upstream)) {
-      message("  ", paste(upstream, collapse = "\n  "))
+    if (nrow(helpers)) {
+      message("  ", paste(helpers$name, collapse = "\n  "))
     }
     message(
       "The new dependency hashes are not shown: they are taken over the ",
@@ -307,35 +377,44 @@ convert_indirect_cache <- function(store = targets::tar_config_get("store"),
   if (backup) {
     convert_backup(meta_path = meta_path)
   }
-  if (length(upstream)) {
-    message("Rebuilding ", length(upstream), " cheap target(s).")
-    # targets validates `names` as a character vector and then selects with
-    # tidyselect, which deprecates being handed one.  That warning is about
-    # targets' own call and says nothing about this conversion, so it alone
-    # is muffled and every other warning still reaches the user.
-    # callr_function = NULL keeps the build in this process. The check that
-    # sends people here stands down through an option, and an option does
-    # not cross into a callr subprocess, so a subprocess would re-source
-    # `_targets.R` and stop at that very check. These targets take seconds,
-    # so there is nothing a subprocess would buy.
-    withCallingHandlers(
+  if (nrow(helpers)) {
+    message("Rebuilding ", nrow(helpers), " generated target(s).")
+    # Invalidated first so the rebuild happens even where the recorded
+    # command already matches this version: see convert_generated_helpers().
+    #
+    # Only the ones the metadata still has: tar_invalidate() refuses a name it
+    # does not know, and a conversion that stopped after invalidating and
+    # before adopting leaves exactly that, so passing the whole set would make
+    # the second attempt fail on the first one's work.
+    recorded <- intersect(helpers$name, meta$name)
+    if (length(recorded)) {
+      convert_muffle_tidyselect(
+        targets::tar_invalidate(names = recorded, store = store)
+      )
+    }
+    # callr_function = NULL keeps the build in this process, because the check
+    # that sends people here stands down through an option and an option does
+    # not cross into a callr subprocess, which would re-source `_targets.R`
+    # and stop at that very check.
+    #
+    # envir = globalenv() because tar_make() defaults it to parent.frame(),
+    # which here is this function's frame.  targets takes that as the
+    # pipeline's environment, and for a target it sends to a worker it then
+    # ships the environment itself rather than the objects of the global one.
+    # `_targets.R` commonly source()s its model functions, which land in the
+    # global environment, so the worker would never receive them and the
+    # build would stop at "object ... not found".
+    convert_muffle_tidyselect(
       targets::tar_make(
-        names = upstream,
+        names = helpers$name,
         store = store,
         script = script,
         callr_function = NULL,
+        envir = globalenv(),
         reporter = "silent"
-      ),
-      warning = function(condition) {
-        if (grepl(
-          "external vector in selections",
-          conditionMessage(condition),
-          fixed = TRUE
-        )) {
-          invokeRestart("muffleWarning")
-        }
-      }
+      )
     )
+    convert_check_simplified(helpers = helpers, store = store)
     meta <- targets::tar_meta(store = store, targets_only = FALSE)
   }
   out <- convert_report(pipeline = pipeline, fits = fits, meta = meta)
